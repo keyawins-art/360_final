@@ -268,6 +268,35 @@ def shutdown_device():
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+@app.post("/api/open-teamviewer")
+def open_teamviewer():
+    try:
+        import subprocess
+        startupinfo = subprocess.STARTUPINFO()
+        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+        startupinfo.wShowWindow = 6  # SW_MINIMIZE
+        
+        tv_path = r"C:\Program Files\TeamViewer\TeamViewer.exe"
+        if os.path.exists(tv_path):
+            subprocess.Popen([tv_path], startupinfo=startupinfo)
+        else:
+            tv_path_x86 = r"C:\Program Files (x86)\TeamViewer\TeamViewer.exe"
+            if os.path.exists(tv_path_x86):
+                subprocess.Popen([tv_path_x86], startupinfo=startupinfo)
+            else:
+                return {"status": "error", "message": "TeamViewer not found at default paths"}
+        return {"status": "success", "message": "TeamViewer started in background"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.post("/api/open-wifi")
+def open_wifi():
+    try:
+        os.system("start ms-availablenetworks:")
+        return {"status": "success", "message": "Wi-Fi settings opened"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 class ValveCommand(BaseModel):
     belt_id: int
     port_id: int

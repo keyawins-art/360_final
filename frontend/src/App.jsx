@@ -80,6 +80,8 @@ function App() {
     { name: 'Customizations', type: 'page', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
     { name: 'Air Valve', type: 'page', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
     { name: 'Settings', type: 'page', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+    { name: 'Team Viewer', type: 'page', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    { name: 'Wi-Fi Connect', type: 'page', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.142 0M1.121 10.121a15.42 15.42 0 0121.758 0' },
     { name: 'Shutdown', type: 'action', color: 'red', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
     { name: 'Restart', type: 'action', color: 'orange', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }
   ];
@@ -261,6 +263,14 @@ function App() {
 
   const handleNavClick = (item) => {
     if (item.type === 'page') {
+      if (item.name === 'Team Viewer') {
+        handleAction('open-teamviewer', 'Team Viewer');
+        return;
+      }
+      if (item.name === 'Wi-Fi Connect') {
+        handleAction('open-wifi', 'Wi-Fi Setup');
+        return;
+      }
       if (item.name === 'Settings' || item.name === 'Customizations') {
         setPendingPage(item.name);
         setShowLogin(true);
@@ -282,64 +292,131 @@ function App() {
   return (
     <div className="h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200/80 text-slate-800 font-sans flex overflow-hidden selection:bg-blue-500/30 relative">
       
-      {/* Subtle Grid Background for Industrial/Pro Feel */}
+      {/* Subtle Grid Background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none z-0"></div>
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col p-6 pt-4 z-10 min-w-0">
-        
-        {/* GLOBAL TOP BAR */}
-        <div className="flex justify-between items-center mb-8 shrink-0 px-4 pb-5 border-b border-slate-200/80 bg-white/40 backdrop-blur-md rounded-2xl shadow-sm">
-          {/* Company Branding (Left) */}
-          <div className="flex items-center gap-5 mt-2">
-            <div className="relative flex items-center justify-center">
-              {/* Outer decorative ring */}
-              <div className="absolute inset-0 rounded-full border border-blue-500/20 scale-[1.15]"></div>
-              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden relative ring-2 ring-white z-10">
-                 <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
-              </div>
+      {/* LEFT SIDEBAR (Navigation) */}
+      <div className="w-[320px] bg-white/70 backdrop-blur-xl border-r border-slate-200/80 p-8 flex flex-col shadow-2xl z-20 shrink-0">
+        {/* Company Branding */}
+        <div className="flex items-center gap-4 mb-10 mt-2 pl-2">
+            <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden relative ring-1 ring-slate-100">
+                <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
             </div>
             <div className="flex flex-col justify-center">
-              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 leading-none flex items-baseline gap-1.5">
+              <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
                 Keya <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Fusion</span>
               </h1>
-              <div className="flex items-center gap-2 mt-1.5">
-                <div className="h-[1px] w-6 bg-blue-500/40"></div>
-                <p className="text-blue-600 text-[10px] font-bold tracking-[0.3em] uppercase leading-none">Technology</p>
-              </div>
+              <p className="text-blue-600 text-[9px] font-bold tracking-[0.3em] uppercase mt-1">Technology</p>
             </div>
-          </div>
+        </div>
 
-          {/* Dynamic Page Title (Right) */}
-          <div className="flex flex-col items-end text-right mt-2">
-             <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 drop-shadow-sm flex items-center gap-3">
+        <nav className="flex flex-col gap-2 flex-1">
+          <div className="text-xs font-bold tracking-widest text-slate-400 mb-2 pl-2">MAIN MENU</div>
+          {navItems.filter(item => item.type === 'page').map(page => {
+            const isActive = activePage === page.name;
+            return (
+              <button 
+                key={page.name}
+                onClick={() => handleNavClick(page)}
+                className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 translate-x-1' 
+                    : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                }`}
+              >
+                <div className={`transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-500'}`}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={page.icon}></path>
+                  </svg>
+                </div>
+                <span className="text-sm tracking-wide">{page.name}</span>
+              </button>
+            )
+          })}
+        </nav>
+        
+        {/* Action Buttons at bottom of sidebar */}
+        <div className="flex flex-col gap-2 mt-auto">
+            <div className="h-px w-full bg-slate-200/80 mb-4"></div>
+            {navItems.filter(item => item.type === 'action').map(action => {
+              const isRed = action.color === 'red';
+              const isBlue = action.color === 'blue';
+              
+              let textClass = 'text-orange-600';
+              let hoverClass = 'hover:bg-orange-50 hover:border-orange-200';
+              let activeClass = 'active:bg-orange-100';
+              
+              if (isRed) {
+                textClass = 'text-red-600';
+                hoverClass = 'hover:bg-red-50 hover:border-red-200';
+                activeClass = 'active:bg-red-100';
+              } else if (isBlue) {
+                textClass = 'text-blue-600';
+                hoverClass = 'hover:bg-blue-50 hover:border-blue-200';
+                activeClass = 'active:bg-blue-100';
+              }
+              
+              return (
+                <button 
+                  key={action.name}
+                  onClick={() => handleNavClick(action)}
+                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 border border-transparent ${hoverClass} ${activeClass} ${textClass}`}
+                >
+                  <svg className="w-5 h-5 opacity-80 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={action.icon}></path>
+                  </svg>
+                  <span className="text-sm tracking-wide">{action.name}</span>
+                </button>
+              )
+            })}
+        </div>
+      </div>
+
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col p-8 pt-6 z-10 min-w-0">
+        
+        {/* TOP HEADER */}
+        <div className="flex justify-between items-center mb-8 shrink-0">
+          {/* Dynamic Page Title */}
+          <div className="flex flex-col">
+             <h2 className="text-4xl font-extrabold tracking-tight text-slate-800 drop-shadow-sm flex items-center gap-3">
                {activePage === 'Control Hub' && "System Control Hub"}
                {activePage === 'Air Valve' && (
                  <>
-                  <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100 text-blue-600 shadow-sm">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                  <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg shadow-blue-500/20 text-white">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                   </div>
                   Air Valve Testing
                  </>
                )}
                {activePage !== 'Control Hub' && activePage !== 'Air Valve' && activePage}
              </h2>
-             <p className="text-slate-500 text-sm font-medium mt-1">
+             <p className="text-slate-500 text-sm font-medium mt-2 max-w-lg">
                {activePage === 'Control Hub' && "Manage Python automation, grading scripts, and real-time operations."}
                {activePage === 'Air Valve' && "Manual testing interface for 15 belts and their respective 7 ports."}
              </p>
+          </div>
+
+          {/* Live Date/Time Display */}
+          <div className="flex flex-col items-end text-right bg-white/60 backdrop-blur-md border border-slate-200/60 px-6 py-3 rounded-2xl shadow-sm">
+             <span className="text-2xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+               {currentDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+             </span>
+             <span className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">
+               {currentDateTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
+             </span>
           </div>
         </div>
         
         {/* Render Control Hub */}
         {activePage === 'Control Hub' ? (
-          <div className="flex flex-col h-full w-full max-w-[1600px] mx-auto animate-in fade-in duration-500">
+          <div className="flex flex-col h-full w-full animate-in fade-in duration-500">
             
             {/* Main Layout Row */}
             <div className="flex flex-1 gap-6 min-h-0">
               
               {/* GRAPH AREA (Left/Middle) */}
-              <div className="flex-1 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col relative overflow-hidden group">
+              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white p-6 shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden group">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                       <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
@@ -381,8 +458,8 @@ function App() {
               <div className="w-[340px] flex flex-col gap-6 h-full">
                 
                 {/* Control Panel */}
-                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1">
-                  <h3 className="text-lg font-bold text-slate-800 mb-5 px-2 flex items-center gap-2">
+                <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-col flex-1">
+                  <h3 className="text-xl font-bold text-slate-800 mb-5 px-2 flex items-center gap-2">
                     <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                     Action Commands
                   </h3>
@@ -390,10 +467,10 @@ function App() {
                   <div className="flex flex-col gap-3">
                     <button 
                       onClick={() => handleAction('run-default', 'Default Mode')}
-                      className={`group relative w-full p-4 rounded-xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Default Mode' ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-500/20' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-indigo-300 shadow-sm text-slate-700'}`}
+                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Default Mode' ? 'bg-gradient-to-r from-indigo-500 to-indigo-600 border-transparent shadow-lg shadow-indigo-500/30' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-indigo-300 shadow-sm text-slate-700'}`}
                     >
-                      <div className="w-10 h-10 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
-                         <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${currentMode === 'Default Mode' ? 'bg-white/20 text-white' : 'bg-indigo-50 group-hover:bg-indigo-100 text-indigo-600'}`}>
+                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             {currentMode === 'Default Mode' ? (
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                             ) : (
@@ -402,17 +479,17 @@ function App() {
                          </svg>
                       </div>
                       <div className="text-left">
-                        <span className="block text-sm font-bold text-slate-800">Default Mode</span>
-                        <span className="block text-xs text-slate-500 group-hover:text-indigo-600 transition-colors">Run standard sequence</span>
+                        <span className={`block text-sm font-bold ${currentMode === 'Default Mode' ? 'text-white' : 'text-slate-800'}`}>Default Mode</span>
+                        <span className={`block text-xs transition-colors ${currentMode === 'Default Mode' ? 'text-indigo-100' : 'text-slate-500 group-hover:text-indigo-600'}`}>Run standard sequence</span>
                       </div>
                     </button>
                     
                     <button 
                       onClick={() => handleAction('run-grading', 'Grading Mode')}
-                      className={`group relative w-full p-4 rounded-xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Grading Mode' ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 shadow-sm text-slate-700'}`}
+                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Grading Mode' ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-transparent shadow-lg shadow-blue-500/30' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 shadow-sm text-slate-700'}`}
                     >
-                      <div className="w-10 h-10 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
-                         <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${currentMode === 'Grading Mode' ? 'bg-white/20 text-white' : 'bg-blue-50 group-hover:bg-blue-100 text-blue-600'}`}>
+                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             {currentMode === 'Grading Mode' ? (
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                             ) : (
@@ -421,17 +498,17 @@ function App() {
                          </svg>
                       </div>
                       <div className="text-left">
-                        <span className="block text-sm font-bold text-slate-800">Grading Mode</span>
-                        <span className="block text-xs text-slate-500 group-hover:text-blue-600 transition-colors">Run grading scripts</span>
+                        <span className={`block text-sm font-bold ${currentMode === 'Grading Mode' ? 'text-white' : 'text-slate-800'}`}>Grading Mode</span>
+                        <span className={`block text-xs transition-colors ${currentMode === 'Grading Mode' ? 'text-blue-100' : 'text-slate-500 group-hover:text-blue-600'}`}>Run grading scripts</span>
                       </div>
                     </button>
 
                     <button 
                       onClick={() => handleAction('run-color', 'Color Grading Mode')}
-                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Color Grading Mode' ? 'bg-purple-50 border-purple-500 shadow-md ring-2 ring-purple-500/20' : 'bg-white hover:bg-[#fcfaf5] border-[#efece3] hover:border-purple-300 shadow-sm hover:shadow-md text-[#3b352b]'}`}
+                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Color Grading Mode' ? 'bg-gradient-to-r from-purple-500 to-purple-600 border-transparent shadow-lg shadow-purple-500/30' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-purple-300 shadow-sm hover:shadow-md text-slate-700'}`}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-purple-50 group-hover:bg-purple-100 flex items-center justify-center transition-colors">
-                         <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${currentMode === 'Color Grading Mode' ? 'bg-white/20 text-white' : 'bg-purple-50 group-hover:bg-purple-100 text-purple-600'}`}>
+                         <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                             {currentMode === 'Color Grading Mode' ? (
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                             ) : (
@@ -440,8 +517,8 @@ function App() {
                          </svg>
                       </div>
                       <div className="text-left">
-                        <span className="block text-base font-bold text-[#2d2820]">Color Grading</span>
-                        <span className="block text-xs text-[#8a8174] group-hover:text-purple-700 transition-colors">Run color scripts</span>
+                        <span className={`block text-base font-bold ${currentMode === 'Color Grading Mode' ? 'text-white' : 'text-slate-800'}`}>Color Grading</span>
+                        <span className={`block text-xs transition-colors ${currentMode === 'Color Grading Mode' ? 'text-purple-100' : 'text-slate-500 group-hover:text-purple-600'}`}>Run color scripts</span>
                       </div>
                     </button>
                   </div>
@@ -459,12 +536,12 @@ function App() {
                 </div>
 
                 {/* Status Console Mini */}
-                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                <div className="bg-white/80 backdrop-blur-xl p-5 rounded-3xl border border-white shadow-xl shadow-slate-200/50">
                   <div className="flex items-center gap-2 mb-3">
                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
                      <span className="font-semibold text-slate-500 text-xs uppercase tracking-wider">System Terminal</span>
                   </div>
-                  <div className="font-mono text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200/60 overflow-hidden text-ellipsis whitespace-nowrap shadow-inner">
+                  <div className="font-mono text-xs text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-200/60 overflow-hidden text-ellipsis whitespace-nowrap shadow-inner">
                     &gt; {status}
                   </div>
                 </div>
@@ -473,9 +550,9 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Air Valve' ? (
-          <div className="flex flex-col h-full w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 overflow-hidden">
+          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-hidden">
 
-            <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden">
               
               {/* Pagination Tabs */}
               <div className="flex gap-3 mb-6 justify-center shrink-0">
@@ -534,11 +611,11 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Customizations' ? (
-          <div className="flex flex-col h-full w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 overflow-hidden">
+          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-hidden">
             <div className="flex-1 flex gap-8 overflow-hidden">
               
               {/* Left Side: Input Form */}
-              <div className="flex-1 flex flex-col bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm">
+              <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50">
                 
                 <div className="flex gap-4 px-4 mb-2 text-slate-500 font-bold text-sm tracking-wider uppercase shrink-0">
                   <div className="w-24 text-center">Grade</div>
@@ -619,10 +696,10 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Settings' ? (
-          <div className="flex h-full w-full gap-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+          <div className="flex h-full w-full gap-6 animate-in fade-in duration-500">
             {/* Left side content placeholder */}
             {activeSettingsModule === 'Camera' ? (
-              <div className="flex-1 flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
+              <div className="flex-1 flex flex-col h-full bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50">
                 <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center shadow-sm">
@@ -724,7 +801,7 @@ function App() {
                 </div>
               </div>
             ) : activeSettingsModule === 'Comports' ? (
-              <div className="flex-1 flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
+              <div className="flex-1 flex flex-col h-full bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50">
                 <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center shadow-sm border border-orange-100">
@@ -826,7 +903,7 @@ function App() {
                 </div>
               </div>
             ) : (
-              <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center">
+              <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-8 shadow-xl shadow-slate-200/50 flex flex-col items-center justify-center">
                  <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-200">
                     <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                  </div>
@@ -837,7 +914,7 @@ function App() {
 
             {/* Right side buttons */}
             <div className="w-[340px] flex flex-col gap-6 h-full">
-              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1">
+              <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-col flex-1">
                 <h3 className="text-lg font-bold text-slate-800 mb-6 px-2 flex items-center gap-2">
                   <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                   Configurations
@@ -872,10 +949,10 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Time Setting' ? (
-          <div className="flex h-full w-full gap-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+          <div className="flex h-full w-full gap-6 animate-in fade-in duration-500">
 
             {/* Main Area (Matrix of 15 belts x 7 boxes) */}
-            <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm min-w-0">
+            <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 min-w-0">
 
               {/* Scrollable Matrix Table */}
               <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/50">
@@ -982,75 +1059,7 @@ function App() {
 
       </div>
       
-      {/* RIGHT SIDE MAIN NAVBAR */}
-      <div className="w-[300px] bg-white border-l border-slate-200/80 p-6 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.03)] z-20">
-
-        {/* Live Date/Time Display */}
-        <div className="flex flex-col items-center w-full border-b border-slate-200 pb-6 mb-6 mt-2">
-           <span className="text-3xl font-bold text-slate-800 tabular-nums tracking-tight">
-             {currentDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-           </span>
-           <span className="text-xs font-bold text-blue-500/80 uppercase tracking-wider mt-1.5">
-             {currentDateTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
-           </span>
-        </div>
-
-        <nav className="flex flex-col gap-3 flex-1">
-          {/* Main Pages */}
-          <div className="flex flex-col gap-2">
-            {navItems.filter(item => item.type === 'page').map(page => {
-              const isActive = activePage === page.name;
-              return (
-                <button 
-                  key={page.name}
-                  onClick={() => handleNavClick(page)}
-                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 ${
-                    isActive 
-                      ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100 translate-x-1' 
-                      : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent hover:shadow-sm'
-                  }`}
-                >
-                  <div className={`p-2.5 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}`}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={page.icon}></path>
-                    </svg>
-                  </div>
-                  <span className="text-base">{page.name}</span>
-                </button>
-              )
-            })}
-          </div>
-          
-          <div className="h-px w-full bg-slate-200 my-4"></div>
-
-          {/* Action Buttons */}
-          <div className="flex flex-col gap-3 mt-auto">
-            {navItems.filter(item => item.type === 'action').map(action => {
-              const isRed = action.color === 'red';
-              const textClass = isRed ? 'text-red-600' : 'text-blue-600';
-              const bgClass = isRed ? 'hover:bg-red-50' : 'hover:bg-blue-50';
-              const borderHoverClass = isRed ? 'hover:border-red-100' : 'hover:border-blue-100';
-              const iconBgClass = isRed ? 'bg-red-50' : 'bg-blue-50';
-              const iconGroupHoverClass = isRed ? 'group-hover:bg-red-100' : 'group-hover:bg-blue-100';
-              
-              return (
-                <button 
-                  key={action.name}
-                  onClick={() => handleNavClick(action)}
-                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 bg-transparent ${textClass} ${bgClass} border border-transparent ${borderHoverClass} hover:shadow-sm`}
-                >
-                  <div className={`p-2.5 rounded-lg transition-colors ${iconBgClass} ${textClass} ${iconGroupHoverClass}`}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={action.icon}></path>
-                    </svg>
-                  </div>
-                  <span className="text-base">{action.name}</span>
-                </button>
-              )
-            })}
-          </div>
-        </nav>
-      </div>
+      {/* The RIGHT SIDE MAIN NAVBAR has been removed and replaced by the Left Sidebar above */}
 
       {/* Login Password Modal */}
       {showLogin && (
