@@ -37,9 +37,26 @@ function App() {
   const [savedCustomValues, setSavedCustomValues] = useState(defaultCustoms);
 
   // Time Setting State
-  const [activeTimeBelt, setActiveTimeBelt] = useState(1);
-  const [timeSettingsValues, setTimeSettingsValues] = useState(["", "", "", "", "", "", ""]);
-  const [activeTimeInput, setActiveTimeInput] = useState(null); // to keep track of focused input for custom numpad
+  const [timeSettingsValues, setTimeSettingsValues] = useState(() => {
+    const defaultSettings = {};
+    for (let i = 1; i <= 15; i++) {
+      defaultSettings[i.toString()] = ["", "", "", "", "", "", ""];
+    }
+    return defaultSettings;
+  });
+
+  const [activeSettingsModule, setActiveSettingsModule] = useState(null);
+  const [activeTimeInput, setActiveTimeInput] = useState(null); // { belt: "1", idx: 0 }
+
+  // Camera Settings State
+  const [cameraRefs, setCameraRefs] = useState(["", "", ""]);
+  const [connectedCameras, setConnectedCameras] = useState([]);
+  const [isCheckingCameras, setIsCheckingCameras] = useState(false);
+
+  // Comports Settings State
+  const [comportRefs, setComportRefs] = useState(["", "", ""]);
+  const [connectedComports, setConnectedComports] = useState([]);
+  const [isCheckingComports, setIsCheckingComports] = useState(false);
 
   const closeConfirm = () => setConfirmDialog({ isOpen: false, type: null, title: '', message: '' });
 
@@ -109,34 +126,114 @@ function App() {
 
   useEffect(() => {
     if (activePage === 'Time Setting') {
-      axios.get(`${API_URL}/time-settings/${activeTimeBelt}`)
-        .then(res => setTimeSettingsValues(res.data.values))
+      axios.get(`${API_URL}/time-settings-all`)
+        .then(res => {
+          if (res.data && res.data.all_values) {
+            setTimeSettingsValues(prev => ({...prev, ...res.data.all_values}));
+          }
+        })
         .catch(err => console.error(err));
     }
-  }, [activePage, activeTimeBelt]);
+  }, [activePage]);
 
   const saveTimeSettings = async () => {
     try {
-      await axios.post(`${API_URL}/time-settings/${activeTimeBelt}`, { values: timeSettingsValues });
-      alert(`Belt ${activeTimeBelt} Time Settings Saved!`);
+      await axios.post(`${API_URL}/time-settings-all`, { belts: timeSettingsValues });
+      alert(`All Belt Time Settings Saved!`);
     } catch (err) {
       console.error(err);
       alert("Failed to save time settings.");
     }
   };
 
-  const handleTimeNumberClick = (num) => {
-    if (activeTimeInput === null) return;
+  useEffect(() => {
+    if (activePage === 'Camera Setting') {
+      axios.get(`${API_URL}/camera-ref`)
+        .then(res => {
+          if (res.data && res.data.references) {
+            setCameraRefs(res.data.references);
+          }
+        })
+        .catch(err => console.error(err));
+      
+      checkCameras();
+    }
+  }, [activePage]);
+
+  const checkCameras = () => {
+    setIsCheckingCameras(true);
+    axios.get(`${API_URL}/camera-check`)
+      .then(res => {
+        if (res.data && res.data.cameras) {
+          setConnectedCameras(res.data.cameras);
+        }
+      })
+      .catch(err => console.error(err))
+      .finally(() => setIsCheckingCameras(false));
+  };
+
+  const saveCameraRefs = async () => {
+    try {
+      await axios.post(`${API_URL}/camera-ref`, { references: cameraRefs });
+      alert("Camera references saved successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save camera references.");
+    }
+  };
+
+  const checkComports = () => {
+    setIsCheckingComports(true);
+    axios.get(`${API_URL}/comport-check`)
+      .then(res => {
+        if (res.data && res.data.comports) {
+          setConnectedComports(res.data.comports);
+        }
+      })
+      .catch(err => {
+        console.error(err);
+        setConnectedComports(["COM1", "COM2", "COM3", "COM4"]);
+      })
+      .finally(() => setIsCheckingComports(false));
+  };
+
+  const saveComportRefs = async () => {
+    try {
+      await axios.post(`${API_URL}/comport-ref`, { references: comportRefs });
+      alert("Comport references saved successfully!");
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save comport references.");
+    }
+  };
+
+  const applyToAllBelts = () => {
+    const belt1Values = timeSettingsValues["1"];
     setTimeSettingsValues(prev => {
-      const newVals = [...prev];
+      const newSettings = { ...prev };
+      for (let i = 1; i <= 15; i++) {
+         newSettings[i.toString()] = [...belt1Values];
+      }
+      return newSettings;
+    });
+    alert("Belt 1 settings copied to all belts! Click 'Save All Settings' to confirm.");
+  };
+
+  const handleTimeNumberClick = (num) => {
+    if (!activeTimeInput) return;
+    const { belt, idx } = activeTimeInput;
+    setTimeSettingsValues(prev => {
+      const newSettings = { ...prev };
+      const beltVals = [...(newSettings[belt] || ["", "", "", "", "", "", ""])];
       if (num === 'DEL') {
-        newVals[activeTimeInput] = newVals[activeTimeInput].slice(0, -1);
+        beltVals[idx] = beltVals[idx].slice(0, -1);
       } else {
-        if (newVals[activeTimeInput].length < 4) {
-          newVals[activeTimeInput] += num;
+        if (beltVals[idx].length < 4) {
+          beltVals[idx] += num;
         }
       }
-      return newVals;
+      newSettings[belt] = beltVals;
+      return newSettings;
     });
   };
 
@@ -183,54 +280,51 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#FDFBF7] text-[#3b352b] font-sans flex overflow-hidden selection:bg-orange-500/30">
+    <div className="h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200/80 text-slate-800 font-sans flex overflow-hidden selection:bg-blue-500/30 relative">
       
-      {/* Decorative Background Blob - Cream/Orange/Blue Theme */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[50%] bg-orange-300/10 blur-[120px] rounded-full mix-blend-multiply"></div>
-        <div className="absolute top-[60%] -right-[10%] w-[40%] h-[50%] bg-blue-300/15 blur-[120px] rounded-full mix-blend-multiply"></div>
-      </div>
+      {/* Subtle Grid Background for Industrial/Pro Feel */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none z-0"></div>
 
       {/* MAIN CONTENT AREA */}
       <div className="flex-1 flex flex-col p-6 pt-4 z-10 min-w-0">
         
         {/* GLOBAL TOP BAR */}
-        <div className="flex justify-between items-center mb-8 shrink-0 px-2 pb-4 border-b border-[#efece3]">
+        <div className="flex justify-between items-center mb-8 shrink-0 px-4 pb-5 border-b border-slate-200/80 bg-white/40 backdrop-blur-md rounded-2xl shadow-sm">
           {/* Company Branding (Left) */}
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-5 mt-2">
             <div className="relative flex items-center justify-center">
               {/* Outer decorative ring */}
-              <div className="absolute inset-0 rounded-full border border-orange-500/20 scale-[1.15]"></div>
-              <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg shadow-blue-900/10 overflow-hidden relative ring-4 ring-white z-10">
+              <div className="absolute inset-0 rounded-full border border-blue-500/20 scale-[1.15]"></div>
+              <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-md overflow-hidden relative ring-2 ring-white z-10">
                  <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
               </div>
             </div>
             <div className="flex flex-col justify-center">
-              <h1 className="text-4xl font-extrabold tracking-tight text-slate-800 leading-none flex items-baseline gap-1.5">
-                Keya <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-amber-500">Fusion</span>
+              <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 leading-none flex items-baseline gap-1.5">
+                Keya <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Fusion</span>
               </h1>
               <div className="flex items-center gap-2 mt-1.5">
-                <div className="h-[1px] w-6 bg-blue-500/30"></div>
-                <p className="text-blue-600 text-[11px] font-bold tracking-[0.3em] uppercase leading-none">Technology</p>
+                <div className="h-[1px] w-6 bg-blue-500/40"></div>
+                <p className="text-blue-600 text-[10px] font-bold tracking-[0.3em] uppercase leading-none">Technology</p>
               </div>
             </div>
           </div>
 
           {/* Dynamic Page Title (Right) */}
-          <div className="flex flex-col items-end text-right">
-             <h2 className="text-4xl font-extrabold tracking-tight text-[#2d2820] drop-shadow-sm flex items-center gap-3">
+          <div className="flex flex-col items-end text-right mt-2">
+             <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 drop-shadow-sm flex items-center gap-3">
                {activePage === 'Control Hub' && "System Control Hub"}
                {activePage === 'Air Valve' && (
                  <>
-                  <div className="p-1.5 bg-orange-100 rounded-xl text-orange-600">
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                  <div className="p-1.5 bg-blue-50 rounded-lg border border-blue-100 text-blue-600 shadow-sm">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
                   </div>
                   Air Valve Testing
                  </>
                )}
                {activePage !== 'Control Hub' && activePage !== 'Air Valve' && activePage}
              </h2>
-             <p className="text-[#8a8174] text-base mt-2">
+             <p className="text-slate-500 text-sm font-medium mt-1">
                {activePage === 'Control Hub' && "Manage Python automation, grading scripts, and real-time operations."}
                {activePage === 'Air Valve' && "Manual testing interface for 15 belts and their respective 7 ports."}
              </p>
@@ -245,31 +339,29 @@ function App() {
             <div className="flex flex-1 gap-6 min-h-0">
               
               {/* GRAPH AREA (Left/Middle) */}
-              <div className="flex-1 bg-white/70 backdrop-blur-xl rounded-3xl border border-[#efece3] p-6 shadow-xl flex flex-col relative overflow-hidden group">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-400 to-blue-400 opacity-80"></div>
-                  
+              <div className="flex-1 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col relative overflow-hidden group">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold text-[#2d2820] flex items-center gap-2">
-                      <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                    <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
                       Live Grading Analytics
                     </h3>
-                    <div className="px-3 py-1 bg-[#f6f2e6] text-xs font-semibold rounded-full border border-[#efece3] text-[#8a8174]">Waiting for Data</div>
+                    <div className="px-3 py-1 bg-slate-50 text-xs font-semibold rounded-md border border-slate-200 text-slate-500">Waiting for Data</div>
                   </div>
 
                   {/* Live Animated Bar Chart */}
-                  <div className="flex-1 rounded-2xl flex flex-col items-center justify-center transition-colors">
+                  <div className="flex-1 rounded-xl flex flex-col items-center justify-center transition-colors">
                      {graphData.length > 0 ? (
                         <ResponsiveContainer width="100%" height="100%">
                           <BarChart data={graphData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                            <CartesianGrid strokeDasharray="3 3" stroke="#e8e4d9" vertical={false} />
-                            <XAxis dataKey="name" stroke="#a69f91" tick={{ fill: '#a69f91' }} tickLine={false} axisLine={false} />
-                            <YAxis stroke="#a69f91" tick={{ fill: '#a69f91' }} tickLine={false} axisLine={false} allowDecimals={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                            <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} />
+                            <YAxis stroke="#94a3b8" tick={{ fill: '#64748b' }} tickLine={false} axisLine={false} allowDecimals={false} />
                             <Tooltip 
-                              cursor={{fill: '#fcfaf5', opacity: 0.8}}
-                              contentStyle={{ backgroundColor: '#ffffff', borderColor: '#efece3', borderRadius: '12px', color: '#2d2820', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.05)' }}
-                              itemStyle={{ color: '#2d2820' }}
+                              cursor={{fill: '#f8fafc', opacity: 0.8}}
+                              contentStyle={{ backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderRadius: '8px', color: '#1e293b', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                              itemStyle={{ color: '#1e293b' }}
                             />
-                            <Bar dataKey="count" radius={[6, 6, 0, 0]} animationDuration={1000}>
+                            <Bar dataKey="count" radius={[4, 4, 0, 0]} animationDuration={1000}>
                               {graphData.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={entry.color} />
                               ))}
@@ -277,9 +369,9 @@ function App() {
                           </BarChart>
                         </ResponsiveContainer>
                      ) : (
-                        <div className="flex flex-col items-center justify-center text-[#a69f91]">
-                          <svg className="w-10 h-10 mb-2 animate-spin text-[#d4cdbd]" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                          Connecting to Data Stream...
+                        <div className="flex flex-col items-center justify-center text-slate-400">
+                          <svg className="w-8 h-8 mb-3 animate-spin text-slate-300" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                          <span className="font-medium text-sm">Connecting to Data Stream...</span>
                         </div>
                      )}
                   </div>
@@ -289,19 +381,19 @@ function App() {
               <div className="w-[340px] flex flex-col gap-6 h-full">
                 
                 {/* Control Panel */}
-                <div className="bg-white/70 backdrop-blur-xl p-5 rounded-3xl border border-[#efece3] shadow-xl flex flex-col flex-1">
-                  <h3 className="text-lg font-bold text-[#2d2820] mb-5 px-2 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1">
+                  <h3 className="text-lg font-bold text-slate-800 mb-5 px-2 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                     Action Commands
                   </h3>
 
                   <div className="flex flex-col gap-3">
                     <button 
                       onClick={() => handleAction('run-default', 'Default Mode')}
-                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Default Mode' ? 'bg-emerald-50 border-emerald-500 shadow-md ring-2 ring-emerald-500/20' : 'bg-white hover:bg-[#fcfaf5] border-[#efece3] hover:border-emerald-300 shadow-sm hover:shadow-md text-[#3b352b]'}`}
+                      className={`group relative w-full p-4 rounded-xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Default Mode' ? 'bg-indigo-50 border-indigo-500 shadow-sm ring-1 ring-indigo-500/20' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-indigo-300 shadow-sm text-slate-700'}`}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-emerald-50 group-hover:bg-emerald-100 flex items-center justify-center transition-colors">
-                         <svg className="w-5 h-5 text-emerald-600" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="w-10 h-10 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors">
+                         <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
                             {currentMode === 'Default Mode' ? (
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
                             ) : (
@@ -310,16 +402,16 @@ function App() {
                          </svg>
                       </div>
                       <div className="text-left">
-                        <span className="block text-base font-bold text-[#2d2820]">Default Mode</span>
-                        <span className="block text-xs text-[#8a8174] group-hover:text-emerald-700 transition-colors">Run standard sequence</span>
+                        <span className="block text-sm font-bold text-slate-800">Default Mode</span>
+                        <span className="block text-xs text-slate-500 group-hover:text-indigo-600 transition-colors">Run standard sequence</span>
                       </div>
                     </button>
                     
                     <button 
                       onClick={() => handleAction('run-grading', 'Grading Mode')}
-                      className={`group relative w-full p-4 rounded-2xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Grading Mode' ? 'bg-blue-50 border-blue-500 shadow-md ring-2 ring-blue-500/20' : 'bg-white hover:bg-[#fcfaf5] border-[#efece3] hover:border-blue-300 shadow-sm hover:shadow-md text-[#3b352b]'}`}
+                      className={`group relative w-full p-4 rounded-xl transition-all active:scale-[0.98] flex items-center gap-4 border overflow-hidden ${currentMode === 'Grading Mode' ? 'bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-500/20' : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-blue-300 shadow-sm text-slate-700'}`}
                     >
-                      <div className="w-10 h-10 rounded-xl bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
+                      <div className="w-10 h-10 rounded-lg bg-blue-50 group-hover:bg-blue-100 flex items-center justify-center transition-colors">
                          <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                             {currentMode === 'Grading Mode' ? (
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
@@ -329,8 +421,8 @@ function App() {
                          </svg>
                       </div>
                       <div className="text-left">
-                        <span className="block text-base font-bold text-[#2d2820]">Grading Mode</span>
-                        <span className="block text-xs text-[#8a8174] group-hover:text-blue-700 transition-colors">Run grading scripts</span>
+                        <span className="block text-sm font-bold text-slate-800">Grading Mode</span>
+                        <span className="block text-xs text-slate-500 group-hover:text-blue-600 transition-colors">Run grading scripts</span>
                       </div>
                     </button>
 
@@ -357,7 +449,7 @@ function App() {
                   <div className="mt-auto pt-4">
                     <button 
                       onClick={() => handleAction('stop-all', 'Stop All')}
-                      className="w-full p-4 bg-red-50/80 hover:bg-red-500 text-red-600 hover:text-white font-bold text-sm uppercase tracking-wider rounded-2xl transition-all active:scale-[0.98] border border-red-200 hover:border-red-500 hover:shadow-lg flex justify-center items-center gap-2"
+                      className="w-full p-4 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white font-bold text-sm uppercase tracking-wider rounded-xl transition-all active:scale-[0.98] border border-rose-200 hover:border-rose-500 shadow-sm hover:shadow flex justify-center items-center gap-2"
                     >
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
                       Emergency Stop All
@@ -367,12 +459,12 @@ function App() {
                 </div>
 
                 {/* Status Console Mini */}
-                <div className="bg-[#f6f2e6]/60 p-4 rounded-3xl border border-[#efece3] shadow-sm backdrop-blur-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                     <span className="font-semibold text-[#8a8174] text-xs uppercase tracking-wider">System Terminal</span>
+                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+                  <div className="flex items-center gap-2 mb-3">
+                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]"></div>
+                     <span className="font-semibold text-slate-500 text-xs uppercase tracking-wider">System Terminal</span>
                   </div>
-                  <div className="font-mono text-xs text-[#5c5549] bg-white p-3 rounded-xl border border-[#efece3] overflow-hidden text-ellipsis whitespace-nowrap shadow-inner">
+                  <div className="font-mono text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-200/60 overflow-hidden text-ellipsis whitespace-nowrap shadow-inner">
                     &gt; {status}
                   </div>
                 </div>
@@ -383,7 +475,7 @@ function App() {
         ) : activePage === 'Air Valve' ? (
           <div className="flex flex-col h-full w-full max-w-[1600px] mx-auto animate-in fade-in duration-500 overflow-hidden">
 
-            <div className="flex-1 bg-white/70 backdrop-blur-xl border border-[#efece3] rounded-3xl p-6 shadow-xl flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm flex flex-col overflow-hidden">
               
               {/* Pagination Tabs */}
               <div className="flex gap-3 mb-6 justify-center shrink-0">
@@ -391,10 +483,10 @@ function App() {
                   <button 
                     key={pageNum}
                     onClick={() => setAirValvePage(pageNum)}
-                    className={`px-8 py-3 rounded-2xl font-bold text-lg transition-all border ${
+                    className={`px-8 py-3 rounded-xl font-bold text-lg transition-all border ${
                       airValvePage === pageNum 
-                        ? 'bg-orange-500 text-white border-orange-600 shadow-md shadow-orange-500/30' 
-                        : 'bg-white text-[#8a8174] border-[#efece3] hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50'
+                        ? 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-500/20' 
+                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
                     }`}
                   >
                     Page {pageNum} <span className="text-sm font-medium opacity-80 ml-1">(Belts {(pageNum-1)*5 + 1}-{pageNum*5})</span>
@@ -405,8 +497,8 @@ function App() {
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 flex flex-col gap-3 h-full">
                   {Array.from({ length: 5 }, (_, i) => (airValvePage - 1) * 5 + i + 1).map(beltId => (
-                    <div key={beltId} className="flex-1 flex items-center gap-4 p-3 bg-[#fbf9f4] border border-[#efece3] rounded-3xl hover:border-orange-300 hover:shadow-md transition-all group min-h-0">
-                      <div className="w-32 xl:w-40 h-full font-black text-[#2d2820] text-2xl xl:text-3xl bg-white rounded-2xl border border-[#efece3] flex items-center justify-center shadow-sm group-hover:border-orange-400 group-hover:text-orange-700 transition-colors shrink-0">
+                    <div key={beltId} className="flex-1 flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group min-h-0">
+                      <div className="w-32 xl:w-40 h-full font-black text-slate-800 text-2xl xl:text-3xl bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-400 group-hover:text-blue-700 transition-colors shrink-0">
                         Belt {beltId}
                       </div>
                       <div className="flex gap-3 flex-1 h-full">
@@ -415,11 +507,11 @@ function App() {
                             key={portId}
                             onClick={async (e) => {
                               const btn = e.currentTarget;
-                              btn.classList.add('bg-orange-400', 'text-white', 'border-orange-500', 'shadow-inner');
-                              btn.classList.remove('bg-white', 'text-[#5c5549]', 'border-[#efece3]', 'hover:border-orange-400', 'hover:text-orange-600');
+                              btn.classList.add('bg-blue-500', 'text-white', 'border-blue-600', 'shadow-inner');
+                              btn.classList.remove('bg-white', 'text-slate-600', 'border-slate-200', 'hover:border-blue-400', 'hover:text-blue-600');
                               setTimeout(() => {
-                                btn.classList.remove('bg-orange-400', 'text-white', 'border-orange-500', 'shadow-inner');
-                                btn.classList.add('bg-white', 'text-[#5c5549]', 'border-[#efece3]', 'hover:border-orange-400', 'hover:text-orange-600');
+                                btn.classList.remove('bg-blue-500', 'text-white', 'border-blue-600', 'shadow-inner');
+                                btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200', 'hover:border-blue-400', 'hover:text-blue-600');
                               }, 300);
                               
                               try {
@@ -428,8 +520,9 @@ function App() {
                                 console.error(err);
                               }
                             }}
-                            className="flex-1 h-full rounded-2xl font-black text-2xl xl:text-3xl text-[#5c5549] bg-white border-[3px] border-[#efece3] shadow-sm hover:border-orange-400 hover:text-orange-600 transition-all active:scale-[0.95] flex items-center justify-center focus:outline-none select-none"
+                            className="flex-1 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:text-blue-600 text-slate-600 font-bold text-xl xl:text-2xl transition-all active:scale-[0.97] shadow-sm flex flex-col justify-center items-center"
                           >
+                            <span className="text-[10px] xl:text-xs font-semibold uppercase tracking-wider opacity-60 mb-0.5">Port</span>
                             {portId}
                           </button>
                         ))}
@@ -445,9 +538,9 @@ function App() {
             <div className="flex-1 flex gap-8 overflow-hidden">
               
               {/* Left Side: Input Form */}
-              <div className="flex-1 flex flex-col bg-white/70 backdrop-blur-xl border border-[#efece3] p-6 rounded-3xl shadow-xl">
+              <div className="flex-1 flex flex-col bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm">
                 
-                <div className="flex gap-4 px-4 mb-2 text-[#8a8174] font-bold text-sm tracking-wider uppercase shrink-0">
+                <div className="flex gap-4 px-4 mb-2 text-slate-500 font-bold text-sm tracking-wider uppercase shrink-0">
                   <div className="w-24 text-center">Grade</div>
                   <div className="flex-1 text-center">Min Value</div>
                   <div className="flex-1 text-center">Max Value</div>
@@ -456,7 +549,7 @@ function App() {
                 <div className="flex flex-col gap-5 flex-1 px-4 mb-4">
                   {['400', '320', '240', '210', '180'].map(level => (
                     <div key={level} className="flex gap-6 items-center flex-1 min-h-0">
-                      <div className="w-24 h-full text-center font-black text-2xl text-[#3b352b] bg-[#f6f2e6] border border-[#efece3] rounded-xl flex items-center justify-center shrink-0">{level}</div>
+                      <div className="w-24 h-full text-center font-black text-2xl text-slate-800 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center shrink-0">{level}</div>
                       <div className="flex-1 h-full">
                         <input 
                           type="text"
@@ -464,7 +557,7 @@ function App() {
                           value={customValues[level].min}
                           onClick={() => setActiveInput({level, field: 'min'})}
                           placeholder="Min"
-                          className="w-full h-full bg-white border-[2px] border-[#efece3] rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer"
+                          className="w-full h-full bg-white border-2 border-slate-200 rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
                         />
                       </div>
                       <div className="flex-1 h-full">
@@ -474,7 +567,7 @@ function App() {
                           value={customValues[level].max}
                           onClick={() => setActiveInput({level, field: 'max'})}
                           placeholder="Max"
-                          className="w-full h-full bg-white border-[2px] border-[#efece3] rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer"
+                          className="w-full h-full bg-white border-2 border-slate-200 rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
                         />
                       </div>
                     </div>
@@ -486,25 +579,25 @@ function App() {
               <div className="w-[280px] flex flex-col gap-6 shrink-0 h-full">
                 
                 {/* Display Screen */}
-                <div className="flex-1 flex flex-col bg-[#2d2820] text-[#fdfbf7] p-5 rounded-3xl shadow-xl relative overflow-hidden min-h-0">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-blue-500"></div>
-                  <h3 className="text-sm font-bold text-orange-400 mb-5 uppercase tracking-wider flex items-center justify-center gap-1.5 text-center shrink-0">
+                <div className="flex-1 flex flex-col bg-slate-800 text-slate-50 p-5 rounded-2xl shadow-lg relative overflow-hidden min-h-0">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
+                  <h3 className="text-sm font-bold text-blue-400 mb-5 uppercase tracking-wider flex items-center justify-center gap-1.5 text-center shrink-0">
                     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Saved Data
                   </h3>
 
                   <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-1">
                     {['400', '320', '240', '210', '180'].map(level => (
-                      <div key={`saved-${level}`} className="flex justify-between items-center border-b border-[#5c5549] pb-2 last:border-0">
+                      <div key={`saved-${level}`} className="flex justify-between items-center border-b border-slate-700 pb-2 last:border-0">
                         <span className="font-black text-xl text-white">{level}</span>
                         <div className="flex gap-3">
                           <div className="flex flex-col items-end">
-                             <span className="text-[9px] text-[#a69f91] uppercase tracking-wider mb-0.5">Min</span>
+                             <span className="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Min</span>
                              <span className="font-mono font-bold text-blue-400 text-sm">{savedCustomValues[level].min || '--'}</span>
                           </div>
                           <div className="flex flex-col items-end">
-                             <span className="text-[9px] text-[#a69f91] uppercase tracking-wider mb-0.5">Max</span>
-                             <span className="font-mono font-bold text-orange-400 text-sm">{savedCustomValues[level].max || '--'}</span>
+                             <span className="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Max</span>
+                             <span className="font-mono font-bold text-indigo-400 text-sm">{savedCustomValues[level].max || '--'}</span>
                           </div>
                         </div>
                       </div>
@@ -515,7 +608,7 @@ function App() {
                 {/* OK Button */}
                 <button 
                   onClick={saveCustomizations}
-                  className="w-full h-32 bg-orange-500 hover:bg-orange-600 text-white rounded-3xl font-black text-4xl shadow-xl shadow-orange-500/30 transition-all active:scale-[0.98] flex justify-center items-center gap-3 border-2 border-orange-600 shrink-0"
+                  className="w-full h-32 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-4xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] flex justify-center items-center gap-3 border border-blue-500 shrink-0"
                 >
                   <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                   OK
@@ -528,45 +621,251 @@ function App() {
         ) : activePage === 'Settings' ? (
           <div className="flex h-full w-full gap-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
             {/* Left side content placeholder */}
-            <div className="flex-1 bg-white/70 backdrop-blur-xl border border-[#efece3] rounded-3xl p-8 shadow-xl flex flex-col items-center justify-center">
-               <div className="w-24 h-24 bg-[#f6f2e6] rounded-full flex items-center justify-center mb-6 border border-[#efece3]">
-                  <svg className="w-12 h-12 text-[#b8b0a1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-               </div>
-               <h2 className="text-3xl font-bold text-[#2d2820] mb-2">System Settings</h2>
-               <p className="text-[#8a8174]">Select a configuration module from the right panel.</p>
-            </div>
+            {activeSettingsModule === 'Camera' ? (
+              <div className="flex-1 flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
+                <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center shadow-sm">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800">Camera Settings</h2>
+                  </div>
+                  <button onClick={() => setActiveSettingsModule(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                
+                <div className="flex h-full w-full p-6 gap-6 overflow-y-auto bg-slate-50/30">
+                  {/* Reference Section (Left) */}
+                  <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 mb-6">Reference</h3>
+                    
+                    <div className="flex flex-col gap-4 flex-1">
+                      {[0, 1, 2].map(idx => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                            <div className="bg-slate-100/80 px-4 py-3 text-slate-500 font-bold border-r border-slate-200">
+                              CAM
+                            </div>
+                            <input 
+                              type="text" 
+                              value={cameraRefs[idx]}
+                              onChange={(e) => {
+                                const newRefs = [...cameraRefs];
+                                newRefs[idx] = e.target.value;
+                                setCameraRefs(newRefs);
+                              }}
+                              className="w-full p-3 text-base font-bold outline-none text-slate-800 bg-transparent"
+                              placeholder={`e.g. ${idx * 2 + 1}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <button 
+                        onClick={saveCameraRefs}
+                        className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-base font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                      >
+                        Save Configuration
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Check-in Section (Right) */}
+                  <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 mb-6">Check INs</h3>
+
+                    <div className="flex flex-col gap-4 flex-1">
+                      {isCheckingCameras ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4">
+                          <svg className="w-8 h-8 animate-spin text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                          <p className="font-semibold text-sm">Scanning cameras...</p>
+                        </div>
+                      ) : connectedCameras.length > 0 ? (
+                        connectedCameras.map((camName, idx) => (
+                          <div key={idx} className="flex flex-col gap-1 relative">
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden transition-all">
+                               <input 
+                                type="text" 
+                                readOnly
+                                value={camName}
+                                className="w-full p-3 text-base font-bold outline-none text-slate-800 bg-transparent cursor-default"
+                              />
+                            </div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                               <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                          <svg className="w-10 h-10 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                          <p className="font-semibold text-sm text-slate-500">No Cameras Found</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <button 
+                        onClick={checkCameras}
+                        disabled={isCheckingCameras}
+                        className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-base font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {isCheckingCameras ? (
+                          <><svg className="w-4 h-4 animate-spin text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Refreshing...</>
+                        ) : (
+                          'Refresh Status'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : activeSettingsModule === 'Comports' ? (
+              <div className="flex-1 flex flex-col h-full bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200/80">
+                <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 bg-orange-50 text-orange-600 rounded-lg flex items-center justify-center shadow-sm border border-orange-100">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    </div>
+                    <h2 className="text-xl font-bold text-slate-800">Comports Settings</h2>
+                  </div>
+                  <button onClick={() => setActiveSettingsModule(null)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 rounded-lg transition-colors">
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                
+                <div className="flex h-full w-full p-6 gap-6 overflow-y-auto bg-slate-50/30">
+                  {/* Reference Section (Left) */}
+                  <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 mb-6">Reference</h3>
+                    
+                    <div className="flex flex-col gap-4 flex-1">
+                      {[0, 1, 2].map(idx => (
+                        <div key={idx} className="flex flex-col gap-1">
+                          <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+                            <div className="bg-slate-100/80 px-4 py-3 text-slate-500 font-bold border-r border-slate-200">
+                              COM
+                            </div>
+                            <input 
+                              type="text" 
+                              value={comportRefs[idx]}
+                              onChange={(e) => {
+                                const newRefs = [...comportRefs];
+                                newRefs[idx] = e.target.value;
+                                setComportRefs(newRefs);
+                              }}
+                              className="w-full p-3 text-base font-bold outline-none text-slate-800 bg-transparent"
+                              placeholder={`e.g. ${idx + 1}`}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <button 
+                        onClick={saveComportRefs}
+                        className="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white text-base font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center"
+                      >
+                        OK
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Check-in Section (Right) */}
+                  <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
+                    <h3 className="text-lg font-bold text-slate-800 mb-6">Check INs</h3>
+
+                    <div className="flex flex-col gap-4 flex-1">
+                      {isCheckingComports ? (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 gap-4">
+                          <svg className="w-8 h-8 animate-spin text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                          <p className="font-semibold text-sm">Scanning comports...</p>
+                        </div>
+                      ) : connectedComports.length > 0 ? (
+                        connectedComports.map((comName, idx) => (
+                          <div key={idx} className="flex flex-col gap-1 relative">
+                            <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl overflow-hidden transition-all">
+                               <input 
+                                type="text" 
+                                readOnly
+                                value={comName}
+                                className="w-full p-3 text-base font-bold outline-none text-slate-800 bg-transparent cursor-default"
+                              />
+                            </div>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                               <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 border border-dashed border-slate-200 rounded-xl">
+                          <svg className="w-10 h-10 mb-2 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                          <p className="font-semibold text-sm text-slate-500">No Comports Found</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="mt-6">
+                      <button 
+                        onClick={checkComports}
+                        disabled={isCheckingComports}
+                        className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-base font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                      >
+                        {isCheckingComports ? (
+                          <><svg className="w-4 h-4 animate-spin text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Refreshing...</>
+                        ) : (
+                          'Refresh'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 bg-white border border-slate-200/80 rounded-2xl p-8 shadow-sm flex flex-col items-center justify-center">
+                 <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6 border border-slate-200">
+                    <svg className="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                 </div>
+                 <h2 className="text-2xl font-bold text-slate-800 mb-2">System Settings</h2>
+                 <p className="text-slate-500 text-sm">Select a configuration module from the right panel.</p>
+              </div>
+            )}
 
             {/* Right side buttons */}
             <div className="w-[340px] flex flex-col gap-6 h-full">
-              <div className="bg-white/70 backdrop-blur-xl p-5 rounded-3xl border border-[#efece3] shadow-xl flex flex-col flex-1">
-                <h3 className="text-lg font-bold text-[#2d2820] mb-6 px-2 flex items-center gap-2">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm flex flex-col flex-1">
+                <h3 className="text-lg font-bold text-slate-800 mb-6 px-2 flex items-center gap-2">
                   <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
                   Configurations
                 </h3>
                 
                 <div className="flex flex-col gap-4">
                   {/* Time Setting Button */}
-                  <button onClick={() => setActivePage('Time Setting')} className="group relative w-full p-5 bg-white hover:bg-indigo-50 text-[#3b352b] rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-4 border border-[#efece3] hover:border-indigo-300">
-                    <div className="w-12 h-12 rounded-xl bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors shrink-0">
-                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                  <button onClick={() => setActivePage('Time Setting')} className="group relative w-full p-4 bg-white hover:bg-slate-50 text-slate-700 rounded-xl shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-4 border border-slate-200 hover:border-indigo-300">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-50 group-hover:bg-indigo-100 flex items-center justify-center transition-colors shrink-0">
+                      <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
-                    <span className="text-lg font-bold text-[#2d2820] text-left">Time Setting</span>
+                    <span className="text-base font-bold text-slate-800 text-left">Time Setting</span>
                   </button>
 
                   {/* Camera Button */}
-                  <button className="group relative w-full p-5 bg-white hover:bg-sky-50 text-[#3b352b] rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-4 border border-[#efece3] hover:border-sky-300">
-                    <div className="w-12 h-12 rounded-xl bg-sky-50 group-hover:bg-sky-100 flex items-center justify-center transition-colors shrink-0">
-                      <svg className="w-6 h-6 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                  <button onClick={() => setActiveSettingsModule('Camera')} className={`group relative w-full p-4 bg-white hover:bg-slate-50 text-slate-700 rounded-xl shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-4 border ${activeSettingsModule === 'Camera' ? 'border-blue-400 bg-blue-50/50' : 'border-slate-200 hover:border-blue-300'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors shrink-0 ${activeSettingsModule === 'Camera' ? 'bg-blue-100' : 'bg-blue-50 group-hover:bg-blue-100'}`}>
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                     </div>
-                    <span className="text-lg font-bold text-[#2d2820] text-left">Camera</span>
+                    <span className="text-base font-bold text-slate-800 text-left">Camera</span>
                   </button>
 
                   {/* Comports Button */}
-                  <button className="group relative w-full p-5 bg-white hover:bg-amber-50 text-[#3b352b] rounded-2xl shadow-sm hover:shadow-md transition-all active:scale-[0.98] flex items-center gap-4 border border-[#efece3] hover:border-amber-300">
-                    <div className="w-12 h-12 rounded-xl bg-amber-50 group-hover:bg-amber-100 flex items-center justify-center transition-colors shrink-0">
-                      <svg className="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                  <button onClick={() => setActiveSettingsModule('Comports')} className={`group relative w-full p-4 bg-white hover:bg-slate-50 text-slate-700 rounded-xl shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-4 border ${activeSettingsModule === 'Comports' ? 'border-orange-400 bg-orange-50/50' : 'border-slate-200 hover:border-orange-300'}`}>
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center transition-colors shrink-0 ${activeSettingsModule === 'Comports' ? 'bg-orange-100' : 'bg-orange-50 group-hover:bg-orange-100'}`}>
+                      <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     </div>
-                    <span className="text-lg font-bold text-[#2d2820] text-left">Comports</span>
+                    <span className="text-base font-bold text-slate-800 text-left">Comports</span>
                   </button>
                 </div>
               </div>
@@ -576,37 +875,16 @@ function App() {
           <div className="flex h-full w-full gap-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
 
             {/* Main Area (Matrix of 15 belts x 7 boxes) */}
-            <div className="flex-1 flex flex-col bg-white/70 backdrop-blur-xl border border-[#efece3] rounded-3xl p-6 shadow-xl min-w-0">
-              <div className="flex justify-between items-center mb-4 shrink-0">
-                <h2 className="text-3xl font-extrabold text-[#2d2820]">
-                  Time Setting <span className="text-indigo-500">Matrix</span>
-                </h2>
-                <div className="flex gap-4">
-                  <button 
-                    onClick={applyToAllBelts}
-                    className="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-lg shadow-amber-500/30 transition-all active:scale-95 flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
-                    Apply Belt 1 to All
-                  </button>
-                  <button 
-                    onClick={saveTimeSettings}
-                    className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                    Save All Settings
-                  </button>
-                </div>
-              </div>
+            <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm min-w-0">
 
               {/* Scrollable Matrix Table */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar border border-[#efece3] rounded-2xl bg-[#fbf9f4]">
+              <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/50">
                 <table className="w-full text-center border-collapse">
-                  <thead className="sticky top-0 bg-[#f6f2e6] shadow-sm z-10">
+                  <thead className="sticky top-0 bg-slate-100/90 backdrop-blur-sm shadow-sm z-10">
                     <tr>
-                      <th className="p-4 text-slate-500 font-bold border-b border-[#efece3]">BELT</th>
+                      <th className="p-4 text-slate-500 font-bold border-b border-slate-200">BELT</th>
                       {[...Array(7)].map((_, i) => (
-                        <th key={i} className="p-4 text-slate-500 font-bold border-b border-[#efece3]">BOX {i + 1}</th>
+                        <th key={i} className="p-4 text-slate-500 font-bold border-b border-slate-200">BOX {i + 1}</th>
                       ))}
                     </tr>
                   </thead>
@@ -614,8 +892,8 @@ function App() {
                     {[...Array(15)].map((_, r) => {
                       const beltId = (r + 1).toString();
                       return (
-                        <tr key={beltId} className="hover:bg-white transition-colors border-b border-[#efece3]/50">
-                          <td className="p-3 font-black text-slate-700 bg-white/50">{beltId}</td>
+                        <tr key={beltId} className="hover:bg-white transition-colors border-b border-slate-200">
+                          <td className="p-3 font-black text-slate-800 bg-white">{beltId}</td>
                           {[...Array(7)].map((_, c) => {
                             const isSelected = activeTimeInput && activeTimeInput.belt === beltId && activeTimeInput.idx === c;
                             const val = timeSettingsValues[beltId]?.[c];
@@ -623,8 +901,8 @@ function App() {
                               <td key={c} className="p-2">
                                 <div 
                                   onClick={() => setActiveTimeInput({ belt: beltId, idx: c })}
-                                  className={`h-12 flex items-center justify-center text-xl font-bold rounded-xl cursor-pointer transition-all border-2
-                                    ${isSelected ? 'bg-indigo-50 border-indigo-500 text-indigo-700 shadow-inner scale-[1.03]' : 'bg-white border-[#e5e0d8] text-[#2d2820] hover:border-indigo-300'}
+                                  className={`h-12 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all border
+                                    ${isSelected ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-inner scale-[1.03]' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'}
                                   `}
                                 >
                                   {val ? val : <span className="text-slate-300">0000</span>}
@@ -642,7 +920,15 @@ function App() {
 
             {/* Number Pad for Time Setting */}
               <div className="w-[300px] shrink-0 flex flex-col gap-3">
-                <div className="bg-white/70 backdrop-blur-xl border border-[#efece3] rounded-3xl p-5 shadow-xl">
+                <button 
+                  onClick={() => setActivePage('Settings')}
+                  className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-2 border-slate-200 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 mb-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                  Back to Settings
+                </button>
+
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm">
                   <h3 className="text-sm font-bold text-slate-400 tracking-widest text-center mb-4">NUMPAD</h3>
                   <div className="grid grid-cols-3 gap-3">
                     {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'DEL'].map((num) => (
@@ -650,10 +936,10 @@ function App() {
                         key={num}
                         onClick={() => handleTimeNumberClick(num)}
                         disabled={num === '.'}
-                        className={`h-16 rounded-2xl font-black text-2xl transition-all active:scale-95 flex justify-center items-center shadow-sm
+                        className={`h-16 rounded-xl font-black text-2xl transition-all active:scale-95 flex justify-center items-center shadow-sm
                           ${num === 'DEL' ? 'bg-red-50 text-red-600 hover:bg-red-100' : 
-                            num === '.' ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 
-                            'bg-white text-[#2d2820] border-2 border-[#efece3] hover:border-indigo-300 hover:text-indigo-600'}
+                            num === '.' ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 
+                            'bg-slate-50 text-slate-800 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600'}
                         `}
                       >
                         {num === 'DEL' ? (
@@ -663,30 +949,48 @@ function App() {
                     ))}
                   </div>
                 </div>
+
+                {/* Buttons placed below the Numpad */}
+                <div className="flex flex-col gap-3">
+                  <button 
+                    onClick={applyToAllBelts}
+                    className="w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold shadow-lg shadow-amber-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Apply Belt 1 to All
+                  </button>
+                  <button 
+                    onClick={saveTimeSettings}
+                    className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                    Save All Settings
+                  </button>
+                </div>
               </div>
           </div>
         ) : (
           /* Render Other Pages */
-          <div className="flex-1 flex flex-col items-center justify-center border border-dashed border-[#d4cdbd] rounded-3xl bg-white/40 backdrop-blur-sm animate-in fade-in duration-500">
-             <div className="w-20 h-20 bg-[#f6f2e6] rounded-full flex items-center justify-center mb-6 border border-[#efece3]">
-                <svg className="w-10 h-10 text-[#b8b0a1]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+          <div className="flex-1 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-2xl bg-slate-50/50 backdrop-blur-sm animate-in fade-in duration-500">
+             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mb-6 border border-slate-200 shadow-sm">
+                <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
              </div>
-             <h2 className="text-3xl font-bold text-[#2d2820] mb-2">{activePage}</h2>
-             <p className="text-[#8a8174]">This module is currently under construction.</p>
+             <h2 className="text-3xl font-bold text-slate-800 mb-2">{activePage}</h2>
+             <p className="text-slate-500 font-medium">This module is currently under construction.</p>
           </div>
         )}
 
       </div>
       
       {/* RIGHT SIDE MAIN NAVBAR */}
-      <div className="w-[300px] bg-[#fbf9f4]/95 backdrop-blur-2xl border-l border-[#efece3] p-6 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.03)] z-20">
+      <div className="w-[300px] bg-white border-l border-slate-200/80 p-6 flex flex-col shadow-[-10px_0_40px_rgba(0,0,0,0.03)] z-20">
 
         {/* Live Date/Time Display */}
-        <div className="flex flex-col items-center w-full border-b border-[#efece3] pb-6 mb-6 mt-2">
-           <span className="text-3xl font-bold text-[#3b352b] tabular-nums tracking-tight">
+        <div className="flex flex-col items-center w-full border-b border-slate-200 pb-6 mb-6 mt-2">
+           <span className="text-3xl font-bold text-slate-800 tabular-nums tracking-tight">
              {currentDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
            </span>
-           <span className="text-xs font-bold text-orange-500/80 uppercase tracking-wider mt-1.5">
+           <span className="text-xs font-bold text-blue-500/80 uppercase tracking-wider mt-1.5">
              {currentDateTime.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'short', day: 'numeric' })}
            </span>
         </div>
@@ -700,13 +1004,13 @@ function App() {
                 <button 
                   key={page.name}
                   onClick={() => handleNavClick(page)}
-                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${
+                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 ${
                     isActive 
-                      ? 'bg-white text-orange-600 shadow-md border border-orange-100 translate-x-1' 
-                      : 'bg-transparent text-[#8a8174] hover:bg-white hover:text-[#3b352b] border border-transparent hover:shadow-sm'
+                      ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-100 translate-x-1' 
+                      : 'bg-transparent text-slate-500 hover:bg-slate-50 hover:text-slate-800 border border-transparent hover:shadow-sm'
                   }`}
                 >
-                  <div className={`p-2.5 rounded-xl transition-colors ${isActive ? 'bg-orange-100 text-orange-600' : 'bg-[#f6f2e6] text-[#a69f91] group-hover:bg-[#efece3] group-hover:text-[#5c5549]'}`}>
+                  <div className={`p-2.5 rounded-lg transition-colors ${isActive ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={page.icon}></path>
                     </svg>
@@ -717,25 +1021,25 @@ function App() {
             })}
           </div>
           
-          <div className="h-px w-full bg-[#efece3] my-4"></div>
+          <div className="h-px w-full bg-slate-200 my-4"></div>
 
           {/* Action Buttons */}
           <div className="flex flex-col gap-3 mt-auto">
             {navItems.filter(item => item.type === 'action').map(action => {
               const isRed = action.color === 'red';
-              const textClass = isRed ? 'text-red-600' : 'text-orange-500';
-              const bgClass = isRed ? 'hover:bg-red-50' : 'hover:bg-orange-50';
-              const borderHoverClass = isRed ? 'hover:border-red-100' : 'hover:border-orange-100';
-              const iconBgClass = isRed ? 'bg-red-50' : 'bg-orange-50';
-              const iconGroupHoverClass = isRed ? 'group-hover:bg-red-100' : 'group-hover:bg-orange-100';
+              const textClass = isRed ? 'text-red-600' : 'text-blue-600';
+              const bgClass = isRed ? 'hover:bg-red-50' : 'hover:bg-blue-50';
+              const borderHoverClass = isRed ? 'hover:border-red-100' : 'hover:border-blue-100';
+              const iconBgClass = isRed ? 'bg-red-50' : 'bg-blue-50';
+              const iconGroupHoverClass = isRed ? 'group-hover:bg-red-100' : 'group-hover:bg-blue-100';
               
               return (
                 <button 
                   key={action.name}
                   onClick={() => handleNavClick(action)}
-                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 bg-transparent ${textClass} ${bgClass} border border-transparent ${borderHoverClass} hover:shadow-sm`}
+                  className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-xl font-bold transition-all duration-300 bg-transparent ${textClass} ${bgClass} border border-transparent ${borderHoverClass} hover:shadow-sm`}
                 >
-                  <div className={`p-2.5 rounded-xl transition-colors ${iconBgClass} ${textClass} ${iconGroupHoverClass}`}>
+                  <div className={`p-2.5 rounded-lg transition-colors ${iconBgClass} ${textClass} ${iconGroupHoverClass}`}>
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={action.icon}></path>
                     </svg>
@@ -750,15 +1054,15 @@ function App() {
 
       {/* Login Password Modal */}
       {showLogin && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2d2820]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#fdfbf7] border border-[#efece3] p-8 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-xl max-w-sm w-full animate-in zoom-in-95 duration-200">
             <div className="flex justify-center mb-4">
-              <div className="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center shadow-inner">
+              <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center shadow-sm border border-blue-100">
                  <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
               </div>
             </div>
-            <h3 className="text-2xl font-black text-center text-[#2d2820] mb-2">Restricted Access</h3>
-            <p className="text-center text-[#8a8174] text-sm mb-6">Enter administrator password to access {pendingPage}.</p>
+            <h3 className="text-2xl font-black text-center text-slate-800 mb-2">Restricted Access</h3>
+            <p className="text-center text-slate-500 text-sm mb-6">Enter administrator password to access {pendingPage}.</p>
             
             <form onSubmit={(e) => {
               e.preventDefault();
@@ -773,7 +1077,7 @@ function App() {
                 type="password" 
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setLoginError(false); }}
-                className={`w-full px-4 py-3 rounded-xl border ${loginError ? 'border-red-500 bg-red-50 text-red-700' : 'border-[#efece3] bg-white text-[#2d2820]'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all mb-4 text-center font-black tracking-[0.3em] text-2xl shadow-sm`}
+                className={`w-full px-4 py-3 rounded-xl border ${loginError ? 'border-red-500 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-800'} focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all mb-4 text-center font-black tracking-[0.3em] text-2xl shadow-sm`}
                 placeholder="••••"
                 readOnly
               />
@@ -786,7 +1090,7 @@ function App() {
                     key={num}
                     type="button"
                     onClick={() => { setPassword(prev => prev + num); setLoginError(false); }}
-                    className="py-3 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#3b352b] font-bold text-xl transition-all border border-[#efece3]"
+                    className="py-3 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-700 font-bold text-xl transition-all border border-slate-200"
                   >
                     {num}
                   </button>
@@ -801,14 +1105,14 @@ function App() {
                 <button
                   type="button"
                   onClick={() => { setPassword(prev => prev + '0'); setLoginError(false); }}
-                  className="py-3 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#3b352b] font-bold text-xl transition-all border border-[#efece3]"
+                  className="py-3 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-700 font-bold text-xl transition-all border border-slate-200"
                 >
                   0
                 </button>
                 <button
                   type="button"
                   onClick={() => { setPassword(prev => prev.slice(0, -1)); setLoginError(false); }}
-                  className="py-3 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#5c5549] font-bold transition-all border border-[#efece3] flex items-center justify-center"
+                  className="py-3 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-500 font-bold transition-all border border-slate-200 flex items-center justify-center"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"></path></svg>
                 </button>
@@ -818,7 +1122,7 @@ function App() {
                 <button 
                   type="button" 
                   onClick={() => setShowLogin(false)}
-                  className="flex-1 px-4 py-3 bg-white text-[#8a8174] border border-[#efece3] hover:bg-[#fbf9f4] hover:text-[#5c5549] rounded-xl font-bold transition-colors shadow-sm"
+                  className="flex-1 px-4 py-3 bg-white text-slate-500 border border-slate-200 hover:bg-slate-50 hover:text-slate-700 rounded-xl font-bold transition-colors shadow-sm"
                 >
                   Cancel
                 </button>
@@ -836,10 +1140,10 @@ function App() {
 
       {/* Custom Confirmation Modal */}
       {confirmDialog.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#2d2820]/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#fdfbf7] border border-[#efece3] p-6 rounded-3xl shadow-2xl max-w-md w-full animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white border border-slate-200 p-6 rounded-2xl shadow-xl max-w-md w-full animate-in zoom-in-95 duration-200">
             <div className="flex items-center gap-4 mb-4">
-              <div className={`p-3 rounded-2xl ${confirmDialog.type === 'Shutdown' ? 'bg-red-100 text-red-600' : 'bg-orange-100 text-orange-600'}`}>
+              <div className={`p-3 rounded-xl ${confirmDialog.type === 'Shutdown' ? 'bg-red-50 text-red-600 border border-red-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                 {confirmDialog.type === 'Shutdown' ? (
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 ) : (
@@ -847,20 +1151,20 @@ function App() {
                 )}
               </div>
               <div>
-                <h3 className="text-xl font-bold text-[#2d2820]">{confirmDialog.title}</h3>
+                <h3 className="text-xl font-bold text-slate-800">{confirmDialog.title}</h3>
               </div>
             </div>
-            <p className="text-[#5c5549] text-sm mb-6 ml-1">{confirmDialog.message}</p>
+            <p className="text-slate-500 text-sm mb-6 ml-1">{confirmDialog.message}</p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={closeConfirm}
-                className="px-5 py-2.5 rounded-xl font-medium text-[#5c5549] hover:bg-[#efece3] transition-colors"
+                className="px-5 py-2.5 rounded-xl font-medium text-slate-500 hover:bg-slate-50 transition-colors"
               >
                 Cancel
               </button>
               <button 
                 onClick={handleConfirmAction}
-                className={`px-5 py-2.5 rounded-xl font-bold text-white shadow-md transition-all active:scale-95 ${confirmDialog.type === 'Shutdown' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-orange-500 hover:bg-orange-600 shadow-orange-500/30'}`}
+                className={`px-5 py-2.5 rounded-xl font-bold text-white shadow-md transition-all active:scale-95 ${confirmDialog.type === 'Shutdown' ? 'bg-red-500 hover:bg-red-600 shadow-red-500/30' : 'bg-blue-600 hover:bg-blue-700 shadow-blue-500/30'}`}
               >
                 Yes, {confirmDialog.type}
               </button>
@@ -871,14 +1175,14 @@ function App() {
 
       {/* On-Screen Numpad Modal for Customizations */}
       {activeInput && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#2d2820]/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setActiveInput(null)}>
-          <div className="bg-[#fdfbf7] border border-[#efece3] p-8 rounded-3xl shadow-2xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-            <h3 className="text-2xl font-black text-center text-[#2d2820] mb-2 uppercase tracking-wide">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setActiveInput(null)}>
+          <div className="bg-white border border-slate-200 p-8 rounded-2xl shadow-xl max-w-sm w-full animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <h3 className="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-wide">
               {activeInput.level} Grade {activeInput.field}
             </h3>
             
-            <div className="w-full bg-white border-[3px] border-blue-400 rounded-xl px-4 py-4 mb-6 text-center font-black tracking-[0.1em] text-4xl shadow-inner text-[#3b352b] h-20 flex items-center justify-center">
-              {customValues[activeInput.level][activeInput.field] || <span className="text-[#a69f91] opacity-50 font-medium text-2xl tracking-normal">Enter {activeInput.field}</span>}
+            <div className="w-full bg-slate-50 border-2 border-blue-400 rounded-xl px-4 py-4 mb-6 text-center font-black tracking-[0.1em] text-4xl shadow-inner text-slate-800 h-20 flex items-center justify-center">
+              {customValues[activeInput.level][activeInput.field] || <span className="text-slate-400 opacity-50 font-medium text-2xl tracking-normal">Enter {activeInput.field}</span>}
             </div>
 
             <div className="grid grid-cols-3 gap-3 mb-5">
@@ -887,7 +1191,7 @@ function App() {
                   key={num}
                   type="button"
                   onClick={() => setCustomValues(prev => ({...prev, [activeInput.level]: {...prev[activeInput.level], [activeInput.field]: prev[activeInput.level][activeInput.field] + num.toString()}}))}
-                  className="py-4 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#3b352b] font-bold text-2xl transition-all border border-[#efece3]"
+                  className="py-4 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-800 font-bold text-2xl transition-all border border-slate-200"
                 >
                   {num}
                 </button>
@@ -895,21 +1199,21 @@ function App() {
               <button
                 type="button"
                 onClick={() => setCustomValues(prev => ({...prev, [activeInput.level]: {...prev[activeInput.level], [activeInput.field]: prev[activeInput.level][activeInput.field] + '.'}}))}
-                className="py-4 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#3b352b] font-black text-3xl transition-all border border-[#efece3]"
+                className="py-4 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-800 font-black text-3xl transition-all border border-slate-200"
               >
                 .
               </button>
               <button
                 type="button"
                 onClick={() => setCustomValues(prev => ({...prev, [activeInput.level]: {...prev[activeInput.level], [activeInput.field]: prev[activeInput.level][activeInput.field] + '0'}}))}
-                className="py-4 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#3b352b] font-bold text-2xl transition-all border border-[#efece3]"
+                className="py-4 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-800 font-bold text-2xl transition-all border border-slate-200"
               >
                 0
               </button>
               <button
                 type="button"
                 onClick={() => setCustomValues(prev => ({...prev, [activeInput.level]: {...prev[activeInput.level], [activeInput.field]: prev[activeInput.level][activeInput.field].slice(0, -1)}}))}
-                className="py-4 bg-[#fbf9f4] hover:bg-[#efece3] active:bg-[#e2ddd0] rounded-xl text-[#5c5549] font-bold transition-all border border-[#efece3] flex items-center justify-center"
+                className="py-4 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 rounded-xl text-slate-500 font-bold transition-all border border-slate-200 flex items-center justify-center"
               >
                 <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"></path></svg>
               </button>

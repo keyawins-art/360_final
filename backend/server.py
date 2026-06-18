@@ -289,6 +289,51 @@ def get_status():
 def get_graph_data():
     return grade_counts
 
+# -------------------------------------------------
+# CAMERA SETTINGS
+# -------------------------------------------------
+
+CAMERA_REF_FILE = os.path.join(BASE_DIR, "wate", "camera_ref.txt")
+
+class CameraRefInput(BaseModel):
+    references: list[str]
+
+@app.get("/api/camera-check")
+def check_cameras():
+    # Mocking camera detection. In the future this can use cv2, wmi or pygrabber.
+    import time
+    time.sleep(0.5) # Simulate checking delay
+    return {"status": "success", "cameras": ["Cam 1", "Cam 2", "Cam 3"]}
+
+@app.get("/api/camera-ref")
+def get_camera_ref():
+    try:
+        if os.path.exists(CAMERA_REF_FILE):
+            with open(CAMERA_REF_FILE, "r") as f:
+                content = f.read().strip()
+            import json
+            try:
+                refs = json.loads(content)
+                if isinstance(refs, list):
+                    # Ensure it has exactly 3 elements
+                    while len(refs) < 3: refs.append("")
+                    return {"status": "success", "references": refs[:3]}
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return {"status": "success", "references": ["", "", ""]}
+
+@app.post("/api/camera-ref")
+def save_camera_ref(payload: CameraRefInput):
+    try:
+        import json
+        with open(CAMERA_REF_FILE, "w") as f:
+            f.write(json.dumps(payload.references))
+        return {"status": "success", "message": "Reference settings saved"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
