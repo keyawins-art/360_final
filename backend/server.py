@@ -363,6 +363,27 @@ def save_camera_ref(payload: CameraRefInput):
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
+class MainSettingsInput(BaseModel):
+    value: str
+    belt_number: int
+
+@app.post("/api/main-settings")
+def save_main_settings(payload: MainSettingsInput):
+    try:
+        letters = "abcdefghijklmno"
+        if 1 <= payload.belt_number <= 15:
+            letter = letters[payload.belt_number - 1]
+            comport_dir = r"D:\4_belt_main\4_belt\comport info"
+            os.makedirs(comport_dir, exist_ok=True)
+            file_path = os.path.join(comport_dir, f"comport({letter}).txt")
+            with open(file_path, "w") as f:
+                f.write(str(payload.value))
+            return {"status": "success", "message": f"Saved setting for Belt {payload.belt_number}"}
+        else:
+            return {"status": "error", "message": "Invalid belt number"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
