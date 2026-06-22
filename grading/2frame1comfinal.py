@@ -330,11 +330,60 @@ class HIKCashewCamera:
         self.cam.MV_CC_GetIntValue("PayloadSize",stParam)
         self.nPayloadSize=stParam.nCurValue
 
+        param_file = r"d:\Keya Work\360\camera_params.json"
+        
+        # Identify Camera Index
+        camera_idx = "1"
+        if "(b)" in SERIAL_FILE.lower() or "(b)" in __file__.lower():
+            camera_idx = "2"
+        elif "(c)" in SERIAL_FILE.lower() or "(c)" in __file__.lower():
+            camera_idx = "3"
+
+        if os.path.exists(param_file):
+            try:
+                import json
+                with open(param_file, "r") as f:
+                    data = json.load(f)
+                if camera_idx in data:
+                    p = data[camera_idx]
+                    self.cam.MV_CC_SetIntValue("Width", int(p.get("width", 1440)))
+                    self.cam.MV_CC_SetIntValue("Height", int(p.get("height", 1080)))
+                    self.cam.MV_CC_SetIntValue("OffsetX", int(p.get("offsetX", 0)))
+                    self.cam.MV_CC_SetIntValue("OffsetY", int(p.get("offsetY", 0)))
+                    self.cam.MV_CC_SetFloatValue("ExposureTime", float(p.get("exposure", 50000)))
+                    self.cam.MV_CC_SetFloatValue("Gain", float(p.get("gain", 0)))
+            except:
+                pass
+
         if self.cam.MV_CC_StartGrabbing()!=0:
             return False
 
         self.is_grabbing=True
-        print("Camera connected")
+        print(f"Camera {camera_idx} connected")
+        
+        import threading
+        def param_monitor():
+            last_params = {}
+            while self.is_grabbing:
+                try:
+                    if os.path.exists(param_file):
+                        with open(param_file, "r") as f:
+                            data = json.load(f)
+                        if camera_idx in data:
+                            p = data[camera_idx]
+                            
+                            if p.get("exposure") != last_params.get("exposure"):
+                                self.cam.MV_CC_SetFloatValue("ExposureTime", float(p["exposure"]))
+                            if p.get("gain") != last_params.get("gain"):
+                                self.cam.MV_CC_SetFloatValue("Gain", float(p["gain"]))
+                            
+                            last_params = dict(p)
+                except Exception as e:
+                    pass
+                time.sleep(1)
+        
+        threading.Thread(target=param_monitor, daemon=True).start()
+
         return True
 
     # -------- Frame Capture (all pixel formats) --------
