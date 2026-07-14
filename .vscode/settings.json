@@ -1,0 +1,8 @@
+{
+    "python.analysis.extraPaths": [
+        "C:\\Program Files (x86)\\MVS\\Development\\Samples\\Python\\MvImport"
+    ],
+    "python.autoComplete.extraPaths": [
+        "C:\\Program Files (x86)\\MVS\\Development\\Samples\\Python\\MvImport"
+    ]
+}

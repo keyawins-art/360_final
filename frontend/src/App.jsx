@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-
 const API_URL = 'http://127.0.0.1:8000/api';
 
 function App() {
   const [status, setStatus] = useState('System Ready');
+  const [telemetry, setTelemetry] = useState({ cpu_load: 0, gpu_load: 0, gpu_temp: 0, uptime: '0h 0m', fps: 0 });
   const [activeCount, setActiveCount] = useState(0);
   const [currentMode, setCurrentMode] = useState('Stopped');
   const [activePage, setActivePage] = useState('Control Hub');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [graphData, setGraphData] = useState([]);
   const [currentDateTime, setCurrentDateTime] = useState(new Date());
 
@@ -64,6 +65,32 @@ function App() {
   const [activeTimeInput, setActiveTimeInput] = useState(null); // { belt: "1", idx: 0 }
 
   // Camera Settings State
+  const defaultCameraParams = {
+    exposure: 50000,
+    gain: 0,
+    width: 1440,
+    height: 1080,
+    offsetX: 0,
+    offsetY: 0
+  };
+  const [cameraParams, setCameraParams] = useState({
+    "1": { ...defaultCameraParams },
+    "2": { ...defaultCameraParams },
+    "3": { ...defaultCameraParams }
+  });
+  const [activeCamParamIdx, setActiveCamParamIdx] = useState("1");
+  
+  // Zones Configuration State
+  const [zonesTab, setZonesTab] = useState('camera'); // 'camera' or 'zones'
+  const [zones, setZones] = useState([
+    {"name": "Zone-1", "zone": [100, 100, 370, 1920]},
+    {"name": "Zone-2", "zone": [540, 100, 350, 1910]},
+    {"name": "Zone-3", "zone": [960, 100, 360, 1910]},
+    {"name": "Zone-4", "zone": [1400, 100, 340, 1910]},
+    {"name": "Zone-5", "zone": [1840, 100, 370, 1910]}
+  ]);
+  const [activeZoneIdx, setActiveZoneIdx] = useState(0);
+  const [isPreviewing, setIsPreviewing] = useState(false);
   const [cameraRefs, setCameraRefs] = useState(["", "", ""]);
   const [connectedCameras, setConnectedCameras] = useState([]);
   const [isCheckingCameras, setIsCheckingCameras] = useState(false);
@@ -84,6 +111,19 @@ function App() {
     closeConfirm();
   };
 
+  const toggleFullScreen = () => {
+    const elem = document.getElementById('camera-feed-container');
+    if (elem) {
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().catch(err => {
+          console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    }
+  };
+
   useEffect(() => {
     const timer = setInterval(() => setCurrentDateTime(new Date()), 1000);
     return () => clearInterval(timer);
@@ -96,6 +136,7 @@ function App() {
     { name: 'Air Valve', type: 'page', icon: 'M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z' },
     { name: 'Settings', type: 'page', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
     { name: 'Team Viewer', type: 'page', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+    { name: 'Virtual Keyboard', type: 'action', color: 'blue', icon: 'M4 6h16M4 10h16M4 14h16M5 18h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
     { name: 'Wi-Fi Connect', type: 'page', icon: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.142 0M1.121 10.121a15.42 15.42 0 0121.758 0' },
     { name: 'Shutdown', type: 'action', color: 'red', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z' },
     { name: 'Restart', type: 'action', color: 'orange', icon: 'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' }
@@ -107,6 +148,7 @@ function App() {
         .then(res => {
           setActiveCount(res.data.active_processes);
           if (res.data.current_mode) setCurrentMode(res.data.current_mode);
+          if (res.data.terminal_message) setStatus(res.data.terminal_message);
         })
         .catch(err => { /* Silent catch */ });
 
@@ -121,6 +163,12 @@ function App() {
             { name: "180", count: data["180"] || 0, color: "#f59e0b" },
           ];
           setGraphData(formatted);
+        })
+        .catch(err => { /* Silent catch */ });
+
+      axios.get(`${API_URL}/telemetry`)
+        .then(res => {
+          if (res.data && res.data.fps !== undefined) setTelemetry(res.data);
         })
         .catch(err => { /* Silent catch */ });
     }, 2000);
@@ -173,9 +221,76 @@ function App() {
         })
         .catch(err => console.error(err));
 
+      axios.get(`${API_URL}/camera-params`)
+        .then(res => {
+          if (res.data && Object.keys(res.data).length > 0) {
+            setCameraParams(prev => ({ ...prev, ...res.data }));
+          }
+        })
+        .catch(err => console.error(err));
+
+      axios.get(`${API_URL}/zones`)
+        .then(res => {
+          if (res.data && Array.isArray(res.data)) {
+            setZones(res.data);
+          }
+        })
+        .catch(err => console.error("Error fetching zones:", err));
+
       checkCameras();
     }
   }, [activePage]);
+
+  const saveCameraParamsData = async () => {
+    try {
+      await axios.post(`${API_URL}/camera-params`, { params: cameraParams });
+      showToast("Camera Parameters Saved Successfully!");
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to save camera parameters.", "error");
+    }
+  };
+
+  const updateCameraParam = (field, value) => {
+    setCameraParams(prev => ({
+      ...prev,
+      [activeCamParamIdx]: {
+        ...prev[activeCamParamIdx],
+        [field]: Number(value)
+      }
+    }));
+  };
+
+  useEffect(() => {
+    if (Object.keys(cameraParams).length > 0 && activePage === 'Camera Setting') {
+      const delayDebounceFn = setTimeout(() => {
+        axios.post(`${API_URL}/camera-params`, { params: cameraParams })
+          .catch(err => console.error("Auto-save error:", err));
+      }, 150);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [cameraParams, activePage]);
+
+  const saveZonesConfig = () => {
+    axios.post(`${API_URL}/zones`, zones)
+      .then(() => showToast('Zones saved to zones_config.json!'))
+      .catch(err => {
+        console.error('Zones save error:', err);
+        showToast('Failed to save zones!', 'error');
+      });
+  };
+
+  const updateZoneParam = (idx, paramIdx, value) => {
+    setZones(prev => {
+      const updated = [...prev];
+      if (updated[idx] && updated[idx].zone) {
+        const zoneCoords = [...updated[idx].zone];
+        zoneCoords[paramIdx] = Number(value);
+        updated[idx] = { ...updated[idx], zone: zoneCoords };
+      }
+      return updated;
+    });
+  };
 
   const checkCameras = () => {
     setIsCheckingCameras(true);
@@ -297,6 +412,11 @@ function App() {
   };
 
   const handleNavClick = (item) => {
+    if (item.name === 'Virtual Keyboard') {
+      handleAction('open-keyboard', 'Virtual Keyboard');
+      return;
+    }
+    
     if (item.type === 'page') {
       if (item.name === 'Team Viewer') {
         handleAction('open-teamviewer', 'Team Viewer');
@@ -306,7 +426,7 @@ function App() {
         handleAction('open-wifi', 'Wi-Fi Setup');
         return;
       }
-      if (item.name === 'Settings' || item.name === 'Customizations') {
+      if (item.name === 'Settings' || item.name === 'Customizations' || item.name === 'Camera Setting') {
         setPendingPage(item.name);
         setShowLogin(true);
         setPassword('');
@@ -325,35 +445,40 @@ function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200/80 text-slate-800 font-sans flex overflow-hidden selection:bg-blue-500/30 relative">
+    <div className="min-h-screen md:h-screen w-screen bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200/80 text-slate-800 font-sans flex flex-col md:flex-row overflow-x-hidden md:overflow-hidden selection:bg-blue-500/30 relative">
 
       {/* Subtle Grid Background */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#cbd5e1_1px,transparent_1px),linear-gradient(to_bottom,#cbd5e1_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_60%_at_50%_50%,#000_70%,transparent_100%)] opacity-20 pointer-events-none z-0"></div>
 
       {/* LEFT SIDEBAR (Navigation) */}
-      <div className="w-[320px] bg-white/70 backdrop-blur-xl border-r border-slate-200/80 p-8 flex flex-col shadow-2xl z-20 shrink-0">
+      <div className={`fixed inset-y-0 left-0 transform ${mobileMenuOpen ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0 transition duration-300 ease-in-out w-[280px] md:w-[320px] bg-white/95 md:bg-white/70 backdrop-blur-xl border-r border-slate-200/80 p-6 md:p-8 flex flex-col shadow-2xl z-50 shrink-0 h-full`}>
+        {/* Close button for mobile */}
+        <button onClick={() => setMobileMenuOpen(false)} className="md:hidden absolute top-6 right-6 text-slate-500 hover:bg-slate-100 p-1 rounded-lg">
+          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+
         {/* Company Branding */}
-        <div className="flex items-center gap-4 mb-10 mt-2 pl-2">
-          <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden relative ring-1 ring-slate-100">
+        <div className="flex items-center gap-4 mb-8 md:mb-10 mt-2 pl-2">
+          <div className="w-10 h-10 md:w-12 md:h-12 bg-white rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/20 overflow-hidden relative ring-1 ring-slate-100">
             <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
           </div>
           <div className="flex flex-col justify-center">
-            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
+            <h1 className="text-xl md:text-2xl font-extrabold tracking-tight text-slate-900 leading-none">
               Keya <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Fusion</span>
             </h1>
-            <p className="text-blue-600 text-[9px] font-bold tracking-[0.3em] uppercase mt-1">Technology</p>
+            <p className="text-blue-600 text-[8px] md:text-[9px] font-bold tracking-[0.3em] uppercase mt-1">Technology</p>
           </div>
         </div>
 
-        <nav className="flex flex-col gap-2 flex-1">
+        <nav className="flex flex-col gap-2 flex-1 overflow-y-auto custom-scrollbar pr-2">
           <div className="text-xs font-bold tracking-widest text-slate-400 mb-2 pl-2">MAIN MENU</div>
           {navItems.filter(item => item.type === 'page').map(page => {
             const isActive = activePage === page.name;
             return (
               <button
                 key={page.name}
-                onClick={() => handleNavClick(page)}
-                className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${isActive
+                onClick={() => { handleNavClick(page); setMobileMenuOpen(false); }}
+                className={`group flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${isActive
                     ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 translate-x-1'
                     : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
@@ -370,8 +495,8 @@ function App() {
         </nav>
 
         {/* Action Buttons at bottom of sidebar */}
-        <div className="flex flex-col gap-2 mt-auto">
-          <div className="h-px w-full bg-slate-200/80 mb-4"></div>
+        <div className="flex flex-col gap-2 mt-auto pt-4">
+          <div className="h-px w-full bg-slate-200/80 mb-2"></div>
           {navItems.filter(item => item.type === 'action').map(action => {
             const isRed = action.color === 'red';
             const isBlue = action.color === 'blue';
@@ -393,8 +518,8 @@ function App() {
             return (
               <button
                 key={action.name}
-                onClick={() => handleNavClick(action)}
-                className={`group w-full flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 border border-transparent ${hoverClass} ${activeClass} ${textClass}`}
+                onClick={() => { handleNavClick(action); setMobileMenuOpen(false); }}
+                className={`group flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 border border-transparent ${hoverClass} ${activeClass} ${textClass}`}
               >
                 <svg className="w-5 h-5 opacity-80 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d={action.icon}></path>
@@ -407,13 +532,38 @@ function App() {
       </div>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col p-8 pt-6 z-10 min-w-0">
+      <div className="flex-1 flex flex-col p-4 md:p-8 pt-4 md:pt-6 z-10 min-w-0 md:overflow-y-auto">
 
-        {/* TOP HEADER */}
-        <div className="flex justify-between items-center mb-8 shrink-0">
+        {/* MOBILE TOP BAR (Logo + Hamburger + Date/Time) */}
+        <div className="md:hidden flex items-center justify-between bg-white/80 backdrop-blur-md border border-slate-200/60 p-3 rounded-2xl shadow-sm mb-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setMobileMenuOpen(true)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-lg">
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </button>
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden relative ring-1 ring-slate-100">
+              <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
+            </div>
+            <div className="flex flex-col justify-center">
+              <h1 className="text-[13px] font-extrabold tracking-tight text-slate-900 leading-none">
+                Keya <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">Fusion</span>
+              </h1>
+            </div>
+          </div>
+          <div className="flex flex-col items-end text-right">
+            <span className="text-sm font-black text-slate-800 tabular-nums tracking-tight leading-none">
+              {currentDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+            <span className="text-[8px] font-bold text-blue-600 uppercase tracking-widest mt-0.5">
+              {currentDateTime.toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })}
+            </span>
+          </div>
+        </div>
+
+        {/* TOP HEADER (Desktop) */}
+        <div className="hidden md:flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 md:mb-8 shrink-0 gap-4">
           {/* Dynamic Page Title */}
           <div className="flex flex-col">
-            <h2 className="text-4xl font-extrabold tracking-tight text-slate-800 drop-shadow-sm flex items-center gap-3">
+            <h2 className="text-2xl md:text-4xl font-extrabold tracking-tight text-slate-800 drop-shadow-sm flex items-center gap-2 md:gap-3">
               {activePage === 'Control Hub' && "System Control Hub"}
               {activePage === 'Air Valve' && (
                 <>
@@ -432,8 +582,8 @@ function App() {
           </div>
 
           {/* Live Date/Time Display */}
-          <div className="flex flex-col items-end text-right bg-white/60 backdrop-blur-md border border-slate-200/60 px-6 py-3 rounded-2xl shadow-sm">
-            <span className="text-2xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
+          <div className="flex flex-col items-start lg:items-end text-left lg:text-right bg-white/60 backdrop-blur-md border border-slate-200/60 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl shadow-sm w-full lg:w-auto">
+            <span className="text-xl md:text-2xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
               {currentDateTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
             </span>
             <span className="text-xs font-bold text-blue-600 uppercase tracking-widest mt-1">
@@ -442,15 +592,51 @@ function App() {
           </div>
         </div>
 
+        {/* --- HARDWARE TELEMETRY BAR (Industrial Touch) --- */}
+        <div className="mx-0 md:mx-8 mt-2 mb-4 bg-white/70 backdrop-blur-md border border-slate-200/60 rounded-xl p-3 shadow-sm flex flex-col lg:flex-row items-start lg:items-center justify-between text-[10px] md:text-xs font-bold text-slate-600 uppercase tracking-widest shrink-0 gap-3 lg:gap-0 overflow-x-auto">
+          <div className="flex items-center gap-3 md:gap-6 min-w-max">
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${status === 'Running' ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}></div>
+              <span>FPS: <span className="text-slate-900">{Number(telemetry.fps || 0).toFixed(1)}</span></span>
+            </div>
+            <div className="w-px h-3 md:h-4 bg-slate-300"></div>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <span>CPU: <span className={telemetry.cpu_load > 80 ? 'text-red-500' : 'text-slate-900'}>{telemetry.cpu_load}%</span></span>
+            </div>
+            <div className="w-px h-3 md:h-4 bg-slate-300"></div>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              <span>GPU: <span className={telemetry.gpu_load > 80 ? 'text-red-500' : 'text-slate-900'}>{telemetry.gpu_load}%</span></span>
+            </div>
+            <div className="w-px h-3 md:h-4 bg-slate-300"></div>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>Uptime: <span className="text-slate-900">{telemetry.uptime}</span></span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 md:gap-6 min-w-max">
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <span className="text-slate-400">GPU Temp:</span>
+              <span className={telemetry.gpu_temp > 80 ? 'text-red-600' : 'text-blue-600'}>{telemetry.gpu_temp}°C</span>
+            </div>
+            <div className="w-px h-3 md:h-4 bg-slate-300"></div>
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <span className="text-slate-400">Mem:</span>
+              <span className={telemetry.mem_percent > 90 ? 'text-red-600' : 'text-blue-600'}>{telemetry.mem_percent}%</span>
+            </div>
+          </div>
+        </div>
+
         {/* Render Control Hub */}
         {activePage === 'Control Hub' ? (
           <div className="flex flex-col h-full w-full animate-in fade-in duration-500">
 
             {/* Main Layout Row */}
-            <div className="flex flex-1 gap-6 min-h-0">
+            <div className="flex flex-col xl:flex-row flex-1 gap-6 min-h-0">
 
               {/* GRAPH AREA (Left/Middle) */}
-              <div className="flex-1 bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white p-6 shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden group">
+              <div className="flex-1 min-h-[300px] bg-white/80 backdrop-blur-xl rounded-[2rem] border border-white p-6 shadow-xl shadow-slate-200/50 flex flex-col relative overflow-hidden group">
                 <div className="flex justify-between items-center mb-6">
                   <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
                     <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
@@ -489,7 +675,7 @@ function App() {
               </div>
 
               {/* CONTROLS SIDEBAR (Right side of content area) */}
-              <div className="w-[340px] flex flex-col gap-6 h-full">
+              <div className="w-full xl:w-[340px] flex flex-col gap-6 h-full">
 
                 {/* Control Panel */}
                 <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-col flex-1">
@@ -584,22 +770,22 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Air Valve' ? (
-          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-hidden">
+          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-y-auto md:overflow-hidden">
 
-            <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white/80 backdrop-blur-xl border border-white rounded-2xl md:rounded-[2rem] p-3 md:p-6 shadow-xl shadow-slate-200/50 flex flex-col md:overflow-hidden">
 
               {/* Pagination Tabs */}
-              <div className="flex gap-3 mb-6 justify-center shrink-0">
+              <div className="flex gap-2 md:gap-3 mb-4 md:mb-6 justify-center shrink-0">
                 {[1, 2, 3].map(pageNum => (
                   <button
                     key={pageNum}
                     onClick={() => setAirValvePage(pageNum)}
-                    className={`px-8 py-3 rounded-xl font-bold text-lg transition-all border ${airValvePage === pageNum
+                    className={`px-3 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-bold text-xs md:text-lg transition-all border ${airValvePage === pageNum
                         ? 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-500/20'
                         : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
                       }`}
                   >
-                    Page {pageNum} <span className="text-sm font-medium opacity-80 ml-1">(Belts {(pageNum - 1) * 5 + 1}-{pageNum * 5})</span>
+                    Page {pageNum} <span className="text-[10px] md:text-sm font-medium opacity-80 ml-0.5 md:ml-1">(Belt {(pageNum - 1) * 5 + 1}-{pageNum * 5})</span>
                   </button>
                 ))}
               </div>
@@ -607,11 +793,11 @@ function App() {
               <div className="flex-1 flex flex-col min-h-0">
                 <div className="flex-1 flex flex-col gap-3 h-full">
                   {Array.from({ length: 5 }, (_, i) => (airValvePage - 1) * 5 + i + 1).map(beltId => (
-                    <div key={beltId} className="flex-1 flex items-center gap-4 p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group min-h-0">
-                      <div className="w-32 xl:w-40 h-full font-black text-slate-800 text-2xl xl:text-3xl bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-400 group-hover:text-blue-700 transition-colors shrink-0">
+                    <div key={beltId} className="flex-1 flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-2 md:p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group min-h-0">
+                      <div className="w-full md:w-32 xl:w-40 py-2 md:py-0 md:h-full font-black text-slate-800 text-lg md:text-2xl xl:text-3xl bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-400 group-hover:text-blue-700 transition-colors shrink-0">
                         Belt {beltId}
                       </div>
-                      <div className="flex gap-3 flex-1 h-full">
+                      <div className="grid grid-cols-7 gap-1.5 md:gap-3 flex-1 md:h-full">
                         {[11, 12, 13, 14, 15, 16, 21].map(portId => (
                           <button
                             key={portId}
@@ -630,9 +816,9 @@ function App() {
                                 console.error(err);
                               }
                             }}
-                            className="flex-1 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:text-blue-600 text-slate-600 font-bold text-xl xl:text-2xl transition-all active:scale-[0.97] shadow-sm flex flex-col justify-center items-center"
+                            className="rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:text-blue-600 text-slate-600 font-bold text-sm md:text-xl xl:text-2xl transition-all active:scale-[0.97] shadow-sm flex flex-col justify-center items-center py-2 md:py-0 md:h-full"
                           >
-                            <span className="text-[10px] xl:text-xs font-semibold uppercase tracking-wider opacity-60 mb-0.5">Port</span>
+                            <span className="text-[8px] md:text-[10px] xl:text-xs font-semibold uppercase tracking-wider opacity-60 mb-0.5">Port</span>
                             {portId}
                           </button>
                         ))}
@@ -644,22 +830,22 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Customizations' ? (
-          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-hidden">
-            <div className="flex-1 flex gap-8 overflow-hidden">
+          <div className="flex flex-col h-full w-full animate-in fade-in duration-500 overflow-y-auto md:overflow-hidden">
+            <div className="flex-1 flex flex-col md:flex-row gap-4 md:gap-8">
 
               {/* Left Side: Input Form */}
-              <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white p-6 rounded-[2rem] shadow-xl shadow-slate-200/50">
+              <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white p-4 md:p-6 rounded-2xl md:rounded-[2rem] shadow-xl shadow-slate-200/50">
 
-                <div className="flex gap-4 px-4 mb-2 text-slate-500 font-bold text-sm tracking-wider uppercase shrink-0">
-                  <div className="w-24 text-center">Grade</div>
-                  <div className="flex-1 text-center">Min Value</div>
-                  <div className="flex-1 text-center">Max Value</div>
+                <div className="flex gap-2 md:gap-4 px-2 md:px-4 mb-2 text-slate-500 font-bold text-[10px] md:text-sm tracking-wider uppercase shrink-0">
+                  <div className="w-16 md:w-24 text-center">Grade</div>
+                  <div className="flex-1 text-center">Min</div>
+                  <div className="flex-1 text-center">Max</div>
                 </div>
 
-                <div className="flex flex-col gap-5 flex-1 px-4 mb-4">
+                <div className="flex flex-col gap-3 md:gap-5 flex-1 px-2 md:px-4 mb-4">
                   {['400', '320', '240', '210', '180'].map(level => (
-                    <div key={level} className="flex gap-6 items-center flex-1 min-h-0">
-                      <div className="w-24 h-full text-center font-black text-2xl text-slate-800 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center shrink-0">{level}</div>
+                    <div key={level} className="flex gap-2 md:gap-6 items-center flex-1 min-h-[48px] md:min-h-0">
+                      <div className="w-16 md:w-24 h-full text-center font-black text-lg md:text-2xl text-slate-800 bg-slate-50 border border-slate-200 rounded-lg md:rounded-xl flex items-center justify-center shrink-0">{level}</div>
                       <div className="flex-1 h-full">
                         <input
                           type="text"
@@ -667,7 +853,7 @@ function App() {
                           value={customValues[level].min}
                           onClick={() => setActiveInput({ level, field: 'min' })}
                           placeholder="Min"
-                          className="w-full h-full bg-white border-2 border-slate-200 rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
+                          className="w-full h-full bg-white border-2 border-slate-200 rounded-lg md:rounded-xl px-2 md:px-4 text-center font-bold text-lg md:text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
                         />
                       </div>
                       <div className="flex-1 h-full">
@@ -677,7 +863,7 @@ function App() {
                           value={customValues[level].max}
                           onClick={() => setActiveInput({ level, field: 'max' })}
                           placeholder="Max"
-                          className="w-full h-full bg-white border-2 border-slate-200 rounded-xl px-4 text-center font-bold text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
+                          className="w-full h-full bg-white border-2 border-slate-200 rounded-lg md:rounded-xl px-2 md:px-4 text-center font-bold text-lg md:text-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all cursor-pointer text-slate-700"
                         />
                       </div>
                     </div>
@@ -685,13 +871,22 @@ function App() {
                 </div>
               </div>
 
-              {/* Right Side: Display Values & OK Button */}
-              <div className="w-[280px] flex flex-col gap-6 shrink-0 h-full">
+              {/* Right Side: OK Button first, then Saved Data (on mobile: stacked below) */}
+              <div className="w-full md:w-[280px] flex flex-col gap-4 md:gap-6 shrink-0 md:h-full">
+
+                {/* OK Button */}
+                <button
+                  onClick={saveCustomizations}
+                  className="w-full h-16 md:h-32 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-2xl md:text-4xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] flex justify-center items-center gap-3 border border-blue-500 shrink-0"
+                >
+                  <svg className="w-7 h-7 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                  OK
+                </button>
 
                 {/* Display Screen */}
-                <div className="flex-1 flex flex-col bg-slate-800 text-slate-50 p-5 rounded-2xl shadow-lg relative overflow-hidden min-h-0">
+                <div className="flex-1 flex flex-col bg-slate-800 text-slate-50 p-4 md:p-5 rounded-2xl shadow-lg relative overflow-hidden min-h-0">
                   <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-indigo-500"></div>
-                  <h3 className="text-sm font-bold text-blue-400 mb-5 uppercase tracking-wider flex items-center justify-center gap-1.5 text-center shrink-0">
+                  <h3 className="text-sm font-bold text-blue-400 mb-3 md:mb-5 uppercase tracking-wider flex items-center justify-center gap-1.5 text-center shrink-0">
                     <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     Saved Data
                   </h3>
@@ -699,7 +894,7 @@ function App() {
                   <div className="flex flex-col gap-2 flex-1 overflow-y-auto pr-1">
                     {['400', '320', '240', '210', '180'].map(level => (
                       <div key={`saved-${level}`} className="flex justify-between items-center border-b border-slate-700 pb-2 last:border-0">
-                        <span className="font-black text-xl text-white">{level}</span>
+                        <span className="font-black text-lg md:text-xl text-white">{level}</span>
                         <div className="flex gap-3">
                           <div className="flex flex-col items-end">
                             <span className="text-[9px] text-slate-400 uppercase tracking-wider mb-0.5">Min</span>
@@ -715,21 +910,12 @@ function App() {
                   </div>
                 </div>
 
-                {/* OK Button */}
-                <button
-                  onClick={saveCustomizations}
-                  className="w-full h-32 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-4xl shadow-lg shadow-blue-500/30 transition-all active:scale-[0.98] flex justify-center items-center gap-3 border border-blue-500 shrink-0"
-                >
-                  <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
-                  OK
-                </button>
-
               </div>
 
             </div>
           </div>
         ) : activePage === 'Settings' ? (
-          <div className="flex h-full w-full gap-6 animate-in fade-in duration-500">
+          <div className="flex flex-col-reverse md:flex-row h-full w-full gap-4 md:gap-6 animate-in fade-in duration-500 overflow-y-auto md:overflow-hidden">
             {/* Left side content placeholder */}
             {activeSettingsModule === 'Camera' ? (
               <div className="flex-1 flex flex-col h-full bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] overflow-hidden shadow-xl shadow-slate-200/50">
@@ -745,7 +931,7 @@ function App() {
                   </button>
                 </div>
 
-                <div className="flex h-full w-full p-6 gap-6 overflow-y-auto bg-slate-50/30">
+                <div className="flex flex-col md:flex-row h-full w-full p-4 md:p-6 gap-4 md:gap-6 overflow-y-auto bg-slate-50/30">
                   {/* Reference Section (Left) */}
                   <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-800 mb-6">Reference</h3>
@@ -847,7 +1033,7 @@ function App() {
                   </button>
                 </div>
 
-                <div className="flex h-full w-full p-6 gap-6 overflow-y-auto bg-slate-50/30">
+                <div className="flex flex-col md:flex-row h-full w-full p-4 md:p-6 gap-4 md:gap-6 overflow-y-auto bg-slate-50/30">
                   {/* Reference Section (Left) */}
                   <div className="flex-1 flex flex-col bg-white border border-slate-200/80 rounded-2xl p-6 shadow-sm">
                     <h3 className="text-lg font-bold text-slate-800 mb-6">Reference</h3>
@@ -1023,7 +1209,7 @@ function App() {
             )}
 
             {/* Right side buttons */}
-            <div className="w-[340px] flex flex-col gap-6 h-full">
+            <div className="w-full md:w-[340px] flex flex-col gap-4 md:gap-6 md:h-full shrink-0">
               <div className="bg-white/80 backdrop-blur-xl p-6 rounded-[2rem] border border-white shadow-xl shadow-slate-200/50 flex flex-col flex-1">
                 <h3 className="text-lg font-bold text-slate-800 mb-6 px-2 flex items-center gap-2">
                   <svg className="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
@@ -1059,19 +1245,43 @@ function App() {
             </div>
           </div>
         ) : activePage === 'Time Setting' ? (
-          <div className="flex h-full w-full gap-6 animate-in fade-in duration-500">
+          <div className="flex flex-col md:flex-row h-full w-full gap-4 md:gap-6 animate-in fade-in duration-500 overflow-y-auto md:overflow-hidden relative">
 
             {/* Main Area (Matrix of 15 belts x 7 boxes) */}
-            <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 min-w-0">
+            <div className="flex-1 flex flex-col bg-white/80 backdrop-blur-xl border border-white rounded-2xl md:rounded-[2rem] p-3 md:p-6 shadow-xl shadow-slate-200/50 min-w-0">
+
+              {/* Back + Action Buttons (Mobile only - on top) */}
+              <div className="flex md:hidden gap-2 mb-3 shrink-0">
+                <button
+                  onClick={() => setActivePage('Settings')}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 rounded-xl font-bold text-xs transition-all active:scale-95 flex items-center justify-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                  Back
+                </button>
+                <button
+                  onClick={applyToAllBelts}
+                  className="flex-1 py-2.5 bg-amber-500 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
+                >
+                  Copy Belt 1
+                </button>
+                <button
+                  onClick={saveTimeSettings}
+                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 flex items-center justify-center gap-1"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                  Save
+                </button>
+              </div>
 
               {/* Scrollable Matrix Table */}
-              <div className="flex-1 overflow-y-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/50">
-                <table className="w-full text-center border-collapse">
+              <div className="flex-1 overflow-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/50">
+                <table className="w-full text-center border-collapse" style={{minWidth: '500px'}}>
                   <thead className="sticky top-0 bg-slate-100/90 backdrop-blur-sm shadow-sm z-10">
                     <tr>
-                      <th className="p-4 text-slate-500 font-bold border-b border-slate-200">BELT</th>
+                      <th className="p-2 md:p-4 text-slate-500 font-bold text-[10px] md:text-sm border-b border-slate-200 sticky left-0 bg-slate-100/90 z-20">BELT</th>
                       {[...Array(7)].map((_, i) => (
-                        <th key={i} className="p-4 text-slate-500 font-bold border-b border-slate-200">BOX {i + 1}</th>
+                        <th key={i} className="p-2 md:p-4 text-slate-500 font-bold text-[10px] md:text-sm border-b border-slate-200">BOX {i + 1}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1080,19 +1290,19 @@ function App() {
                       const beltId = (r + 1).toString();
                       return (
                         <tr key={beltId} className="hover:bg-white transition-colors border-b border-slate-200">
-                          <td className="p-3 font-black text-slate-800 bg-white">{beltId}</td>
+                          <td className="p-1.5 md:p-3 font-black text-slate-800 bg-white text-xs md:text-base sticky left-0 z-10">{beltId}</td>
                           {[...Array(7)].map((_, c) => {
                             const isSelected = activeTimeInput && activeTimeInput.belt === beltId && activeTimeInput.idx === c;
                             const val = timeSettingsValues[beltId]?.[c];
                             return (
-                              <td key={c} className="p-2">
+                              <td key={c} className="p-1 md:p-2">
                                 <div
                                   onClick={() => setActiveTimeInput({ belt: beltId, idx: c })}
-                                  className={`h-12 flex items-center justify-center text-xl font-bold rounded-lg cursor-pointer transition-all border
+                                  className={`h-9 md:h-12 flex items-center justify-center text-sm md:text-xl font-bold rounded-lg cursor-pointer transition-all border
                                     ${isSelected ? 'bg-indigo-50 border-indigo-400 text-indigo-700 shadow-inner scale-[1.03]' : 'bg-white border-slate-200 text-slate-700 hover:border-indigo-300'}
                                   `}
                                 >
-                                  {val ? val : <span className="text-slate-300">0000</span>}
+                                  {val ? val : <span className="text-slate-300 text-xs md:text-base">0000</span>}
                                 </div>
                               </td>
                             );
@@ -1105,8 +1315,38 @@ function App() {
               </div>
             </div>
 
-            {/* Number Pad for Time Setting */}
-            <div className="w-[300px] shrink-0 flex flex-col gap-3">
+            {/* FLOATING NUMPAD POPUP (Mobile) */}
+            {activeTimeInput && (
+              <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t-2 border-slate-200 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] rounded-t-3xl p-4 animate-in slide-in-from-bottom duration-200">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-xs font-bold text-slate-400 tracking-widest">NUMPAD — Belt {activeTimeInput.belt}, Box {activeTimeInput.idx + 1}</h3>
+                  <button onClick={() => setActiveTimeInput(null)} className="text-slate-400 hover:text-slate-600 bg-slate-100 rounded-full p-1">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {[1, 2, 3, 'DEL', 4, 5, 6, 0, 7, 8, 9].map((num) => (
+                    <button
+                      key={num}
+                      onClick={() => handleTimeNumberClick(num)}
+                      className={`h-12 rounded-xl font-black text-xl transition-all active:scale-95 flex justify-center items-center
+                          ${num === 'DEL' ? 'bg-red-50 text-red-600' : 'bg-slate-50 text-slate-800 border border-slate-200'}`}
+                    >
+                      {num === 'DEL' ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"></path></svg> : num}
+                    </button>
+                  ))}
+                  <button
+                    onClick={() => setActiveTimeInput(null)}
+                    className="h-12 rounded-xl font-bold text-sm bg-indigo-600 text-white transition-all active:scale-95 flex justify-center items-center"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Number Pad for Time Setting (Desktop only) */}
+            <div className="hidden md:flex w-[300px] shrink-0 flex-col gap-3">
               <button
                 onClick={() => setActivePage('Settings')}
                 className="w-full py-3.5 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-2 border-slate-200 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 mb-2"
@@ -1153,6 +1393,216 @@ function App() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                   Save All Settings
                 </button>
+              </div>
+            </div>
+          </div>
+        ) : activePage === 'Camera Setting' ? (
+          <div className="flex-1 flex flex-col h-full bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between p-5 border-b border-slate-200 bg-slate-50/50">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center shadow-sm border border-blue-100">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path></svg>
+                </div>
+                <h2 className="text-xl font-bold text-slate-800">Camera Settings</h2>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setIsPreviewing(true)}
+                  className="px-4 py-2 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 font-bold rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                  Live Preview
+                </button>
+                <button
+                  onClick={() => setIsPreviewing(false)}
+                  className="px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 font-bold rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  Stop Preview
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row h-full w-full p-4 gap-4 bg-slate-50/50 overflow-y-auto md:overflow-hidden">
+              
+              {/* Camera Selection - Horizontal on mobile, Vertical sidebar on desktop */}
+              <div className="flex flex-row md:flex-col gap-2 md:w-24 shrink-0">
+                {["1", "2", "3"].map(camIdx => (
+                  <button
+                    key={camIdx}
+                    onClick={() => {
+                      setActiveCamParamIdx(camIdx);
+                      if (isPreviewing) {
+                        setIsPreviewing(false);
+                        setTimeout(() => setIsPreviewing(true), 50);
+                      }
+                    }}
+                    className={`flex-1 md:flex-1 py-3 md:py-0 rounded-xl font-bold text-sm transition-all border-2 flex items-center justify-center ${activeCamParamIdx === camIdx ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
+                  >
+                    Cam {camIdx}
+                  </button>
+                ))}
+              </div>
+
+              {/* Video Feed - Full width on mobile */}
+              <div id="camera-feed-container" className="w-full md:flex-1 min-h-[250px] md:min-h-0 bg-black rounded-2xl overflow-hidden relative shadow-inner border-2 border-slate-800 flex items-center justify-center group">
+                {/* Full Screen Toggle Button */}
+                <button
+                  onClick={toggleFullScreen}
+                  className="absolute top-4 right-4 p-2 bg-black/50 hover:bg-black/80 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-10 backdrop-blur-sm border border-white/20"
+                  title="Toggle Fullscreen"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+                </button>
+                {isPreviewing ? (
+                  <img 
+                    key={activeCamParamIdx}
+                    src={`${API_URL}/video_feed/${activeCamParamIdx}`} 
+                    className="w-full h-full object-contain"
+                    alt={`Camera ${activeCamParamIdx} Live Feed`}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      const parent = e.target.parentElement;
+                      let errorDiv = parent.querySelector('.error-msg');
+                      if (!errorDiv) {
+                        errorDiv = document.createElement('div');
+                        errorDiv.className = 'error-msg absolute text-red-500 font-bold flex flex-col items-center';
+                        errorDiv.innerHTML = '<svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg><span>Connection Failed</span>';
+                        parent.appendChild(errorDiv);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="text-slate-600 flex flex-col items-center font-bold">
+                    <svg className="w-16 h-16 mb-4 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                    Preview Offline
+                  </div>
+                )}
+              </div>
+
+              {/* Settings and Zones Tabs Side Panel - Full width on mobile, fixed width on desktop */}
+              <div className="w-full md:w-[22rem] bg-white border border-slate-200 rounded-[1.5rem] p-4 shadow-sm flex flex-col overflow-hidden shrink-0">
+                <div className="flex border-b border-slate-200 mb-3 pb-1">
+                  <button
+                    onClick={() => setZonesTab('camera')}
+                    className={`flex-1 pb-2 font-bold text-sm text-center border-b-2 transition-all ${zonesTab === 'camera' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Camera Params
+                  </button>
+                  <button
+                    onClick={() => setZonesTab('zones')}
+                    className={`flex-1 pb-2 font-bold text-sm text-center border-b-2 transition-all ${zonesTab === 'zones' ? 'border-blue-600 text-blue-600' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Zones Config
+                  </button>
+                </div>
+                
+                {zonesTab === 'camera' ? (
+                  <>
+                    <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                      {[
+                        { key: 'exposure', label: 'Exposure', min: 100, max: 100000 },
+                        { key: 'gain', label: 'Gain (Brightness)', min: 0, max: 20 },
+                        { key: 'width', label: 'Width (Crop)', min: 32, max: 2448 },
+                        { key: 'height', label: 'Height (Crop)', min: 8, max: 2048 },
+                        { key: 'offsetX', label: 'Offset X', min: 0, max: 2448 },
+                        { key: 'offsetY', label: 'Offset Y', min: 0, max: 2048 },
+                      ].map(param => (
+                        <div key={param.key} className="flex flex-col gap-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                          <div className="flex justify-between items-center">
+                            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">{param.label}</label>
+                            <input
+                              type="number"
+                              min={param.min}
+                              max={param.max}
+                              value={cameraParams[activeCamParamIdx]?.[param.key] ?? 0}
+                              onChange={(e) => updateCameraParam(param.key, e.target.value)}
+                              className="w-20 p-1 bg-white border border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-blue-500 text-center"
+                            />
+                          </div>
+                          <input 
+                            type="range" 
+                            min={param.min} 
+                            max={param.max} 
+                            value={cameraParams[activeCamParamIdx]?.[param.key] ?? 0}
+                            onChange={(e) => updateCameraParam(param.key, e.target.value)}
+                            className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <button
+                        onClick={saveCameraParamsData}
+                        className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        Save All
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* Zone Selector Buttons */}
+                    <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1.5 custom-scrollbar">
+                      {zones.map((z, idx) => (
+                        <button
+                          key={idx}
+                          onClick={() => setActiveZoneIdx(idx)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeZoneIdx === idx ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                          {z.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    {zones[activeZoneIdx] ? (
+                      <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        {[
+                          { label: 'X (Left/Right)', max: 2448, idx: 0 },
+                          { label: 'Y (Top/Bottom)', max: 2048, idx: 1 },
+                          { label: 'Width', max: 2448, idx: 2 },
+                          { label: 'Height', max: 2048, idx: 3 }
+                        ].map(param => (
+                          <div key={param.idx} className="flex flex-col gap-1.5 p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="flex justify-between items-center">
+                              <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wide">{param.label}</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={param.max}
+                                value={zones[activeZoneIdx].zone[param.idx] ?? 0}
+                                onChange={(e) => updateZoneParam(activeZoneIdx, param.idx, e.target.value)}
+                                className="w-20 p-1 bg-white border border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-blue-500 text-center"
+                              />
+                            </div>
+                            <input 
+                              type="range" 
+                              min={0} 
+                              max={param.max} 
+                              value={zones[activeZoneIdx].zone[param.idx] ?? 0}
+                              onChange={(e) => updateZoneParam(activeZoneIdx, param.idx, e.target.value)}
+                              className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-slate-500 text-center py-8 font-bold">No Zones Loaded</div>
+                    )}
+
+                    <div className="mt-3 pt-3 border-t border-slate-100">
+                      <button
+                        onClick={saveZonesConfig}
+                        className="w-full py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-md shadow-red-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+                        Save All Zones
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -1376,6 +1826,8 @@ function App() {
           <span className="font-bold text-lg">{toast.message}</span>
         </div>
       )}
+
+
 
     </div>
   );

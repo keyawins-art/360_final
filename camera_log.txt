@@ -1,0 +1,2326 @@
+2026-06-23 14:16:56 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:16:56 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:16:56 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:16:56 - Initializing MVS...
+2026-06-23 14:16:57 - Enum devices return: 0, count: 1
+2026-06-23 14:16:57 - Found device serial: DA9551444
+2026-06-23 14:16:57 - Matched target serial: DA9551444
+2026-06-23 14:16:57 - Create handle return: 0
+2026-06-23 14:16:57 - Open device return: 0
+2026-06-23 14:16:57 - Payload size: 15040512
+2026-06-23 14:16:57 - Start grabbing return: 0
+2026-06-23 14:16:57 - Entering frame grab loop...
+2026-06-23 14:16:57 - Exiting frame grab loop and releasing resources.
+2026-06-23 14:18:26 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:18:26 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:18:26 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:18:26 - Initializing MVS...
+2026-06-23 14:18:26 - Enum devices return: 0, count: 1
+2026-06-23 14:18:26 - Found device serial: DA9551444
+2026-06-23 14:18:26 - Matched target serial: DA9551444
+2026-06-23 14:18:26 - Create handle return: 0
+2026-06-23 14:18:27 - Open device return: 0
+2026-06-23 14:18:27 - Payload size: 15040512
+2026-06-23 14:18:27 - Start grabbing return: 0
+2026-06-23 14:18:27 - Entering frame grab loop...
+2026-06-23 14:30:09 - Exiting frame grab loop and releasing resources.
+2026-06-23 14:30:26 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:30:26 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:30:26 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:30:26 - Initializing MVS...
+2026-06-23 14:30:26 - Enum devices return: 0, count: 1
+2026-06-23 14:30:26 - Found device serial: DA9551444
+2026-06-23 14:30:26 - Matched target serial: DA9551444
+2026-06-23 14:30:26 - Create handle return: 0
+2026-06-23 14:30:26 - Open device return: 0
+2026-06-23 14:30:26 - Payload size: 15040512
+2026-06-23 14:30:26 - Start grabbing return: 0
+2026-06-23 14:30:26 - Entering frame grab loop...
+2026-06-23 14:30:26 - Parameters changed: {'exposure': 49998, 'gain': 0, 'width': 1440, 'height': 1080, 'offsetX': 0, 'offsetY': 0}
+2026-06-23 14:30:26 - Set ExposureTime to 49998 ret=0
+2026-06-23 14:30:26 - Set Gain to 0 ret=2147483910
+2026-06-23 14:30:26 - Set Width to 1440 ret=2147483910
+2026-06-23 14:30:26 - Set Height to 1080 ret=2147483910
+2026-06-23 14:30:26 - Set OffsetX to 0 ret=0
+2026-06-23 14:30:26 - Set OffsetY to 0 ret=0
+2026-06-23 14:30:36 - Parameters changed: {'exposure': 15809, 'gain': 0, 'width': 1440, 'height': 3691, 'offsetX': 3824, 'offsetY': 0}
+2026-06-23 14:30:36 - Set ExposureTime to 15809 ret=0
+2026-06-23 14:30:36 - Set Gain to 0 ret=2147483910
+2026-06-23 14:30:36 - Set Width to 1440 ret=2147483910
+2026-06-23 14:30:36 - Set Height to 3691 ret=2147483910
+2026-06-23 14:30:36 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:30:36 - Set OffsetY to 0 ret=0
+2026-06-23 14:30:46 - Parameters changed: {'exposure': 100000, 'gain': 100, 'width': 4000, 'height': 3691, 'offsetX': 3824, 'offsetY': 4000}
+2026-06-23 14:30:46 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:30:46 - Set Gain to 100 ret=2147483910
+2026-06-23 14:30:46 - Set Width to 4000 ret=2147483910
+2026-06-23 14:30:46 - Set Height to 3691 ret=2147483910
+2026-06-23 14:30:46 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:30:46 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:30:52 - Parameters changed: {'exposure': 100000, 'gain': 100, 'width': 0, 'height': 3691, 'offsetX': 3824, 'offsetY': 4000}
+2026-06-23 14:30:52 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:30:52 - Set Gain to 100 ret=2147483910
+2026-06-23 14:30:52 - Set Width to 0 ret=2147483910
+2026-06-23 14:30:52 - Set Height to 3691 ret=2147483910
+2026-06-23 14:30:52 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:30:52 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:30:58 - Parameters changed: {'exposure': 100000, 'gain': 100, 'width': 0, 'height': 676, 'offsetX': 3824, 'offsetY': 4000}
+2026-06-23 14:30:58 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:30:58 - Set Gain to 100 ret=2147483910
+2026-06-23 14:30:58 - Set Width to 0 ret=2147483910
+2026-06-23 14:30:58 - Set Height to 676 ret=2147483910
+2026-06-23 14:30:58 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:30:58 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:31:02 - Parameters changed: {'exposure': 100000, 'gain': 0, 'width': 0, 'height': 676, 'offsetX': 3824, 'offsetY': 4000}
+2026-06-23 14:31:02 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:31:02 - Set Gain to 0 ret=2147483910
+2026-06-23 14:31:02 - Set Width to 0 ret=2147483910
+2026-06-23 14:31:02 - Set Height to 676 ret=2147483910
+2026-06-23 14:31:02 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:31:02 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:31:10 - Parameters changed: {'exposure': 0, 'gain': 0, 'width': 0, 'height': 676, 'offsetX': 3824, 'offsetY': 4000}
+2026-06-23 14:31:10 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:31:10 - Set Gain to 0 ret=2147483910
+2026-06-23 14:31:10 - Set Width to 0 ret=2147483910
+2026-06-23 14:31:10 - Set Height to 676 ret=2147483910
+2026-06-23 14:31:10 - Set OffsetX to 3824 ret=2147483906
+2026-06-23 14:31:10 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:31:15 - Parameters changed: {'exposure': 0, 'gain': 0, 'width': 0, 'height': 676, 'offsetX': 0, 'offsetY': 4000}
+2026-06-23 14:31:15 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:31:15 - Set Gain to 0 ret=2147483910
+2026-06-23 14:31:15 - Set Width to 0 ret=2147483910
+2026-06-23 14:31:15 - Set Height to 676 ret=2147483910
+2026-06-23 14:31:15 - Set OffsetX to 0 ret=0
+2026-06-23 14:31:15 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:31:16 - Exiting frame grab loop and releasing resources.
+2026-06-23 14:31:20 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:31:20 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:31:20 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:31:20 - Initializing MVS...
+2026-06-23 14:31:20 - Enum devices return: 0, count: 1
+2026-06-23 14:31:20 - Found device serial: DA9551444
+2026-06-23 14:31:20 - Matched target serial: DA9551444
+2026-06-23 14:31:20 - Create handle return: 0
+2026-06-23 14:31:20 - Open device return: 0
+2026-06-23 14:31:20 - Payload size: 15040512
+2026-06-23 14:31:20 - Start grabbing return: 0
+2026-06-23 14:31:20 - Entering frame grab loop...
+2026-06-23 14:31:20 - Parameters changed: {'exposure': 0, 'gain': 0, 'width': 0, 'height': 676, 'offsetX': 0, 'offsetY': 4000}
+2026-06-23 14:31:20 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:31:20 - Set Gain to 0 ret=2147483910
+2026-06-23 14:31:20 - Set Width to 0 ret=2147483910
+2026-06-23 14:31:20 - Set Height to 676 ret=2147483910
+2026-06-23 14:31:20 - Set OffsetX to 0 ret=0
+2026-06-23 14:31:20 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:31:24 - Parameters changed: {'exposure': 100000, 'gain': 0, 'width': 0, 'height': 676, 'offsetX': 0, 'offsetY': 4000}
+2026-06-23 14:31:24 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:31:24 - Set Gain to 0 ret=2147483910
+2026-06-23 14:31:24 - Set Width to 0 ret=2147483910
+2026-06-23 14:31:24 - Set Height to 676 ret=2147483910
+2026-06-23 14:31:24 - Set OffsetX to 0 ret=0
+2026-06-23 14:31:24 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:53:07 - Exiting frame grab loop and releasing resources.
+2026-06-23 14:53:23 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:53:23 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:53:23 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:53:23 - Initializing MVS...
+2026-06-23 14:53:23 - Enum devices return: 0, count: 1
+2026-06-23 14:53:23 - Found device serial: DA9551444
+2026-06-23 14:53:23 - Matched target serial: DA9551444
+2026-06-23 14:53:23 - Create handle return: 0
+2026-06-23 14:53:24 - Open device return: 0
+2026-06-23 14:53:24 - Payload size: 15040512
+2026-06-23 14:53:24 - Start grabbing return: 0
+2026-06-23 14:53:24 - Entering frame grab loop...
+2026-06-23 14:53:24 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:53:24 - Set Width to 128 ret=0
+2026-06-23 14:53:24 - Set Height to 676 ret=0
+2026-06-23 14:53:24 - Set OffsetX to 0 ret=0
+2026-06-23 14:53:24 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:53:24 - New payload size: 259584
+2026-06-23 14:53:24 - Restart grabbing return: 0
+2026-06-23 14:53:24 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:53:24 - Set Gain to 0 ret=0
+2026-06-23 14:53:30 - Exiting frame grab loop and releasing resources.
+2026-06-23 14:53:32 - generate_camera_frames called for cam_idx=1
+2026-06-23 14:53:32 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 14:53:32 - Target serial for cam_idx=1: DA9551444
+2026-06-23 14:53:32 - Initializing MVS...
+2026-06-23 14:53:32 - Enum devices return: 0, count: 1
+2026-06-23 14:53:32 - Found device serial: DA9551444
+2026-06-23 14:53:32 - Matched target serial: DA9551444
+2026-06-23 14:53:32 - Create handle return: 0
+2026-06-23 14:53:33 - Open device return: 0
+2026-06-23 14:53:33 - Payload size: 259584
+2026-06-23 14:53:33 - Start grabbing return: 0
+2026-06-23 14:53:33 - Entering frame grab loop...
+2026-06-23 14:53:33 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:53:33 - Set Width to 128 ret=0
+2026-06-23 14:53:33 - Set Height to 676 ret=0
+2026-06-23 14:53:33 - Set OffsetX to 0 ret=0
+2026-06-23 14:53:33 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:53:33 - New payload size: 259584
+2026-06-23 14:53:33 - Restart grabbing return: 0
+2026-06-23 14:53:33 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:53:33 - Set Gain to 0 ret=0
+2026-06-23 14:53:42 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:53:42 - Set Width to 4000 ret=2147483906
+2026-06-23 14:53:42 - Set Height to 4000 ret=2147483906
+2026-06-23 14:53:42 - Set OffsetX to 0 ret=0
+2026-06-23 14:53:42 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:53:42 - New payload size: 259584
+2026-06-23 14:53:42 - Restart grabbing return: 0
+2026-06-23 14:53:42 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:53:42 - Set Gain to 100 ret=2147483906
+2026-06-23 14:55:12 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:55:12 - Set Width to 2448 ret=0
+2026-06-23 14:55:12 - Set Height to 2048 ret=0
+2026-06-23 14:55:12 - Set OffsetX to 0 ret=0
+2026-06-23 14:55:12 - Set OffsetY to 0 ret=0
+2026-06-23 14:55:12 - New payload size: 15040512
+2026-06-23 14:55:12 - Restart grabbing return: 0
+2026-06-23 14:55:12 - Set ExposureTime to 50000 ret=0
+2026-06-23 14:55:12 - Set Gain to 0 ret=0
+2026-06-23 14:56:07 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:56:07 - Set Width to 4000 ret=2147483906
+2026-06-23 14:56:07 - Set Height to 4000 ret=2147483906
+2026-06-23 14:56:07 - Set OffsetX to 0 ret=0
+2026-06-23 14:56:07 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:56:07 - New payload size: 15040512
+2026-06-23 14:56:07 - Restart grabbing return: 0
+2026-06-23 14:56:07 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:56:07 - Set Gain to 100 ret=2147483906
+2026-06-23 14:56:10 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:56:10 - Set Gain to 0 ret=0
+2026-06-23 14:56:14 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:56:14 - Set Width to 440 ret=0
+2026-06-23 14:56:14 - Set Height to 4000 ret=2147483906
+2026-06-23 14:56:14 - Set OffsetX to 0 ret=0
+2026-06-23 14:56:14 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:56:14 - New payload size: 2703360
+2026-06-23 14:56:14 - Restart grabbing return: 0
+2026-06-23 14:56:14 - Set ExposureTime to 0 ret=2147483906
+2026-06-23 14:56:14 - Set Gain to 0 ret=0
+2026-06-23 14:56:23 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 14:56:23 - Set Width to 3008 ret=2147483906
+2026-06-23 14:56:23 - Set Height to 4000 ret=2147483906
+2026-06-23 14:56:23 - Set OffsetX to 2248 ret=2147483906
+2026-06-23 14:56:23 - Set OffsetY to 4000 ret=2147483906
+2026-06-23 14:56:23 - New payload size: 2703360
+2026-06-23 14:56:23 - Restart grabbing return: 0
+2026-06-23 14:56:23 - Set ExposureTime to 61765 ret=0
+2026-06-23 14:56:23 - Set Gain to 53 ret=2147483906
+2026-06-23 14:56:30 - Set ExposureTime to 61765 ret=0
+2026-06-23 14:56:30 - Set Gain to 100 ret=2147483906
+2026-06-23 14:56:35 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:56:35 - Set Gain to 100 ret=2147483906
+2026-06-23 14:56:44 - Set ExposureTime to 100000 ret=0
+2026-06-23 14:56:44 - Set Gain to 0 ret=0
+2026-06-23 15:03:56 - generate_camera_frames called for cam_idx=1
+2026-06-23 15:03:56 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 15:03:56 - Target serial for cam_idx=1: DA9551444
+2026-06-23 15:03:56 - Initializing MVS...
+2026-06-23 15:03:56 - Enum devices return: 0, count: 1
+2026-06-23 15:03:56 - Found device serial: DA9551444
+2026-06-23 15:03:56 - Matched target serial: DA9551444
+2026-06-23 15:03:56 - Create handle return: 0
+2026-06-23 15:03:56 - Open device return: 0
+2026-06-23 15:03:56 - Payload size: 2703360
+2026-06-23 15:03:56 - Start grabbing return: 0
+2026-06-23 15:03:56 - Entering frame grab loop...
+2026-06-23 15:03:56 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:03:56 - Set Width to 2448 ret=0
+2026-06-23 15:03:56 - Set Height to 2048 ret=0
+2026-06-23 15:03:56 - Set OffsetX to 0 ret=0
+2026-06-23 15:03:56 - Set OffsetY to 0 ret=0
+2026-06-23 15:03:56 - New payload size: 15040512
+2026-06-23 15:03:57 - Restart grabbing return: 0
+2026-06-23 15:03:57 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:03:57 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-23 15:04:00 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:04:00 - Set Gain to 23.98 (original: 88) ret=0
+2026-06-23 15:04:04 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:04:04 - Set Gain to 23.98 (original: 28) ret=0
+2026-06-23 15:23:44 - Exiting frame grab loop and releasing resources.
+2026-06-23 15:23:48 - generate_camera_frames called for cam_idx=1
+2026-06-23 15:23:48 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 15:23:48 - Target serial for cam_idx=1: DA9551444
+2026-06-23 15:23:48 - Initializing MVS...
+2026-06-23 15:23:48 - Enum devices return: 0, count: 1
+2026-06-23 15:23:48 - Found device serial: DA9551444
+2026-06-23 15:23:48 - Matched target serial: DA9551444
+2026-06-23 15:23:48 - Create handle return: 0
+2026-06-23 15:23:48 - Open device return: 0
+2026-06-23 15:23:48 - Payload size: 15040512
+2026-06-23 15:23:48 - Start grabbing return: 0
+2026-06-23 15:23:48 - Entering frame grab loop...
+2026-06-23 15:23:48 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:23:48 - Set Width to 2448 ret=0
+2026-06-23 15:23:48 - Set Height to 2048 ret=0
+2026-06-23 15:23:48 - Set OffsetX to 0 ret=0
+2026-06-23 15:23:48 - Set OffsetY to 0 ret=0
+2026-06-23 15:23:48 - New payload size: 15040512
+2026-06-23 15:23:48 - Restart grabbing return: 0
+2026-06-23 15:23:48 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:23:48 - Set Gain to 23.98 (original: 28) ret=0
+2026-06-23 15:24:03 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:03 - Set Width to 848 ret=0
+2026-06-23 15:24:03 - Set Height to 1382 ret=2147483906
+2026-06-23 15:24:03 - Set OffsetX to 880 ret=0
+2026-06-23 15:24:03 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:03 - New payload size: 5210112
+2026-06-23 15:24:03 - Restart grabbing return: 0
+2026-06-23 15:24:03 - Set ExposureTime to 11029.0 (original: 11029) ret=0
+2026-06-23 15:24:03 - Set Gain to 23.98 (original: 39) ret=0
+2026-06-23 15:24:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:15 - Set Width to 2448 ret=0
+2026-06-23 15:24:15 - Set Height to 2048 ret=0
+2026-06-23 15:24:15 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:15 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:15 - New payload size: 15040512
+2026-06-23 15:24:15 - Restart grabbing return: 0
+2026-06-23 15:24:15 - Set ExposureTime to 68382.0 (original: 68382) ret=0
+2026-06-23 15:24:15 - Set Gain to 23.98 (original: 89) ret=0
+2026-06-23 15:24:20 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:21 - Set Width to 2448 ret=0
+2026-06-23 15:24:21 - Set Height to 2048 ret=0
+2026-06-23 15:24:21 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:21 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:21 - New payload size: 15040512
+2026-06-23 15:24:21 - Restart grabbing return: 0
+2026-06-23 15:24:21 - Set ExposureTime to 68382.0 (original: 68382) ret=0
+2026-06-23 15:24:21 - Set Gain to 23.98 (original: 89) ret=0
+2026-06-23 15:24:25 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:25 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:31 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:31 - Set Width to 2448 ret=0
+2026-06-23 15:24:31 - Set Height to 128 ret=0
+2026-06-23 15:24:31 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:31 - Set OffsetY to 1920 ret=0
+2026-06-23 15:24:31 - New payload size: 940032
+2026-06-23 15:24:31 - Restart grabbing return: 0
+2026-06-23 15:24:31 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:31 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:35 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:35 - Set Width to 2448 ret=0
+2026-06-23 15:24:35 - Set Height to 2048 ret=0
+2026-06-23 15:24:35 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:35 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:35 - New payload size: 15040512
+2026-06-23 15:24:35 - Restart grabbing return: 0
+2026-06-23 15:24:35 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:35 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:39 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:39 - Set Gain to 3.0 (original: 3) ret=0
+2026-06-23 15:24:42 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:42 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:45 - Set ExposureTime to 100.0 (original: 0) ret=0
+2026-06-23 15:24:45 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:51 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:51 - Set Width to 2448 ret=0
+2026-06-23 15:24:51 - Set Height to 2048 ret=0
+2026-06-23 15:24:51 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:51 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:51 - New payload size: 15040512
+2026-06-23 15:24:51 - Restart grabbing return: 0
+2026-06-23 15:24:51 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:51 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:55 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:55 - Set Width to 2448 ret=0
+2026-06-23 15:24:55 - Set Height to 2048 ret=0
+2026-06-23 15:24:55 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:55 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:55 - New payload size: 15040512
+2026-06-23 15:24:55 - Restart grabbing return: 0
+2026-06-23 15:24:55 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:55 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:24:59 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:24:59 - Set Width to 2448 ret=0
+2026-06-23 15:24:59 - Set Height to 2048 ret=0
+2026-06-23 15:24:59 - Set OffsetX to 0 ret=0
+2026-06-23 15:24:59 - Set OffsetY to 0 ret=0
+2026-06-23 15:24:59 - New payload size: 15040512
+2026-06-23 15:24:59 - Restart grabbing return: 0
+2026-06-23 15:24:59 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:24:59 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:25:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:25:02 - Set Width to 2448 ret=0
+2026-06-23 15:25:02 - Set Height to 2048 ret=0
+2026-06-23 15:25:02 - Set OffsetX to 0 ret=0
+2026-06-23 15:25:02 - Set OffsetY to 0 ret=0
+2026-06-23 15:25:02 - New payload size: 15040512
+2026-06-23 15:25:02 - Restart grabbing return: 0
+2026-06-23 15:25:02 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:25:02 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:25:08 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:25:08 - Set Width to 2232 ret=0
+2026-06-23 15:25:08 - Set Height to 1162 ret=2147483906
+2026-06-23 15:25:08 - Set OffsetX to 216 ret=0
+2026-06-23 15:25:08 - Set OffsetY to 0 ret=0
+2026-06-23 15:25:08 - New payload size: 13713408
+2026-06-23 15:25:08 - Restart grabbing return: 0
+2026-06-23 15:25:08 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:25:08 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:25:14 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:25:14 - Set Width to 1184 ret=0
+2026-06-23 15:25:14 - Set Height to 1162 ret=2147483906
+2026-06-23 15:25:14 - Set OffsetX to 1264 ret=0
+2026-06-23 15:25:14 - Set OffsetY to 0 ret=0
+2026-06-23 15:25:14 - New payload size: 7274496
+2026-06-23 15:25:14 - Restart grabbing return: 0
+2026-06-23 15:25:14 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:25:14 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:25:18 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:25:18 - Set Width to 1184 ret=0
+2026-06-23 15:25:18 - Set Height to 2048 ret=0
+2026-06-23 15:25:18 - Set OffsetX to 1264 ret=0
+2026-06-23 15:25:18 - Set OffsetY to 0 ret=0
+2026-06-23 15:25:18 - New payload size: 7274496
+2026-06-23 15:25:18 - Restart grabbing return: 0
+2026-06-23 15:25:18 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:25:18 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:28:42 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:28:42 - Set Width to 2448 ret=0
+2026-06-23 15:28:42 - Set Height to 2048 ret=0
+2026-06-23 15:28:42 - Set OffsetX to 0 ret=0
+2026-06-23 15:28:42 - Set OffsetY to 0 ret=0
+2026-06-23 15:28:42 - New payload size: 15040512
+2026-06-23 15:28:42 - Restart grabbing return: 0
+2026-06-23 15:28:42 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:28:42 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:28:48 - Stopping grabbing to apply resolution/offset changes...
+2026-06-23 15:28:49 - Set Width to 2448 ret=0
+2026-06-23 15:28:49 - Set Height to 2048 ret=0
+2026-06-23 15:28:49 - Set OffsetX to 0 ret=0
+2026-06-23 15:28:49 - Set OffsetY to 0 ret=0
+2026-06-23 15:28:49 - New payload size: 15040512
+2026-06-23 15:28:49 - Restart grabbing return: 0
+2026-06-23 15:28:49 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-23 15:28:49 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 15:54:55 - generate_camera_frames called for cam_idx=2
+2026-06-23 15:54:55 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-23 15:54:55 - Target serial for cam_idx=2: 
+2026-06-23 15:54:55 - No target serial found, returning.
+2026-06-23 16:12:54 - Set ExposureTime to 26103.0 (original: 26103) ret=0
+2026-06-23 16:12:54 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-23 16:32:04 - Set ExposureTime to 75368.0 (original: 75368) ret=0
+2026-06-23 16:32:04 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:24:45 - generate_camera_frames called for cam_idx=1
+2026-06-24 10:24:45 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 10:24:45 - Target serial for cam_idx=1: DA9551444
+2026-06-24 10:24:45 - Initializing MVS...
+2026-06-24 10:24:45 - Enum devices return: 0, count: 0
+2026-06-24 10:24:45 - No matching device found, returning.
+2026-06-24 10:25:59 - generate_camera_frames called for cam_idx=2
+2026-06-24 10:25:59 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 10:25:59 - Target serial for cam_idx=2: 
+2026-06-24 10:25:59 - No target serial found, returning.
+2026-06-24 10:26:17 - generate_camera_frames called for cam_idx=3
+2026-06-24 10:26:17 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 10:26:17 - Target serial for cam_idx=3: 
+2026-06-24 10:26:17 - No target serial found, returning.
+2026-06-24 10:38:30 - generate_camera_frames called for cam_idx=1
+2026-06-24 10:38:30 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 10:38:30 - Target serial for cam_idx=1: DA9551444
+2026-06-24 10:38:30 - Initializing MVS...
+2026-06-24 10:38:30 - Enum devices return: 0, count: 1
+2026-06-24 10:38:30 - Found device serial: DA9551444
+2026-06-24 10:38:30 - Matched target serial: DA9551444
+2026-06-24 10:38:30 - Create handle return: 0
+2026-06-24 10:38:30 - Open device return: 0
+2026-06-24 10:38:30 - Payload size: 15040512
+2026-06-24 10:38:30 - Start grabbing return: 0
+2026-06-24 10:38:30 - Entering frame grab loop...
+2026-06-24 10:38:30 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:38:30 - Set Width to 2448 ret=0
+2026-06-24 10:38:30 - Set Height to 2048 ret=0
+2026-06-24 10:38:30 - Set OffsetX to 0 ret=0
+2026-06-24 10:38:30 - Set OffsetY to 0 ret=0
+2026-06-24 10:38:30 - New payload size: 15040512
+2026-06-24 10:38:30 - Restart grabbing return: 0
+2026-06-24 10:38:30 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:38:30 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:38:41 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:38:41 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:38:45 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:38:45 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:38:51 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:38:51 - Set Width to 984 ret=0
+2026-06-24 10:38:51 - Set Height to 2048 ret=0
+2026-06-24 10:38:51 - Set OffsetX to 1464 ret=0
+2026-06-24 10:38:51 - Set OffsetY to 0 ret=0
+2026-06-24 10:38:51 - New payload size: 6045696
+2026-06-24 10:38:51 - Restart grabbing return: 0
+2026-06-24 10:38:51 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:38:51 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:38:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:38:57 - Set Width to 984 ret=0
+2026-06-24 10:38:57 - Set Height to 278 ret=2147483906
+2026-06-24 10:38:57 - Set OffsetX to 1464 ret=0
+2026-06-24 10:38:57 - Set OffsetY to 0 ret=0
+2026-06-24 10:38:57 - New payload size: 6045696
+2026-06-24 10:38:57 - Restart grabbing return: 0
+2026-06-24 10:38:57 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:38:57 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:39:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:02 - Set Width to 984 ret=0
+2026-06-24 10:39:02 - Set Height to 128 ret=0
+2026-06-24 10:39:02 - Set OffsetX to 1464 ret=0
+2026-06-24 10:39:02 - Set OffsetY to 1920 ret=0
+2026-06-24 10:39:02 - New payload size: 377856
+2026-06-24 10:39:02 - Restart grabbing return: 0
+2026-06-24 10:39:02 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:39:02 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:39:08 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:08 - Set Width to 984 ret=0
+2026-06-24 10:39:08 - Set Height to 1088 ret=0
+2026-06-24 10:39:08 - Set OffsetX to 1464 ret=0
+2026-06-24 10:39:08 - Set OffsetY to 960 ret=0
+2026-06-24 10:39:08 - New payload size: 3211776
+2026-06-24 10:39:08 - Restart grabbing return: 0
+2026-06-24 10:39:08 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:39:08 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:39:12 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:12 - Set Width to 984 ret=0
+2026-06-24 10:39:12 - Set Height to 514 ret=2147483906
+2026-06-24 10:39:12 - Set OffsetX to 1464 ret=0
+2026-06-24 10:39:12 - Set OffsetY to 960 ret=0
+2026-06-24 10:39:12 - New payload size: 3211776
+2026-06-24 10:39:12 - Restart grabbing return: 0
+2026-06-24 10:39:12 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:39:12 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:39:19 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:19 - Set Width to 352 ret=0
+2026-06-24 10:39:19 - Set Height to 128 ret=0
+2026-06-24 10:39:19 - Set OffsetX to 2096 ret=0
+2026-06-24 10:39:19 - Set OffsetY to 1920 ret=0
+2026-06-24 10:39:19 - New payload size: 135168
+2026-06-24 10:39:19 - Restart grabbing return: 0
+2026-06-24 10:39:19 - Set ExposureTime to 34559.0 (original: 34559) ret=0
+2026-06-24 10:39:19 - Set Gain to 23.98 (original: 52) ret=0
+2026-06-24 10:39:30 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:39:30 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:39:34 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:34 - Set Width to 352 ret=0
+2026-06-24 10:39:34 - Set Height to 750 ret=2147483906
+2026-06-24 10:39:34 - Set OffsetX to 2096 ret=0
+2026-06-24 10:39:34 - Set OffsetY to 1920 ret=0
+2026-06-24 10:39:34 - New payload size: 135168
+2026-06-24 10:39:34 - Restart grabbing return: 0
+2026-06-24 10:39:34 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:39:34 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:39:38 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:39:39 - Set Width to 792 ret=0
+2026-06-24 10:39:39 - Set Height to 750 ret=2147483906
+2026-06-24 10:39:39 - Set OffsetX to 1656 ret=0
+2026-06-24 10:39:39 - Set OffsetY to 1920 ret=0
+2026-06-24 10:39:39 - New payload size: 304128
+2026-06-24 10:39:39 - Restart grabbing return: 0
+2026-06-24 10:39:39 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:39:39 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:49:46 - generate_camera_frames called for cam_idx=1
+2026-06-24 10:49:46 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 10:49:46 - Target serial for cam_idx=1: DA9551444
+2026-06-24 10:49:46 - Initializing MVS...
+2026-06-24 10:49:46 - Enum devices return: 0, count: 1
+2026-06-24 10:49:46 - Found device serial: DA9551444
+2026-06-24 10:49:46 - Matched target serial: DA9551444
+2026-06-24 10:49:46 - Create handle return: 0
+2026-06-24 10:49:47 - Open device return: 0
+2026-06-24 10:49:47 - Payload size: 304128
+2026-06-24 10:49:47 - Start grabbing return: 0
+2026-06-24 10:49:47 - Entering frame grab loop...
+2026-06-24 10:49:47 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:49:47 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 10:49:47 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 10:49:47 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-24 10:49:47 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 10:49:47 - New payload size: 304128
+2026-06-24 10:49:47 - Restart grabbing return: 0
+2026-06-24 10:49:47 - Set ExposureTime to 50000.0 (original: 50000) ret=0
+2026-06-24 10:49:47 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-24 10:49:53 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:49:53 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:49:58 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:49:58 - Set Width to 2448 (limits: 32-2448) ret=0
+2026-06-24 10:49:58 - Set Height to 1688 (limits: 8-2048) ret=0
+2026-06-24 10:49:58 - Set OffsetX to 0 (max: 0) ret=0
+2026-06-24 10:49:58 - Set OffsetY to 0 (max: 360) ret=0
+2026-06-24 10:49:58 - New payload size: 12396672
+2026-06-24 10:49:58 - Restart grabbing return: 0
+2026-06-24 10:49:58 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:49:58 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:50:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:50:02 - Set Width to 2448 (limits: 32-2448) ret=0
+2026-06-24 10:50:02 - Set Height to 764 (limits: 8-2048) ret=0
+2026-06-24 10:50:02 - Set OffsetX to 0 (max: 0) ret=0
+2026-06-24 10:50:02 - Set OffsetY to 0 (max: 1284) ret=0
+2026-06-24 10:50:02 - New payload size: 5610816
+2026-06-24 10:50:02 - Restart grabbing return: 0
+2026-06-24 10:50:02 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:50:02 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:50:06 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:50:06 - Set Width to 352 (limits: 32-2448) ret=0
+2026-06-24 10:50:06 - Set Height to 764 (limits: 8-2048) ret=0
+2026-06-24 10:50:06 - Set OffsetX to 0 (max: 2096) ret=0
+2026-06-24 10:50:06 - Set OffsetY to 0 (max: 1284) ret=0
+2026-06-24 10:50:06 - New payload size: 806784
+2026-06-24 10:50:06 - Restart grabbing return: 0
+2026-06-24 10:50:06 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:50:06 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:50:11 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:50:11 - Set Width to 776 (limits: 32-2448) ret=0
+2026-06-24 10:50:11 - Set Height to 764 (limits: 8-2048) ret=0
+2026-06-24 10:50:11 - Set OffsetX to 0 (max: 1672) ret=0
+2026-06-24 10:50:11 - Set OffsetY to 0 (max: 1284) ret=0
+2026-06-24 10:50:11 - New payload size: 1778592
+2026-06-24 10:50:11 - Restart grabbing return: 0
+2026-06-24 10:50:11 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:50:11 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:50:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:50:15 - Set Width to 776 (limits: 32-2448) ret=0
+2026-06-24 10:50:15 - Set Height to 72 (limits: 8-2048) ret=0
+2026-06-24 10:50:15 - Set OffsetX to 0 (max: 1672) ret=0
+2026-06-24 10:50:15 - Set OffsetY to 0 (max: 1976) ret=0
+2026-06-24 10:50:15 - New payload size: 167616
+2026-06-24 10:50:15 - Restart grabbing return: 0
+2026-06-24 10:50:15 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:50:15 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:50:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:50:57 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-24 10:50:57 - Set Height to 72 (limits: 8-2048) ret=0
+2026-06-24 10:50:57 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-24 10:50:57 - Set OffsetY to 0 (max: 1976) ret=0
+2026-06-24 10:50:57 - New payload size: 6912
+2026-06-24 10:50:57 - Restart grabbing return: 0
+2026-06-24 10:50:57 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:50:57 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:51:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:51:02 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-24 10:51:02 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-24 10:51:02 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-24 10:51:02 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-24 10:51:02 - New payload size: 196608
+2026-06-24 10:51:02 - Restart grabbing return: 0
+2026-06-24 10:51:02 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:51:02 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:20 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:20 - Set Width to 656 (limits: 32-2448) ret=0
+2026-06-24 10:56:20 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-24 10:56:20 - Set OffsetX to 0 (max: 1792) ret=0
+2026-06-24 10:56:20 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-24 10:56:20 - New payload size: 4030464
+2026-06-24 10:56:20 - Restart grabbing return: 0
+2026-06-24 10:56:20 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:20 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:25 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:25 - Set Width to 656 (limits: 32-2448) ret=0
+2026-06-24 10:56:25 - Set Height to 396 (limits: 8-2048) ret=0
+2026-06-24 10:56:25 - Set OffsetX to 0 (max: 1792) ret=0
+2026-06-24 10:56:25 - Set OffsetY to 0 (max: 1652) ret=0
+2026-06-24 10:56:25 - New payload size: 779328
+2026-06-24 10:56:25 - Restart grabbing return: 0
+2026-06-24 10:56:25 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:25 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:33 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:33 - Set Width to 656 (limits: 32-2448) ret=0
+2026-06-24 10:56:33 - Set Height to 1528 (limits: 8-2048) ret=0
+2026-06-24 10:56:33 - Set OffsetX to 0 (max: 1792) ret=0
+2026-06-24 10:56:33 - Set OffsetY to 0 (max: 520) ret=0
+2026-06-24 10:56:34 - New payload size: 3007104
+2026-06-24 10:56:34 - Restart grabbing return: 0
+2026-06-24 10:56:34 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:34 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:37 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:38 - Set Width to 656 (limits: 32-2448) ret=0
+2026-06-24 10:56:38 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-24 10:56:38 - Set OffsetX to 0 (max: 1792) ret=0
+2026-06-24 10:56:38 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-24 10:56:38 - New payload size: 4030464
+2026-06-24 10:56:38 - Restart grabbing return: 0
+2026-06-24 10:56:38 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:38 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:42 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:42 - Set Width to 656 (limits: 32-2448) ret=0
+2026-06-24 10:56:42 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-24 10:56:42 - Set OffsetX to 0 (max: 1792) ret=0
+2026-06-24 10:56:42 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-24 10:56:42 - New payload size: 4030464
+2026-06-24 10:56:42 - Restart grabbing return: 0
+2026-06-24 10:56:42 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:42 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 10:56:46 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 10:56:46 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 10:56:46 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 10:56:46 - Set OffsetX to 0 (max: 272) ret=0
+2026-06-24 10:56:46 - Set OffsetY to 0 (max: 372) ret=0
+2026-06-24 10:56:46 - New payload size: 10940928
+2026-06-24 10:56:46 - Restart grabbing return: 0
+2026-06-24 10:56:46 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 10:56:46 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:01:27 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:01:27 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:01:27 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:01:27 - Set OffsetX to 0 (max: 272) ret=0
+2026-06-24 11:01:27 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 11:01:27 - New payload size: 10940928
+2026-06-24 11:01:27 - Restart grabbing return: 0
+2026-06-24 11:01:27 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:01:27 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:01:30 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:01:30 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:01:30 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:01:30 - Set OffsetX to 0 (max: 272) ret=0
+2026-06-24 11:01:30 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 11:01:30 - New payload size: 10940928
+2026-06-24 11:01:30 - Restart grabbing return: 0
+2026-06-24 11:01:30 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:01:30 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:01:34 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:01:34 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:01:34 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:01:34 - Set OffsetX to 0 (max: 272) ret=0
+2026-06-24 11:01:34 - Set OffsetY to 0 (max: 372) ret=0
+2026-06-24 11:01:34 - New payload size: 10940928
+2026-06-24 11:01:34 - Restart grabbing return: 0
+2026-06-24 11:01:34 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:01:34 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:01:38 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:01:38 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:01:38 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:01:38 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 11:01:38 - Set OffsetY to 0 (max: 372) ret=0
+2026-06-24 11:01:38 - New payload size: 10940928
+2026-06-24 11:01:38 - Restart grabbing return: 0
+2026-06-24 11:01:38 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:01:38 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:03:12 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:03:12 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:03:12 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:03:12 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 11:03:12 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 11:03:12 - New payload size: 10940928
+2026-06-24 11:03:12 - Restart grabbing return: 0
+2026-06-24 11:03:12 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:03:12 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 11:03:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 11:03:15 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 11:03:15 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 11:03:15 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 11:03:15 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 11:03:15 - New payload size: 10940928
+2026-06-24 11:03:15 - Restart grabbing return: 0
+2026-06-24 11:03:15 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 11:03:15 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:43:13 - generate_camera_frames called for cam_idx=1
+2026-06-24 13:43:13 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 13:43:13 - Target serial for cam_idx=1: DA9551444
+2026-06-24 13:43:13 - Initializing MVS...
+2026-06-24 13:43:13 - Enum devices return: 0, count: 1
+2026-06-24 13:43:13 - Found device serial: DA9551444
+2026-06-24 13:43:13 - Matched target serial: DA9551444
+2026-06-24 13:43:13 - Create handle return: 0
+2026-06-24 13:43:13 - Open device return: 2147484163
+2026-06-24 13:43:48 - Exiting frame grab loop and releasing resources.
+2026-06-24 13:43:52 - generate_camera_frames called for cam_idx=1
+2026-06-24 13:43:52 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 13:43:52 - Target serial for cam_idx=1: DA9551444
+2026-06-24 13:43:52 - Initializing MVS...
+2026-06-24 13:43:52 - Enum devices return: 0, count: 1
+2026-06-24 13:43:52 - Found device serial: DA9551444
+2026-06-24 13:43:52 - Matched target serial: DA9551444
+2026-06-24 13:43:52 - Create handle return: 0
+2026-06-24 13:43:53 - Open device return: 0
+2026-06-24 13:43:53 - Payload size: 10940928
+2026-06-24 13:43:53 - Start grabbing return: 0
+2026-06-24 13:43:53 - Entering frame grab loop...
+2026-06-24 13:43:53 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:43:53 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:43:53 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:43:53 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:43:53 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 13:43:53 - New payload size: 10940928
+2026-06-24 13:43:53 - Restart grabbing return: 0
+2026-06-24 13:43:53 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:43:53 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:43:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:43:57 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:43:57 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:43:57 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:43:57 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 13:43:57 - New payload size: 10940928
+2026-06-24 13:43:57 - Restart grabbing return: 0
+2026-06-24 13:43:57 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:43:57 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:43:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:43:57 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:43:57 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:43:57 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:43:57 - Set OffsetY to 372 (max: 372) ret=0
+2026-06-24 13:43:57 - New payload size: 10940928
+2026-06-24 13:43:57 - Restart grabbing return: 0
+2026-06-24 13:43:57 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:43:57 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:44:03 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:44:03 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:44:03 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:44:03 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:44:03 - Set OffsetY to 16 (max: 372) ret=0
+2026-06-24 13:44:03 - New payload size: 10940928
+2026-06-24 13:44:03 - Restart grabbing return: 0
+2026-06-24 13:44:03 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:44:03 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:44:04 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:44:04 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:44:04 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:44:04 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:44:04 - Set OffsetY to 40 (max: 372) ret=0
+2026-06-24 13:44:04 - New payload size: 10940928
+2026-06-24 13:44:04 - Restart grabbing return: 0
+2026-06-24 13:44:04 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:44:04 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:44:08 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:44:08 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:44:08 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:44:08 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:44:08 - Set OffsetY to 112 (max: 372) ret=0
+2026-06-24 13:44:08 - New payload size: 10940928
+2026-06-24 13:44:08 - Restart grabbing return: 0
+2026-06-24 13:44:08 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:44:08 - Set Gain to 23.98 (original: 100) ret=0
+2026-06-24 13:46:37 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:46:37 - Set Gain to 8.0 (original: 8) ret=0
+2026-06-24 13:46:40 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:46:40 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:46:42 - Set ExposureTime to 45643.0 (original: 45643) ret=0
+2026-06-24 13:46:42 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:46:43 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:46:43 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:46:50 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:46:50 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:46:50 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:46:50 - Set OffsetX to 272 (max: 272) ret=0
+2026-06-24 13:46:50 - Set OffsetY to 112 (max: 372) ret=0
+2026-06-24 13:46:50 - New payload size: 10940928
+2026-06-24 13:46:50 - Restart grabbing return: 0
+2026-06-24 13:46:50 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:46:50 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:46:51 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:46:51 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-24 13:46:51 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:46:51 - Set OffsetX to 264 (max: 272) ret=0
+2026-06-24 13:46:51 - Set OffsetY to 112 (max: 372) ret=0
+2026-06-24 13:46:51 - New payload size: 10940928
+2026-06-24 13:46:51 - Restart grabbing return: 0
+2026-06-24 13:46:51 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:46:51 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:49:43 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:43 - Set Width to 280 (limits: 32-2448) ret=0
+2026-06-24 13:49:43 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:49:44 - Set OffsetX to 264 (max: 2168) ret=0
+2026-06-24 13:49:44 - Set OffsetY to 112 (max: 372) ret=0
+2026-06-24 13:49:44 - New payload size: 1407840
+2026-06-24 13:49:44 - Restart grabbing return: 0
+2026-06-24 13:49:44 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:44 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:49:46 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:46 - Set Width to 696 (limits: 32-2448) ret=0
+2026-06-24 13:49:46 - Set Height to 1676 (limits: 8-2048) ret=0
+2026-06-24 13:49:46 - Set OffsetX to 264 (max: 1752) ret=0
+2026-06-24 13:49:46 - Set OffsetY to 112 (max: 372) ret=0
+2026-06-24 13:49:46 - New payload size: 3499488
+2026-06-24 13:49:46 - Restart grabbing return: 0
+2026-06-24 13:49:46 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:46 - Set Gain to 18.0 (original: 18) ret=0
+2026-06-24 13:49:47 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:49:49 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:49 - Set Width to 696 (limits: 32-2448) ret=0
+2026-06-24 13:49:49 - Set Height to 44 (limits: 8-2048) ret=0
+2026-06-24 13:49:49 - Set OffsetX to 264 (max: 1752) ret=0
+2026-06-24 13:49:49 - Set OffsetY to 112 (max: 2004) ret=0
+2026-06-24 13:49:49 - New payload size: 91872
+2026-06-24 13:49:49 - Restart grabbing return: 0
+2026-06-24 13:49:49 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:49 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:49:49 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:49 - Set Width to 184 (limits: 32-2448) ret=0
+2026-06-24 13:49:49 - Set Height to 44 (limits: 8-2048) ret=0
+2026-06-24 13:49:49 - Set OffsetX to 264 (max: 2264) ret=0
+2026-06-24 13:49:49 - Set OffsetY to 112 (max: 2004) ret=0
+2026-06-24 13:49:49 - New payload size: 24288
+2026-06-24 13:49:49 - Restart grabbing return: 0
+2026-06-24 13:49:49 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:49 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:49:50 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:50 - Set Gain to 8.0 (original: 8) ret=0
+2026-06-24 13:49:51 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:51 - Set Gain to 13.0 (original: 13) ret=0
+2026-06-24 13:49:51 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:51 - Set Width to 696 (limits: 32-2448) ret=0
+2026-06-24 13:49:51 - Set Height to 44 (limits: 8-2048) ret=0
+2026-06-24 13:49:51 - Set OffsetX to 264 (max: 1752) ret=0
+2026-06-24 13:49:51 - Set OffsetY to 112 (max: 2004) ret=0
+2026-06-24 13:49:51 - New payload size: 91872
+2026-06-24 13:49:51 - Restart grabbing return: 0
+2026-06-24 13:49:51 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:51 - Set Gain to 13.0 (original: 13) ret=0
+2026-06-24 13:49:52 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:52 - Set Width to 696 (limits: 32-2448) ret=0
+2026-06-24 13:49:52 - Set Height to 112 (limits: 8-2048) ret=0
+2026-06-24 13:49:52 - Set OffsetX to 264 (max: 1752) ret=0
+2026-06-24 13:49:52 - Set OffsetY to 112 (max: 1936) ret=0
+2026-06-24 13:49:52 - New payload size: 233856
+2026-06-24 13:49:52 - Restart grabbing return: 0
+2026-06-24 13:49:52 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:52 - Set Gain to 13.0 (original: 13) ret=0
+2026-06-24 13:49:54 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:49:54 - Set Width to 696 (limits: 32-2448) ret=0
+2026-06-24 13:49:54 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:49:54 - Set OffsetX to 264 (max: 1752) ret=0
+2026-06-24 13:49:54 - Set OffsetY to 112 (max: 1920) ret=0
+2026-06-24 13:49:54 - New payload size: 267264
+2026-06-24 13:49:54 - Restart grabbing return: 0
+2026-06-24 13:49:54 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:49:54 - Set Gain to 13.0 (original: 13) ret=0
+2026-06-24 13:50:02 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:02 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:03 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:03 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:03 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:03 - Set OffsetX to 264 (max: 1664) ret=0
+2026-06-24 13:50:03 - Set OffsetY to 112 (max: 1920) ret=0
+2026-06-24 13:50:03 - New payload size: 301056
+2026-06-24 13:50:03 - Restart grabbing return: 0
+2026-06-24 13:50:03 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:03 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:04 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:04 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:04 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:04 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:04 - Set OffsetY to 112 (max: 1920) ret=0
+2026-06-24 13:50:04 - New payload size: 301056
+2026-06-24 13:50:04 - Restart grabbing return: 0
+2026-06-24 13:50:04 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:04 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:07 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:07 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:07 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:07 - Set OffsetX to 0 (max: 1664) ret=0
+2026-06-24 13:50:07 - Set OffsetY to 112 (max: 1920) ret=0
+2026-06-24 13:50:07 - New payload size: 301056
+2026-06-24 13:50:07 - Restart grabbing return: 0
+2026-06-24 13:50:07 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:07 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:11 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:12 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:12 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:12 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:12 - Set OffsetY to 112 (max: 1920) ret=0
+2026-06-24 13:50:12 - New payload size: 301056
+2026-06-24 13:50:12 - Restart grabbing return: 0
+2026-06-24 13:50:12 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:12 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:18 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:18 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:18 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:18 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:18 - Set OffsetY to 128 (max: 1920) ret=0
+2026-06-24 13:50:18 - New payload size: 301056
+2026-06-24 13:50:18 - Restart grabbing return: 0
+2026-06-24 13:50:18 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:18 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:20 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:20 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:20 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:20 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:20 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:50:20 - New payload size: 301056
+2026-06-24 13:50:20 - Restart grabbing return: 0
+2026-06-24 13:50:20 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:20 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:23 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:23 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:23 - Set Height to 8 (limits: 8-2048) ret=0
+2026-06-24 13:50:23 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:23 - Set OffsetY to 0 (max: 2040) ret=0
+2026-06-24 13:50:23 - New payload size: 18816
+2026-06-24 13:50:23 - Restart grabbing return: 0
+2026-06-24 13:50:23 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:23 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:26 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:27 - Set Width to 784 (limits: 32-2448) ret=0
+2026-06-24 13:50:27 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:27 - Set OffsetX to 792 (max: 1664) ret=0
+2026-06-24 13:50:27 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:50:27 - New payload size: 301056
+2026-06-24 13:50:27 - Restart grabbing return: 0
+2026-06-24 13:50:27 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:27 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:28 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:28 - Set Width to 432 (limits: 32-2448) ret=0
+2026-06-24 13:50:28 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:50:28 - Set OffsetX to 792 (max: 2016) ret=0
+2026-06-24 13:50:28 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:50:28 - New payload size: 165888
+2026-06-24 13:50:28 - Restart grabbing return: 0
+2026-06-24 13:50:28 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:28 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:30 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:30 - Set Width to 432 (limits: 32-2448) ret=0
+2026-06-24 13:50:30 - Set Height to 56 (limits: 8-2048) ret=0
+2026-06-24 13:50:30 - Set OffsetX to 792 (max: 2016) ret=0
+2026-06-24 13:50:30 - Set OffsetY to 0 (max: 1992) ret=0
+2026-06-24 13:50:30 - New payload size: 72576
+2026-06-24 13:50:30 - Restart grabbing return: 0
+2026-06-24 13:50:30 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:30 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:32 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:50:32 - Set Width to 432 (limits: 32-2448) ret=0
+2026-06-24 13:50:32 - Set Height to 72 (limits: 8-2048) ret=0
+2026-06-24 13:50:32 - Set OffsetX to 792 (max: 2016) ret=0
+2026-06-24 13:50:32 - Set OffsetY to 0 (max: 1976) ret=0
+2026-06-24 13:50:32 - New payload size: 93312
+2026-06-24 13:50:32 - Restart grabbing return: 0
+2026-06-24 13:50:32 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:32 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:50:34 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:34 - Set Gain to 7.0 (original: 7) ret=0
+2026-06-24 13:50:38 - Set ExposureTime to 6344.0 (original: 6344) ret=0
+2026-06-24 13:50:38 - Set Gain to 7.0 (original: 7) ret=0
+2026-06-24 13:50:39 - Set ExposureTime to 60701.0 (original: 60701) ret=0
+2026-06-24 13:50:39 - Set Gain to 7.0 (original: 7) ret=0
+2026-06-24 13:50:39 - Set ExposureTime to 53723.0 (original: 53723) ret=0
+2026-06-24 13:50:39 - Set Gain to 7.0 (original: 7) ret=0
+2026-06-24 13:50:40 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:50:40 - Set Gain to 7.0 (original: 7) ret=0
+2026-06-24 13:51:04 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:04 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:05 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:05 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:51:05 - Set Height to 72 (limits: 8-2048) ret=0
+2026-06-24 13:51:05 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-24 13:51:05 - Set OffsetY to 0 (max: 1976) ret=0
+2026-06-24 13:51:05 - New payload size: 171072
+2026-06-24 13:51:05 - Restart grabbing return: 0
+2026-06-24 13:51:05 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:05 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:07 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:07 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:51:07 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:51:07 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-24 13:51:07 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:51:07 - New payload size: 304128
+2026-06-24 13:51:07 - Restart grabbing return: 0
+2026-06-24 13:51:07 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:07 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:08 - Exiting frame grab loop and releasing resources.
+2026-06-24 13:51:14 - generate_camera_frames called for cam_idx=1
+2026-06-24 13:51:14 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 13:51:14 - Target serial for cam_idx=1: DA9551444
+2026-06-24 13:51:14 - Initializing MVS...
+2026-06-24 13:51:14 - Enum devices return: 0, count: 1
+2026-06-24 13:51:14 - Found device serial: DA9551444
+2026-06-24 13:51:14 - Matched target serial: DA9551444
+2026-06-24 13:51:14 - Create handle return: 0
+2026-06-24 13:51:14 - Open device return: 0
+2026-06-24 13:51:14 - Payload size: 304128
+2026-06-24 13:51:14 - Start grabbing return: 0
+2026-06-24 13:51:14 - Entering frame grab loop...
+2026-06-24 13:51:14 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:14 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:51:14 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:51:14 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-24 13:51:14 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:51:14 - New payload size: 304128
+2026-06-24 13:51:14 - Restart grabbing return: 0
+2026-06-24 13:51:14 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:14 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:19 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:19 - Set Width to 64 (limits: 32-2448) ret=0
+2026-06-24 13:51:19 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:51:19 - Set OffsetX to 792 (max: 2384) ret=0
+2026-06-24 13:51:19 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:51:19 - New payload size: 24576
+2026-06-24 13:51:19 - Restart grabbing return: 0
+2026-06-24 13:51:19 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:19 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:19 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:19 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:51:19 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:51:19 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-24 13:51:19 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-24 13:51:19 - New payload size: 304128
+2026-06-24 13:51:20 - Restart grabbing return: 0
+2026-06-24 13:51:20 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:20 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:23 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:23 - Set Gain to 4.0 (original: 4) ret=0
+2026-06-24 13:51:23 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:23 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:27 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:51:27 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:51:27 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:51:27 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-24 13:51:27 - Set OffsetY to 128 (max: 1920) ret=0
+2026-06-24 13:51:27 - New payload size: 304128
+2026-06-24 13:51:27 - Restart grabbing return: 0
+2026-06-24 13:51:27 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:51:27 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:51:31 - generate_camera_frames called for cam_idx=2
+2026-06-24 13:51:31 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 13:51:31 - Target serial for cam_idx=2: 
+2026-06-24 13:51:31 - No target serial found, returning.
+2026-06-24 13:52:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:52:57 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:52:57 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-24 13:52:57 - Set OffsetX to 368 (max: 1656) ret=0
+2026-06-24 13:52:57 - Set OffsetY to 128 (max: 1920) ret=0
+2026-06-24 13:52:57 - New payload size: 304128
+2026-06-24 13:52:57 - Restart grabbing return: 0
+2026-06-24 13:52:57 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:52:57 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:52:58 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:52:58 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-24 13:52:58 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:52:58 - Set OffsetX to 368 (max: 1656) ret=0
+2026-06-24 13:52:58 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:52:58 - New payload size: 209088
+2026-06-24 13:52:58 - Restart grabbing return: 0
+2026-06-24 13:52:58 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:52:58 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:00 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:00 - Set Width to 472 (limits: 32-2448) ret=0
+2026-06-24 13:53:00 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:00 - Set OffsetX to 368 (max: 1976) ret=0
+2026-06-24 13:53:00 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:00 - New payload size: 124608
+2026-06-24 13:53:00 - Restart grabbing return: 0
+2026-06-24 13:53:00 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:00 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:01 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:01 - Set Width to 440 (limits: 32-2448) ret=0
+2026-06-24 13:53:01 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:01 - Set OffsetX to 368 (max: 2008) ret=0
+2026-06-24 13:53:01 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:01 - New payload size: 116160
+2026-06-24 13:53:01 - Restart grabbing return: 0
+2026-06-24 13:53:01 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:01 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:03 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:03 - Set Width to 48 (limits: 32-2448) ret=0
+2026-06-24 13:53:03 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:03 - Set OffsetX to 368 (max: 2400) ret=0
+2026-06-24 13:53:03 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:03 - New payload size: 12672
+2026-06-24 13:53:03 - Restart grabbing return: 0
+2026-06-24 13:53:03 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:03 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:04 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:04 - Set Width to 40 (limits: 32-2448) ret=0
+2026-06-24 13:53:04 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:04 - Set OffsetX to 368 (max: 2408) ret=0
+2026-06-24 13:53:04 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:04 - New payload size: 10560
+2026-06-24 13:53:04 - Restart grabbing return: 0
+2026-06-24 13:53:04 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:04 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:07 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:07 - Set Width to 64 (limits: 32-2448) ret=0
+2026-06-24 13:53:07 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:07 - Set OffsetX to 368 (max: 2384) ret=0
+2026-06-24 13:53:07 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:07 - New payload size: 16896
+2026-06-24 13:53:07 - Restart grabbing return: 0
+2026-06-24 13:53:07 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:07 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:07 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:07 - Set Width to 184 (limits: 32-2448) ret=0
+2026-06-24 13:53:07 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:07 - Set OffsetX to 368 (max: 2264) ret=0
+2026-06-24 13:53:07 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:07 - New payload size: 48576
+2026-06-24 13:53:07 - Restart grabbing return: 0
+2026-06-24 13:53:07 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:07 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:10 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:10 - Set Width to 224 (limits: 32-2448) ret=0
+2026-06-24 13:53:10 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:10 - Set OffsetX to 368 (max: 2224) ret=0
+2026-06-24 13:53:10 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:10 - New payload size: 59136
+2026-06-24 13:53:10 - Restart grabbing return: 0
+2026-06-24 13:53:10 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:10 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:11 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:12 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:12 - Set Height to 88 (limits: 8-2048) ret=0
+2026-06-24 13:53:12 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:12 - Set OffsetY to 128 (max: 1960) ret=0
+2026-06-24 13:53:12 - New payload size: 40128
+2026-06-24 13:53:12 - Restart grabbing return: 0
+2026-06-24 13:53:12 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:12 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:14 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:14 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:14 - Set Height to 40 (limits: 8-2048) ret=0
+2026-06-24 13:53:14 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:14 - Set OffsetY to 128 (max: 2008) ret=0
+2026-06-24 13:53:14 - New payload size: 18240
+2026-06-24 13:53:14 - Restart grabbing return: 0
+2026-06-24 13:53:14 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:14 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:14 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:14 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:14 - Set Height to 40 (limits: 8-2048) ret=0
+2026-06-24 13:53:14 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:14 - Set OffsetY to 128 (max: 2008) ret=0
+2026-06-24 13:53:14 - New payload size: 18240
+2026-06-24 13:53:14 - Restart grabbing return: 0
+2026-06-24 13:53:14 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:14 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:15 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:15 - Set Height to 48 (limits: 8-2048) ret=0
+2026-06-24 13:53:15 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:15 - Set OffsetY to 128 (max: 2000) ret=0
+2026-06-24 13:53:15 - New payload size: 21888
+2026-06-24 13:53:15 - Restart grabbing return: 0
+2026-06-24 13:53:15 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:15 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:15 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:15 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-24 13:53:15 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:15 - Set OffsetY to 128 (max: 1928) ret=0
+2026-06-24 13:53:15 - New payload size: 54720
+2026-06-24 13:53:15 - Restart grabbing return: 0
+2026-06-24 13:53:15 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:16 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:21 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:53:21 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:53:21 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-24 13:53:21 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:53:21 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-24 13:53:21 - New payload size: 54720
+2026-06-24 13:53:21 - Restart grabbing return: 0
+2026-06-24 13:53:21 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:21 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-24 13:53:52 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-24 13:53:52 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-24 13:53:53 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-06-24 13:53:53 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-24 13:54:01 - Set ExposureTime to 36461.0 (original: 36461) ret=0
+2026-06-24 13:54:01 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-24 13:54:03 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-24 13:54:03 - Set Gain to 0.0 (original: 0) ret=0
+2026-06-24 13:54:04 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-24 13:54:04 - Set Gain to 11.0 (original: 11) ret=0
+2026-06-24 13:58:27 - generate_camera_frames called for cam_idx=1
+2026-06-24 13:58:27 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-24 13:58:27 - Target serial for cam_idx=1: DA9551444
+2026-06-24 13:58:27 - Initializing MVS...
+2026-06-24 13:58:27 - Enum devices return: 0, count: 1
+2026-06-24 13:58:27 - Found device serial: DA9551444
+2026-06-24 13:58:27 - Matched target serial: DA9551444
+2026-06-24 13:58:27 - Create handle return: 0
+2026-06-24 13:58:28 - Open device return: 0
+2026-06-24 13:58:28 - Payload size: 15040512
+2026-06-24 13:58:28 - Start grabbing return: 0
+2026-06-24 13:58:28 - Entering frame grab loop...
+2026-06-24 13:58:28 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:58:28 - Set Width to 152 (limits: 32-2448) ret=0
+2026-06-24 13:58:28 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-24 13:58:28 - Set OffsetX to 368 (max: 2296) ret=0
+2026-06-24 13:58:28 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-24 13:58:28 - New payload size: 54720
+2026-06-24 13:58:28 - Restart grabbing return: 0
+2026-06-24 13:58:28 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-24 13:58:28 - Set Gain to 11.0 (original: 11) ret=0
+2026-06-24 13:58:31 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-24 13:58:31 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-24 13:58:33 - Stopping grabbing to apply resolution/offset changes...
+2026-06-24 13:58:33 - Set Width to 384 (limits: 32-2448) ret=0
+2026-06-24 13:58:33 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-24 13:58:33 - Set OffsetX to 368 (max: 2064) ret=0
+2026-06-24 13:58:33 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-24 13:58:33 - New payload size: 138240
+2026-06-24 13:58:33 - Restart grabbing return: 0
+2026-06-24 13:58:33 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-24 13:58:33 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-24 13:58:35 - Exiting frame grab loop and releasing resources.
+2026-06-25 10:49:17 - generate_camera_frames called for cam_idx=1
+2026-06-25 10:49:17 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 10:49:17 - Target serial for cam_idx=1: DA9551444
+2026-06-25 10:49:17 - Initializing MVS...
+2026-06-25 10:49:17 - Enum devices return: 0, count: 1
+2026-06-25 10:49:17 - Found device serial: DA9551444
+2026-06-25 10:49:17 - Matched target serial: DA9551444
+2026-06-25 10:49:17 - Create handle return: 0
+2026-06-25 10:49:17 - Open device return: 2147484163
+2026-06-25 10:51:01 - generate_camera_frames called for cam_idx=1
+2026-06-25 10:51:01 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 10:51:01 - Target serial for cam_idx=1: DA9551444
+2026-06-25 10:51:01 - Initializing MVS...
+2026-06-25 10:51:01 - Enum devices return: 0, count: 1
+2026-06-25 10:51:01 - Found device serial: DA9551444
+2026-06-25 10:51:01 - Matched target serial: DA9551444
+2026-06-25 10:51:01 - Create handle return: 0
+2026-06-25 10:51:02 - Open device return: 0
+2026-06-25 10:51:02 - Payload size: 15040512
+2026-06-25 10:51:02 - Start grabbing return: 0
+2026-06-25 10:51:02 - Entering frame grab loop...
+2026-06-25 10:51:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 10:51:02 - Set Width to 384 (limits: 32-2448) ret=0
+2026-06-25 10:51:02 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-25 10:51:02 - Set OffsetX to 368 (max: 2064) ret=0
+2026-06-25 10:51:02 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-25 10:51:02 - New payload size: 138240
+2026-06-25 10:51:02 - Restart grabbing return: 0
+2026-06-25 10:51:02 - Set ExposureTime to 57028.0 (original: 57028) ret=0
+2026-06-25 10:51:02 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 10:51:07 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-06-25 10:51:07 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 10:51:10 - Set ExposureTime to 4140.0 (original: 4140) ret=0
+2026-06-25 10:51:10 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 10:51:12 - Set ExposureTime to 12588.0 (original: 12588) ret=0
+2026-06-25 10:51:12 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 10:51:15 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 10:51:15 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 10:51:15 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-25 10:51:15 - Set OffsetX to 368 (max: 1656) ret=0
+2026-06-25 10:51:15 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-25 10:51:15 - New payload size: 285120
+2026-06-25 10:51:15 - Restart grabbing return: 0
+2026-06-25 10:51:15 - Set ExposureTime to 12588.0 (original: 12588) ret=0
+2026-06-25 10:51:15 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 10:51:18 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 10:51:18 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 10:51:18 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-25 10:51:18 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-25 10:51:18 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-25 10:51:18 - New payload size: 285120
+2026-06-25 10:51:18 - Restart grabbing return: 0
+2026-06-25 10:51:18 - Set ExposureTime to 12588.0 (original: 12588) ret=0
+2026-06-25 10:51:18 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:07:13 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:07:13 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:07:13 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:07:13 - Initializing MVS...
+2026-06-25 11:07:13 - Enum devices return: 0, count: 1
+2026-06-25 11:07:13 - Found device serial: DA9551444
+2026-06-25 11:07:13 - Matched target serial: DA9551444
+2026-06-25 11:07:13 - Create handle return: 0
+2026-06-25 11:07:13 - Open device return: 0
+2026-06-25 11:07:13 - Payload size: 15040512
+2026-06-25 11:07:13 - Start grabbing return: 0
+2026-06-25 11:07:13 - Entering frame grab loop...
+2026-06-25 11:07:13 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:07:13 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:07:13 - Set Height to 120 (limits: 8-2048) ret=0
+2026-06-25 11:07:13 - Set OffsetX to 792 (max: 1656) ret=0
+2026-06-25 11:07:13 - Set OffsetY to 24 (max: 1928) ret=0
+2026-06-25 11:07:13 - New payload size: 285120
+2026-06-25 11:07:13 - Restart grabbing return: 0
+2026-06-25 11:07:13 - Set ExposureTime to 12588.0 (original: 12588) ret=0
+2026-06-25 11:07:13 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:14:04 - Exiting frame grab loop and releasing resources.
+2026-06-25 11:37:20 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:37:20 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:37:20 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:37:20 - Initializing MVS...
+2026-06-25 11:37:20 - Enum devices return: 0, count: 1
+2026-06-25 11:37:20 - Found device serial: DA9551444
+2026-06-25 11:37:20 - Matched target serial: DA9551444
+2026-06-25 11:37:20 - Create handle return: 0
+2026-06-25 11:37:21 - Open device return: 0
+2026-06-25 11:37:21 - Payload size: 285120
+2026-06-25 11:37:21 - Start grabbing return: 0
+2026-06-25 11:37:21 - Entering frame grab loop...
+2026-06-25 11:37:21 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:37:21 - Set Width to 2448 (limits: 32-2448) ret=0
+2026-06-25 11:37:21 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:37:21 - Set OffsetX to 0 (max: 0) ret=0
+2026-06-25 11:37:21 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:37:21 - New payload size: 15040512
+2026-06-25 11:37:21 - Restart grabbing return: 0
+2026-06-25 11:37:21 - Set ExposureTime to 12588.0 (original: 12588) ret=0
+2026-06-25 11:37:21 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:39:29 - Set ExposureTime to 8180.0 (original: 8180) ret=0
+2026-06-25 11:39:29 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:39:30 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:39:30 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:39:54 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:39:54 - Set Width to 704 (limits: 32-2448) ret=0
+2026-06-25 11:39:54 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:39:54 - Set OffsetX to 0 (max: 1744) ret=0
+2026-06-25 11:39:54 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:39:54 - New payload size: 4325376
+2026-06-25 11:39:54 - Restart grabbing return: 0
+2026-06-25 11:39:54 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:39:54 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:39:57 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:39:57 - Set Width to 752 (limits: 32-2448) ret=0
+2026-06-25 11:39:57 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:39:57 - Set OffsetX to 0 (max: 1696) ret=0
+2026-06-25 11:39:57 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:39:57 - New payload size: 4620288
+2026-06-25 11:39:57 - Restart grabbing return: 0
+2026-06-25 11:39:57 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:39:57 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:39:58 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:39:58 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:39:58 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:39:58 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:39:58 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:39:58 - New payload size: 4866048
+2026-06-25 11:39:58 - Restart grabbing return: 0
+2026-06-25 11:39:58 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:39:58 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:01 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:01 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:01 - Set Height to 92 (limits: 8-2048) ret=0
+2026-06-25 11:40:01 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:01 - Set OffsetY to 0 (max: 1956) ret=0
+2026-06-25 11:40:01 - New payload size: 218592
+2026-06-25 11:40:01 - Restart grabbing return: 0
+2026-06-25 11:40:01 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:01 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:01 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:01 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:01 - Set Height to 92 (limits: 8-2048) ret=0
+2026-06-25 11:40:01 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:02 - Set OffsetY to 0 (max: 1956) ret=0
+2026-06-25 11:40:02 - New payload size: 218592
+2026-06-25 11:40:02 - Restart grabbing return: 0
+2026-06-25 11:40:02 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:02 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:02 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:02 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:02 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:02 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:02 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:02 - New payload size: 304128
+2026-06-25 11:40:02 - Restart grabbing return: 0
+2026-06-25 11:40:02 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:02 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:04 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:04 - Set Width to 200 (limits: 32-2448) ret=0
+2026-06-25 11:40:04 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:04 - Set OffsetX to 0 (max: 2248) ret=0
+2026-06-25 11:40:04 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:04 - New payload size: 76800
+2026-06-25 11:40:05 - Restart grabbing return: 0
+2026-06-25 11:40:05 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:05 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:05 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:05 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-25 11:40:05 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:06 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-25 11:40:06 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:06 - New payload size: 12288
+2026-06-25 11:40:06 - Restart grabbing return: 0
+2026-06-25 11:40:06 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:06 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:08 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:09 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-25 11:40:09 - Set Height to 8 (limits: 8-2048) ret=0
+2026-06-25 11:40:09 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-25 11:40:09 - Set OffsetY to 0 (max: 2040) ret=0
+2026-06-25 11:40:09 - New payload size: 768
+2026-06-25 11:40:09 - Restart grabbing return: 0
+2026-06-25 11:40:09 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:09 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:10 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:11 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-25 11:40:11 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:11 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-25 11:40:11 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:11 - New payload size: 12288
+2026-06-25 11:40:11 - Restart grabbing return: 0
+2026-06-25 11:40:11 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:11 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:12 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:12 - Set Width to 616 (limits: 32-2448) ret=0
+2026-06-25 11:40:12 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:12 - Set OffsetX to 0 (max: 1832) ret=0
+2026-06-25 11:40:12 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:12 - New payload size: 236544
+2026-06-25 11:40:12 - Restart grabbing return: 0
+2026-06-25 11:40:12 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:12 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:12 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:13 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:13 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:13 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:13 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:13 - New payload size: 304128
+2026-06-25 11:40:13 - Restart grabbing return: 0
+2026-06-25 11:40:13 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:13 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:15 - Exiting frame grab loop and releasing resources.
+2026-06-25 11:40:19 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:40:19 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:40:19 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:40:19 - Initializing MVS...
+2026-06-25 11:40:19 - Enum devices return: 0, count: 1
+2026-06-25 11:40:19 - Found device serial: DA9551444
+2026-06-25 11:40:19 - Matched target serial: DA9551444
+2026-06-25 11:40:19 - Create handle return: 0
+2026-06-25 11:40:20 - Open device return: 0
+2026-06-25 11:40:20 - Payload size: 304128
+2026-06-25 11:40:20 - Start grabbing return: 0
+2026-06-25 11:40:20 - Entering frame grab loop...
+2026-06-25 11:40:20 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:20 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:20 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:20 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:20 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:20 - New payload size: 304128
+2026-06-25 11:40:20 - Restart grabbing return: 0
+2026-06-25 11:40:20 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:20 - Set Gain to 17.0 (original: 17) ret=0
+2026-06-25 11:40:22 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:22 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:40:39 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:39 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:39 - Set Height to 52 (limits: 8-2048) ret=0
+2026-06-25 11:40:39 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:39 - Set OffsetY to 0 (max: 1996) ret=0
+2026-06-25 11:40:39 - New payload size: 123552
+2026-06-25 11:40:39 - Restart grabbing return: 0
+2026-06-25 11:40:39 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:39 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:40:41 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:41 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:41 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:41 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:41 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:41 - New payload size: 304128
+2026-06-25 11:40:41 - Restart grabbing return: 0
+2026-06-25 11:40:41 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:41 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:40:43 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:43 - Set Width to 96 (limits: 32-2448) ret=0
+2026-06-25 11:40:43 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:43 - Set OffsetX to 0 (max: 2352) ret=0
+2026-06-25 11:40:43 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:43 - New payload size: 36864
+2026-06-25 11:40:43 - Restart grabbing return: 0
+2026-06-25 11:40:43 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:43 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:40:46 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:46 - Set Width to 552 (limits: 32-2448) ret=0
+2026-06-25 11:40:46 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:46 - Set OffsetX to 0 (max: 1896) ret=0
+2026-06-25 11:40:46 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:46 - New payload size: 211968
+2026-06-25 11:40:46 - Restart grabbing return: 0
+2026-06-25 11:40:46 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:46 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:40:47 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:40:47 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:40:47 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:40:47 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:40:47 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:40:47 - New payload size: 304128
+2026-06-25 11:40:47 - Restart grabbing return: 0
+2026-06-25 11:40:47 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:40:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:45:50 - Exiting frame grab loop and releasing resources.
+2026-06-25 11:46:23 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:46:23 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:46:23 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:46:23 - Initializing MVS...
+2026-06-25 11:46:23 - Enum devices return: 0, count: 1
+2026-06-25 11:46:23 - Found device serial: DA9551444
+2026-06-25 11:46:23 - Matched target serial: DA9551444
+2026-06-25 11:46:23 - Create handle return: 0
+2026-06-25 11:46:24 - Open device return: 0
+2026-06-25 11:46:24 - Payload size: 304128
+2026-06-25 11:46:24 - Start grabbing return: 0
+2026-06-25 11:46:24 - Entering frame grab loop...
+2026-06-25 11:46:24 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:24 - Set Width to 792 (limits: 32-2448) ret=0
+2026-06-25 11:46:24 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:46:24 - Set OffsetX to 0 (max: 1656) ret=0
+2026-06-25 11:46:24 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:46:24 - New payload size: 304128
+2026-06-25 11:46:24 - Restart grabbing return: 0
+2026-06-25 11:46:24 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:24 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:40 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:40 - Set Width to 2344 (limits: 32-2448) ret=0
+2026-06-25 11:46:40 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:46:40 - Set OffsetX to 0 (max: 104) ret=0
+2026-06-25 11:46:40 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:46:40 - New payload size: 900096
+2026-06-25 11:46:40 - Restart grabbing return: 0
+2026-06-25 11:46:40 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:40 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:41 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:41 - Set Width to 32 (limits: 32-2448) ret=0
+2026-06-25 11:46:41 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:46:41 - Set OffsetX to 0 (max: 2416) ret=0
+2026-06-25 11:46:41 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:46:41 - New payload size: 12288
+2026-06-25 11:46:41 - Restart grabbing return: 0
+2026-06-25 11:46:41 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:41 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:42 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:42 - Set Width to 2448 (limits: 32-2448) ret=0
+2026-06-25 11:46:42 - Set Height to 128 (limits: 8-2048) ret=0
+2026-06-25 11:46:42 - Set OffsetX to 0 (max: 0) ret=0
+2026-06-25 11:46:42 - Set OffsetY to 0 (max: 1920) ret=0
+2026-06-25 11:46:42 - New payload size: 940032
+2026-06-25 11:46:42 - Restart grabbing return: 0
+2026-06-25 11:46:42 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:42 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:44 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:44 - Set Width to 2448 (limits: 32-2448) ret=0
+2026-06-25 11:46:44 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:46:44 - Set OffsetX to 0 (max: 0) ret=0
+2026-06-25 11:46:44 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:46:44 - New payload size: 15040512
+2026-06-25 11:46:44 - Restart grabbing return: 0
+2026-06-25 11:46:44 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:44 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:47 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:47 - Set Width to 2320 (limits: 32-2448) ret=0
+2026-06-25 11:46:47 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:46:47 - Set OffsetX to 0 (max: 128) ret=0
+2026-06-25 11:46:47 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:46:47 - New payload size: 14254080
+2026-06-25 11:46:47 - Restart grabbing return: 0
+2026-06-25 11:46:47 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:49 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:49 - Set Width to 2288 (limits: 32-2448) ret=0
+2026-06-25 11:46:49 - Set Height to 2048 (limits: 8-2048) ret=0
+2026-06-25 11:46:49 - Set OffsetX to 0 (max: 160) ret=0
+2026-06-25 11:46:49 - Set OffsetY to 0 (max: 0) ret=0
+2026-06-25 11:46:49 - New payload size: 14057472
+2026-06-25 11:46:49 - Restart grabbing return: 0
+2026-06-25 11:46:49 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:49 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:55 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:55 - Set Width to 2288 (limits: 32-2448) ret=0
+2026-06-25 11:46:55 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:46:55 - Set OffsetX to 0 (max: 160) ret=0
+2026-06-25 11:46:55 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:46:55 - New payload size: 13782912
+2026-06-25 11:46:55 - Restart grabbing return: 0
+2026-06-25 11:46:55 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:55 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:56 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:56 - Set Width to 2288 (limits: 32-2448) ret=0
+2026-06-25 11:46:56 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:46:56 - Set OffsetX to 80 (max: 160) ret=0
+2026-06-25 11:46:56 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:46:56 - New payload size: 13782912
+2026-06-25 11:46:56 - Restart grabbing return: 0
+2026-06-25 11:46:56 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:56 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:46:59 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:46:59 - Set Width to 2232 (limits: 32-2448) ret=0
+2026-06-25 11:46:59 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:46:59 - Set OffsetX to 80 (max: 216) ret=0
+2026-06-25 11:46:59 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:46:59 - New payload size: 13445568
+2026-06-25 11:46:59 - Restart grabbing return: 0
+2026-06-25 11:46:59 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:46:59 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:47:01 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:47:01 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 11:47:01 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:47:01 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 11:47:01 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:47:01 - New payload size: 13060032
+2026-06-25 11:47:01 - Restart grabbing return: 0
+2026-06-25 11:47:01 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:47:01 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:52:35 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:52:35 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:52:35 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:52:35 - Initializing MVS...
+2026-06-25 11:52:35 - Enum devices return: 0, count: 1
+2026-06-25 11:52:35 - Found device serial: DA9551444
+2026-06-25 11:52:35 - Matched target serial: DA9551444
+2026-06-25 11:52:35 - Create handle return: 0
+2026-06-25 11:52:36 - Open device return: 0
+2026-06-25 11:52:36 - Payload size: 13060032
+2026-06-25 11:52:36 - Start grabbing return: 0
+2026-06-25 11:52:36 - Entering frame grab loop...
+2026-06-25 11:52:36 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:52:36 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 11:52:36 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:52:36 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 11:52:36 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:52:36 - New payload size: 13060032
+2026-06-25 11:52:36 - Restart grabbing return: 0
+2026-06-25 11:52:36 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:52:36 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 11:56:20 - Exiting frame grab loop and releasing resources.
+2026-06-25 11:56:29 - generate_camera_frames called for cam_idx=1
+2026-06-25 11:56:29 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 11:56:29 - Target serial for cam_idx=1: DA9551444
+2026-06-25 11:56:29 - Initializing MVS...
+2026-06-25 11:56:29 - Enum devices return: 0, count: 1
+2026-06-25 11:56:29 - Found device serial: DA9551444
+2026-06-25 11:56:29 - Matched target serial: DA9551444
+2026-06-25 11:56:29 - Create handle return: 0
+2026-06-25 11:56:30 - Open device return: 0
+2026-06-25 11:56:30 - Payload size: 13060032
+2026-06-25 11:56:30 - Start grabbing return: 0
+2026-06-25 11:56:30 - Entering frame grab loop...
+2026-06-25 11:56:30 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 11:56:30 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 11:56:30 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 11:56:30 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 11:56:30 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 11:56:30 - New payload size: 13060032
+2026-06-25 11:56:30 - Restart grabbing return: 0
+2026-06-25 11:56:30 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 11:56:30 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:00:33 - Exiting frame grab loop and releasing resources.
+2026-06-25 12:00:42 - generate_camera_frames called for cam_idx=1
+2026-06-25 12:00:42 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 12:00:42 - Target serial for cam_idx=1: DA9551444
+2026-06-25 12:00:42 - Initializing MVS...
+2026-06-25 12:00:42 - Enum devices return: 0, count: 1
+2026-06-25 12:00:42 - Found device serial: DA9551444
+2026-06-25 12:00:42 - Matched target serial: DA9551444
+2026-06-25 12:00:42 - Create handle return: 0
+2026-06-25 12:00:43 - Open device return: 0
+2026-06-25 12:00:43 - Payload size: 13060032
+2026-06-25 12:00:43 - Start grabbing return: 0
+2026-06-25 12:00:43 - Entering frame grab loop...
+2026-06-25 12:00:43 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:00:43 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 12:00:43 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:00:43 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 12:00:43 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:00:43 - New payload size: 13060032
+2026-06-25 12:00:43 - Restart grabbing return: 0
+2026-06-25 12:00:43 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:00:43 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:05:14 - Exiting frame grab loop and releasing resources.
+2026-06-25 12:05:19 - generate_camera_frames called for cam_idx=1
+2026-06-25 12:05:19 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 12:05:19 - Target serial for cam_idx=1: DA9551444
+2026-06-25 12:05:19 - Initializing MVS...
+2026-06-25 12:05:19 - Enum devices return: 0, count: 1
+2026-06-25 12:05:19 - Found device serial: DA9551444
+2026-06-25 12:05:19 - Matched target serial: DA9551444
+2026-06-25 12:05:19 - Create handle return: 0
+2026-06-25 12:05:20 - Open device return: 0
+2026-06-25 12:05:20 - Payload size: 13060032
+2026-06-25 12:05:20 - Start grabbing return: 0
+2026-06-25 12:05:20 - Entering frame grab loop...
+2026-06-25 12:05:20 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:05:20 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 12:05:20 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:05:20 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 12:05:20 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:05:20 - New payload size: 13060032
+2026-06-25 12:05:20 - Restart grabbing return: 0
+2026-06-25 12:05:20 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:05:20 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:10:48 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:10:48 - Set Width to 2264 (limits: 32-2448) ret=0
+2026-06-25 12:10:48 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:10:48 - Set OffsetX to 80 (max: 184) ret=0
+2026-06-25 12:10:48 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:10:48 - New payload size: 13638336
+2026-06-25 12:10:48 - Restart grabbing return: 0
+2026-06-25 12:10:48 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:10:48 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:11:00 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:11:00 - Set Width to 2176 (limits: 32-2448) ret=0
+2026-06-25 12:11:00 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:11:00 - Set OffsetX to 80 (max: 272) ret=0
+2026-06-25 12:11:00 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:11:00 - New payload size: 13108224
+2026-06-25 12:11:00 - Restart grabbing return: 0
+2026-06-25 12:11:00 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:11:00 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:26 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:26 - Set Width to 2208 (limits: 32-2448) ret=0
+2026-06-25 12:12:26 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:26 - Set OffsetX to 80 (max: 240) ret=0
+2026-06-25 12:12:26 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:26 - New payload size: 13300992
+2026-06-25 12:12:26 - Restart grabbing return: 0
+2026-06-25 12:12:26 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:26 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:27 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:27 - Set Width to 2224 (limits: 32-2448) ret=0
+2026-06-25 12:12:27 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:27 - Set OffsetX to 80 (max: 224) ret=0
+2026-06-25 12:12:27 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:27 - New payload size: 13397376
+2026-06-25 12:12:27 - Restart grabbing return: 0
+2026-06-25 12:12:27 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:27 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:28 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:28 - Set Width to 2288 (limits: 32-2448) ret=0
+2026-06-25 12:12:28 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:28 - Set OffsetX to 80 (max: 160) ret=0
+2026-06-25 12:12:28 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:28 - New payload size: 13782912
+2026-06-25 12:12:28 - Restart grabbing return: 0
+2026-06-25 12:12:28 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:28 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:28 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:28 - Set Width to 2304 (limits: 32-2448) ret=0
+2026-06-25 12:12:28 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:28 - Set OffsetX to 80 (max: 144) ret=0
+2026-06-25 12:12:28 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:28 - New payload size: 13879296
+2026-06-25 12:12:28 - Restart grabbing return: 0
+2026-06-25 12:12:28 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:28 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:29 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:29 - Set Width to 2240 (limits: 32-2448) ret=0
+2026-06-25 12:12:29 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:29 - Set OffsetX to 80 (max: 208) ret=0
+2026-06-25 12:12:29 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:29 - New payload size: 13493760
+2026-06-25 12:12:29 - Restart grabbing return: 0
+2026-06-25 12:12:29 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:29 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:30 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:30 - Set Width to 2232 (limits: 32-2448) ret=0
+2026-06-25 12:12:30 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:30 - Set OffsetX to 80 (max: 216) ret=0
+2026-06-25 12:12:30 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:30 - New payload size: 13445568
+2026-06-25 12:12:30 - Restart grabbing return: 0
+2026-06-25 12:12:30 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:30 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:31 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:31 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 12:12:31 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:31 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 12:12:31 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:31 - New payload size: 13060032
+2026-06-25 12:12:31 - Restart grabbing return: 0
+2026-06-25 12:12:31 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:31 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:12:41 - Exiting frame grab loop and releasing resources.
+2026-06-25 12:12:45 - generate_camera_frames called for cam_idx=1
+2026-06-25 12:12:45 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 12:12:45 - Target serial for cam_idx=1: DA9551444
+2026-06-25 12:12:45 - Initializing MVS...
+2026-06-25 12:12:45 - Enum devices return: 0, count: 1
+2026-06-25 12:12:45 - Found device serial: DA9551444
+2026-06-25 12:12:45 - Matched target serial: DA9551444
+2026-06-25 12:12:45 - Create handle return: 0
+2026-06-25 12:12:45 - Open device return: 0
+2026-06-25 12:12:45 - Payload size: 13060032
+2026-06-25 12:12:45 - Start grabbing return: 0
+2026-06-25 12:12:45 - Entering frame grab loop...
+2026-06-25 12:12:45 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:12:45 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 12:12:45 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:12:45 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 12:12:45 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:12:45 - New payload size: 13060032
+2026-06-25 12:12:45 - Restart grabbing return: 0
+2026-06-25 12:12:45 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:12:45 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:18:35 - Exiting frame grab loop and releasing resources.
+2026-06-25 12:40:22 - generate_camera_frames called for cam_idx=1
+2026-06-25 12:40:22 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-25 12:40:22 - Target serial for cam_idx=1: DA9551444
+2026-06-25 12:40:22 - Initializing MVS...
+2026-06-25 12:40:24 - Enum devices return: 0, count: 1
+2026-06-25 12:40:24 - Found device serial: DA9551444
+2026-06-25 12:40:24 - Matched target serial: DA9551444
+2026-06-25 12:40:24 - Create handle return: 0
+2026-06-25 12:40:26 - Open device return: 0
+2026-06-25 12:40:26 - Payload size: 13060032
+2026-06-25 12:40:26 - Start grabbing return: 0
+2026-06-25 12:40:26 - Entering frame grab loop...
+2026-06-25 12:40:26 - Stopping grabbing to apply resolution/offset changes...
+2026-06-25 12:40:26 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-25 12:40:26 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-25 12:40:26 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-25 12:40:26 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-25 12:40:26 - New payload size: 13060032
+2026-06-25 12:40:26 - Restart grabbing return: 0
+2026-06-25 12:40:26 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-25 12:40:26 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-25 12:47:51 - Exiting frame grab loop and releasing resources.
+2026-06-26 13:56:46 - generate_camera_frames called for cam_idx=1
+2026-06-26 13:56:46 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-26 13:56:46 - Target serial for cam_idx=1: DA9551444
+2026-06-26 13:56:46 - Initializing MVS...
+2026-06-26 13:56:46 - MvCamera.MV_CC_Initialize raised exception: name 'MvCamera' is not defined
+2026-06-26 14:01:40 - generate_camera_frames called for cam_idx=1
+2026-06-26 14:01:40 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-26 14:01:40 - Target serial for cam_idx=1: DA9551444
+2026-06-26 14:01:40 - Initializing MVS...
+2026-06-26 14:01:40 - MvCamera.MV_CC_Initialize raised exception: name 'MvCamera' is not defined
+2026-06-26 14:02:06 - generate_camera_frames called for cam_idx=1
+2026-06-26 14:02:06 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-26 14:02:06 - Target serial for cam_idx=1: DA9551444
+2026-06-26 14:02:06 - Initializing MVS...
+2026-06-26 14:02:06 - MvCamera.MV_CC_Initialize raised exception: name 'MvCamera' is not defined
+2026-06-27 12:03:40 - generate_camera_frames called for cam_idx=1
+2026-06-27 12:03:40 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-06-27 12:03:40 - Target serial for cam_idx=1: DA9551444
+2026-06-27 12:03:40 - Initializing MVS...
+2026-06-27 12:03:40 - Enum devices return: 0, count: 1
+2026-06-27 12:03:40 - Found device serial: DA9551444
+2026-06-27 12:03:40 - Matched target serial: DA9551444
+2026-06-27 12:03:40 - Create handle return: 0
+2026-06-27 12:03:40 - Open device return: 0
+2026-06-27 12:03:40 - Payload size: 15040512
+2026-06-27 12:03:40 - Start grabbing return: 0
+2026-06-27 12:03:40 - Entering frame grab loop...
+2026-06-27 12:03:40 - Stopping grabbing to apply resolution/offset changes...
+2026-06-27 12:03:41 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-06-27 12:03:41 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-06-27 12:03:41 - Set OffsetX to 80 (max: 280) ret=0
+2026-06-27 12:03:41 - Set OffsetY to 0 (max: 40) ret=0
+2026-06-27 12:03:41 - New payload size: 13060032
+2026-06-27 12:03:41 - Restart grabbing return: 0
+2026-06-27 12:03:41 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-06-27 12:03:41 - Set Gain to 20.0 (original: 20) ret=0
+2026-06-27 12:04:55 - Exiting frame grab loop and releasing resources.
+2026-07-07 15:08:24 - generate_camera_frames called for cam_idx=1
+2026-07-07 15:08:24 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-07 15:08:24 - Target serial for cam_idx=1: DA9551444
+2026-07-07 15:08:24 - Initializing MVS...
+2026-07-07 15:08:24 - Enum devices return: 0, count: 0
+2026-07-07 15:08:24 - No matching device found, returning.
+2026-07-07 15:26:39 - generate_camera_frames called for cam_idx=2
+2026-07-07 15:26:39 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-07 15:26:39 - Target serial for cam_idx=2: 
+2026-07-07 15:26:39 - No target serial found, returning.
+2026-07-07 15:26:40 - generate_camera_frames called for cam_idx=3
+2026-07-07 15:26:40 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-07 15:26:40 - Target serial for cam_idx=3: 
+2026-07-07 15:26:40 - No target serial found, returning.
+2026-07-09 09:34:29 - generate_camera_frames called for cam_idx=1
+2026-07-09 09:34:29 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-09 09:34:29 - Target serial for cam_idx=1: DA9551444
+2026-07-09 09:34:29 - Initializing MVS...
+2026-07-09 09:34:30 - Enum devices return: 0, count: 1
+2026-07-09 09:34:30 - Found device serial: DA9551444
+2026-07-09 09:34:30 - Matched target serial: DA9551444
+2026-07-09 09:34:30 - Create handle return: 0
+2026-07-09 09:34:31 - Open device return: 0
+2026-07-09 09:34:31 - Payload size: 15040512
+2026-07-09 09:34:31 - Start grabbing return: 0
+2026-07-09 09:34:31 - Entering frame grab loop...
+2026-07-09 09:34:31 - Stopping grabbing to apply resolution/offset changes...
+2026-07-09 09:34:31 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-09 09:34:31 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-09 09:34:31 - Set OffsetX to 80 (max: 280) ret=0
+2026-07-09 09:34:31 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-09 09:34:31 - New payload size: 13060032
+2026-07-09 09:34:31 - Restart grabbing return: 0
+2026-07-09 09:34:31 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-07-09 09:34:31 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 09:35:45 - Set ExposureTime to 57763.0 (original: 57763) ret=0
+2026-07-09 09:35:45 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 09:35:49 - Set ExposureTime to 15158.0 (original: 15158) ret=0
+2026-07-09 09:35:49 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 09:35:50 - Set ExposureTime to 19199.0 (original: 19199) ret=0
+2026-07-09 09:35:50 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 09:35:53 - Set ExposureTime to 4875.0 (original: 4875) ret=0
+2026-07-09 09:35:53 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 14:06:22 - generate_camera_frames called for cam_idx=1
+2026-07-09 14:06:22 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-09 14:06:22 - Target serial for cam_idx=1: DA9551444
+2026-07-09 14:06:22 - Initializing MVS...
+2026-07-09 14:06:22 - Enum devices return: 0, count: 1
+2026-07-09 14:06:22 - Found device serial: DA9551444
+2026-07-09 14:06:22 - Matched target serial: DA9551444
+2026-07-09 14:06:22 - Create handle return: 0
+2026-07-09 14:06:22 - Open device return: 0
+2026-07-09 14:06:22 - Payload size: 15040512
+2026-07-09 14:06:22 - Start grabbing return: 0
+2026-07-09 14:06:22 - Entering frame grab loop...
+2026-07-09 14:06:22 - Stopping grabbing to apply resolution/offset changes...
+2026-07-09 14:06:23 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-09 14:06:23 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-09 14:06:23 - Set OffsetX to 80 (max: 280) ret=0
+2026-07-09 14:06:23 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-09 14:06:23 - New payload size: 13060032
+2026-07-09 14:06:23 - Restart grabbing return: 0
+2026-07-09 14:06:23 - Set ExposureTime to 4875.0 (original: 4875) ret=0
+2026-07-09 14:06:23 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 14:06:27 - Stopping grabbing to apply resolution/offset changes...
+2026-07-09 14:06:27 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-09 14:06:27 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-09 14:06:27 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-09 14:06:27 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-09 14:06:27 - New payload size: 13060032
+2026-07-09 14:06:27 - Restart grabbing return: 0
+2026-07-09 14:06:27 - Set ExposureTime to 4875.0 (original: 4875) ret=0
+2026-07-09 14:06:27 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 14:22:01 - generate_camera_frames called for cam_idx=1
+2026-07-09 14:22:01 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-09 14:22:01 - Target serial for cam_idx=1: DA9551444
+2026-07-09 14:22:01 - Initializing MVS...
+2026-07-09 14:22:01 - Enum devices return: 0, count: 1
+2026-07-09 14:22:01 - Found device serial: DA9551444
+2026-07-09 14:22:01 - Matched target serial: DA9551444
+2026-07-09 14:22:01 - Create handle return: 0
+2026-07-09 14:22:01 - Open device return: 2147484163
+2026-07-09 14:22:52 - generate_camera_frames called for cam_idx=1
+2026-07-09 14:22:52 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-09 14:22:52 - Target serial for cam_idx=1: DA9551444
+2026-07-09 14:22:52 - Initializing MVS...
+2026-07-09 14:22:52 - Enum devices return: 0, count: 1
+2026-07-09 14:22:52 - Found device serial: DA9551444
+2026-07-09 14:22:52 - Matched target serial: DA9551444
+2026-07-09 14:22:52 - Create handle return: 0
+2026-07-09 14:22:52 - Open device return: 0
+2026-07-09 14:22:52 - Payload size: 15040512
+2026-07-09 14:22:52 - Start grabbing return: 0
+2026-07-09 14:22:52 - Entering frame grab loop...
+2026-07-09 14:22:52 - Stopping grabbing to apply resolution/offset changes...
+2026-07-09 14:22:52 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-09 14:22:52 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-09 14:22:52 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-09 14:22:52 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-09 14:22:52 - New payload size: 13060032
+2026-07-09 14:22:52 - Restart grabbing return: 0
+2026-07-09 14:22:52 - Set ExposureTime to 4875.0 (original: 4875) ret=0
+2026-07-09 14:22:52 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 14:23:40 - Exiting frame grab loop and releasing resources.
+2026-07-09 17:02:38 - generate_camera_frames called for cam_idx=1
+2026-07-09 17:02:38 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-09 17:02:38 - Target serial for cam_idx=1: DA9551444
+2026-07-09 17:02:38 - Initializing MVS...
+2026-07-09 17:02:38 - Enum devices return: 0, count: 1
+2026-07-09 17:02:38 - Found device serial: DA9551444
+2026-07-09 17:02:38 - Matched target serial: DA9551444
+2026-07-09 17:02:38 - Create handle return: 0
+2026-07-09 17:02:38 - Open device return: 0
+2026-07-09 17:02:38 - Payload size: 15040512
+2026-07-09 17:02:38 - Start grabbing return: 0
+2026-07-09 17:02:38 - Entering frame grab loop...
+2026-07-09 17:02:38 - Stopping grabbing to apply resolution/offset changes...
+2026-07-09 17:02:39 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-09 17:02:39 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-09 17:02:39 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-09 17:02:39 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-09 17:02:39 - New payload size: 13060032
+2026-07-09 17:02:39 - Restart grabbing return: 0
+2026-07-09 17:02:39 - Set ExposureTime to 4875.0 (original: 4875) ret=0
+2026-07-09 17:02:39 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:42 - Set ExposureTime to 11118.0 (original: 11118) ret=0
+2026-07-09 17:02:42 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:44 - Set ExposureTime to 7446.0 (original: 7446) ret=0
+2026-07-09 17:02:44 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:45 - Set ExposureTime to 11486.0 (original: 11486) ret=0
+2026-07-09 17:02:45 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:46 - Set ExposureTime to 10017.0 (original: 10017) ret=0
+2026-07-09 17:02:46 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:47 - Set ExposureTime to 12955.0 (original: 12955) ret=0
+2026-07-09 17:02:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:47 - Set ExposureTime to 10384.0 (original: 10384) ret=0
+2026-07-09 17:02:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:51 - Set ExposureTime to 9649.0 (original: 9649) ret=0
+2026-07-09 17:02:51 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:52 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-09 17:02:52 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:02:52 - Set ExposureTime to 8180.0 (original: 8180) ret=0
+2026-07-09 17:02:52 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-09 17:05:50 - Exiting frame grab loop and releasing resources.
+2026-07-10 10:37:08 - generate_camera_frames called for cam_idx=1
+2026-07-10 10:37:08 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-10 10:37:08 - Target serial for cam_idx=1: DA9551444
+2026-07-10 10:37:08 - Initializing MVS...
+2026-07-10 10:37:08 - Enum devices return: 0, count: 1
+2026-07-10 10:37:08 - Found device serial: DA9551444
+2026-07-10 10:37:08 - Matched target serial: DA9551444
+2026-07-10 10:37:08 - Create handle return: 0
+2026-07-10 10:37:08 - Open device return: 0
+2026-07-10 10:37:08 - Payload size: 15040512
+2026-07-10 10:37:08 - Start grabbing return: 0
+2026-07-10 10:37:08 - Entering frame grab loop...
+2026-07-10 10:37:08 - Stopping grabbing to apply resolution/offset changes...
+2026-07-10 10:37:08 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-10 10:37:08 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-10 10:37:08 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-10 10:37:08 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-10 10:37:08 - New payload size: 13060032
+2026-07-10 10:37:08 - Restart grabbing return: 0
+2026-07-10 10:37:08 - Set ExposureTime to 8180.0 (original: 8180) ret=0
+2026-07-10 10:37:08 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-10 10:37:20 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-10 10:37:20 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:53:47 - generate_camera_frames called for cam_idx=1
+2026-07-11 09:53:47 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-11 09:53:47 - Target serial for cam_idx=1: DA9551444
+2026-07-11 09:53:47 - Initializing MVS...
+2026-07-11 09:53:47 - Enum devices return: 0, count: 1
+2026-07-11 09:53:47 - Found device serial: DA9551444
+2026-07-11 09:53:47 - Matched target serial: DA9551444
+2026-07-11 09:53:47 - Create handle return: 0
+2026-07-11 09:53:47 - Open device return: 0
+2026-07-11 09:53:47 - Payload size: 15040512
+2026-07-11 09:53:47 - Start grabbing return: 0
+2026-07-11 09:53:47 - Entering frame grab loop...
+2026-07-11 09:53:47 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:53:47 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:53:47 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:53:47 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-11 09:53:47 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:53:47 - New payload size: 13060032
+2026-07-11 09:53:47 - Restart grabbing return: 0
+2026-07-11 09:53:47 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:53:47 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:53:59 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:53:59 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:53:59 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:53:59 - Set OffsetX to 240 (max: 280) ret=0
+2026-07-11 09:53:59 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:53:59 - New payload size: 13060032
+2026-07-11 09:53:59 - Restart grabbing return: 0
+2026-07-11 09:53:59 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:53:59 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:01 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:54:01 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:54:01 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:54:01 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-11 09:54:01 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:54:01 - New payload size: 13060032
+2026-07-11 09:54:01 - Restart grabbing return: 0
+2026-07-11 09:54:01 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:54:01 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:22 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:54:22 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:54:22 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:54:22 - Set OffsetX to 104 (max: 280) ret=0
+2026-07-11 09:54:22 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:54:22 - New payload size: 13060032
+2026-07-11 09:54:22 - Restart grabbing return: 0
+2026-07-11 09:54:22 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:54:22 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:24 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:54:24 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:54:24 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:54:24 - Set OffsetX to 80 (max: 280) ret=0
+2026-07-11 09:54:24 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:54:24 - New payload size: 13060032
+2026-07-11 09:54:24 - Restart grabbing return: 0
+2026-07-11 09:54:24 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:54:24 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:24 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 09:54:24 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 09:54:24 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 09:54:24 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-11 09:54:24 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 09:54:24 - New payload size: 13060032
+2026-07-11 09:54:24 - Restart grabbing return: 0
+2026-07-11 09:54:24 - Set ExposureTime to 8915.0 (original: 8915) ret=0
+2026-07-11 09:54:24 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:27 - Set ExposureTime to 13322.0 (original: 13322) ret=0
+2026-07-11 09:54:27 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 09:54:47 - Exiting frame grab loop and releasing resources.
+2026-07-11 14:40:15 - generate_camera_frames called for cam_idx=1
+2026-07-11 14:40:15 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-11 14:40:15 - Target serial for cam_idx=1: DA9551444
+2026-07-11 14:40:15 - Initializing MVS...
+2026-07-11 14:40:15 - Enum devices return: 0, count: 1
+2026-07-11 14:40:15 - Found device serial: DA9551444
+2026-07-11 14:40:15 - Matched target serial: DA9551444
+2026-07-11 14:40:15 - Create handle return: 0
+2026-07-11 14:40:16 - Open device return: 0
+2026-07-11 14:40:16 - Payload size: 15040512
+2026-07-11 14:40:16 - Start grabbing return: 0
+2026-07-11 14:40:16 - Entering frame grab loop...
+2026-07-11 14:40:16 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 14:40:16 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 14:40:16 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 14:40:16 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-11 14:40:16 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 14:40:16 - New payload size: 13060032
+2026-07-11 14:40:16 - Restart grabbing return: 0
+2026-07-11 14:40:16 - Set ExposureTime to 13322.0 (original: 13322) ret=0
+2026-07-11 14:40:16 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:40:19 - Set ExposureTime to 18097.0 (original: 18097) ret=0
+2026-07-11 14:40:19 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:40:22 - Set ExposureTime to 11853.0 (original: 11853) ret=0
+2026-07-11 14:40:22 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:40:42 - Exiting frame grab loop and releasing resources.
+2026-07-11 14:47:34 - generate_camera_frames called for cam_idx=1
+2026-07-11 14:47:34 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-11 14:47:34 - Target serial for cam_idx=1: DA9551444
+2026-07-11 14:47:34 - Initializing MVS...
+2026-07-11 14:47:34 - Enum devices return: 0, count: 1
+2026-07-11 14:47:34 - Found device serial: DA9551444
+2026-07-11 14:47:34 - Matched target serial: DA9551444
+2026-07-11 14:47:34 - Create handle return: 0
+2026-07-11 14:47:35 - Open device return: 0
+2026-07-11 14:47:35 - Payload size: 15040512
+2026-07-11 14:47:35 - Start grabbing return: 0
+2026-07-11 14:47:35 - Entering frame grab loop...
+2026-07-11 14:47:35 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 14:47:35 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 14:47:35 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 14:47:35 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-11 14:47:35 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 14:47:35 - New payload size: 13060032
+2026-07-11 14:47:35 - Restart grabbing return: 0
+2026-07-11 14:47:35 - Set ExposureTime to 16628.0 (original: 16628) ret=0
+2026-07-11 14:47:35 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:47:39 - Set ExposureTime to 14424.0 (original: 14424) ret=0
+2026-07-11 14:47:39 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:47:39 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 14:47:39 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:47:40 - Set ExposureTime to 12955.0 (original: 12955) ret=0
+2026-07-11 14:47:40 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:47:40 - Set ExposureTime to 15526.0 (original: 15526) ret=0
+2026-07-11 14:47:40 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 14:48:16 - Exiting frame grab loop and releasing resources.
+2026-07-11 15:21:27 - generate_camera_frames called for cam_idx=1
+2026-07-11 15:21:27 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-11 15:21:27 - Target serial for cam_idx=1: DA9551444
+2026-07-11 15:21:27 - Initializing MVS...
+2026-07-11 15:21:27 - Enum devices return: 0, count: 1
+2026-07-11 15:21:27 - Found device serial: DA9551444
+2026-07-11 15:21:27 - Matched target serial: DA9551444
+2026-07-11 15:21:27 - Create handle return: 0
+2026-07-11 15:21:28 - Open device return: 0
+2026-07-11 15:21:28 - Payload size: 15040512
+2026-07-11 15:21:28 - Start grabbing return: 0
+2026-07-11 15:21:28 - Entering frame grab loop...
+2026-07-11 15:21:28 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 15:21:28 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 15:21:28 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 15:21:28 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-11 15:21:28 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 15:21:28 - New payload size: 13060032
+2026-07-11 15:21:28 - Restart grabbing return: 0
+2026-07-11 15:21:28 - Set ExposureTime to 15526.0 (original: 15526) ret=0
+2026-07-11 15:21:28 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:21:31 - Set ExposureTime to 15158.0 (original: 15158) ret=0
+2026-07-11 15:21:31 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:21:53 - Exiting frame grab loop and releasing resources.
+2026-07-11 15:34:31 - generate_camera_frames called for cam_idx=1
+2026-07-11 15:34:31 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-11 15:34:31 - Target serial for cam_idx=1: DA9551444
+2026-07-11 15:34:31 - Initializing MVS...
+2026-07-11 15:34:31 - Enum devices return: 0, count: 1
+2026-07-11 15:34:31 - Found device serial: DA9551444
+2026-07-11 15:34:31 - Matched target serial: DA9551444
+2026-07-11 15:34:31 - Create handle return: 0
+2026-07-11 15:34:31 - Open device return: 0
+2026-07-11 15:34:31 - Payload size: 15040512
+2026-07-11 15:34:31 - Start grabbing return: 0
+2026-07-11 15:34:31 - Entering frame grab loop...
+2026-07-11 15:34:31 - Stopping grabbing to apply resolution/offset changes...
+2026-07-11 15:34:31 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-11 15:34:31 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-11 15:34:31 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-11 15:34:31 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-11 15:34:31 - New payload size: 13060032
+2026-07-11 15:34:31 - Restart grabbing return: 0
+2026-07-11 15:34:31 - Set ExposureTime to 15158.0 (original: 15158) ret=0
+2026-07-11 15:34:31 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:34:37 - Set ExposureTime to 16995.0 (original: 16995) ret=0
+2026-07-11 15:34:37 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:34:38 - Set ExposureTime to 39766.0 (original: 39766) ret=0
+2026-07-11 15:34:38 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:34:40 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-07-11 15:34:40 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:34:46 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-07-11 15:34:46 - Set Gain to 8.0 (original: 8) ret=0
+2026-07-11 15:34:48 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-07-11 15:34:48 - Set Gain to 5.0 (original: 5) ret=0
+2026-07-11 15:34:48 - Set ExposureTime to 100000.0 (original: 100000) ret=0
+2026-07-11 15:34:48 - Set Gain to 2.0 (original: 2) ret=0
+2026-07-11 15:34:51 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:34:51 - Set Gain to 2.0 (original: 2) ret=0
+2026-07-11 15:34:54 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:34:54 - Set Gain to 4.0 (original: 4) ret=0
+2026-07-11 15:34:55 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:34:55 - Set Gain to 11.0 (original: 11) ret=0
+2026-07-11 15:34:57 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:34:57 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:34:59 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:34:59 - Set Gain to 18.0 (original: 18) ret=0
+2026-07-11 15:35:00 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-11 15:35:00 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-11 15:37:03 - Exiting frame grab loop and releasing resources.
+2026-07-13 11:04:45 - generate_camera_frames called for cam_idx=1
+2026-07-13 11:04:45 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-13 11:04:45 - Target serial for cam_idx=1: DA9551444
+2026-07-13 11:04:45 - Initializing MVS...
+2026-07-13 11:04:45 - Enum devices return: 0, count: 1
+2026-07-13 11:04:45 - Found device serial: DA9551444
+2026-07-13 11:04:45 - Matched target serial: DA9551444
+2026-07-13 11:04:45 - Create handle return: 0
+2026-07-13 11:04:46 - Open device return: 0
+2026-07-13 11:04:46 - Payload size: 15040512
+2026-07-13 11:04:46 - Start grabbing return: 0
+2026-07-13 11:04:46 - Entering frame grab loop...
+2026-07-13 11:04:46 - Stopping grabbing to apply resolution/offset changes...
+2026-07-13 11:04:46 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-13 11:04:46 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-13 11:04:46 - Set OffsetX to 72 (max: 280) ret=0
+2026-07-13 11:04:46 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-13 11:04:46 - New payload size: 13060032
+2026-07-13 11:04:46 - Restart grabbing return: 0
+2026-07-13 11:04:46 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-13 11:04:46 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-13 11:04:58 - Stopping grabbing to apply resolution/offset changes...
+2026-07-13 11:04:58 - Set Width to 2168 (limits: 32-2448) ret=0
+2026-07-13 11:04:58 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-13 11:04:58 - Set OffsetX to 0 (max: 280) ret=0
+2026-07-13 11:04:58 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-13 11:04:58 - New payload size: 13060032
+2026-07-13 11:04:58 - Restart grabbing return: 0
+2026-07-13 11:04:58 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-13 11:04:58 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-13 11:05:10 - Stopping grabbing to apply resolution/offset changes...
+2026-07-13 11:05:10 - Set Width to 2272 (limits: 32-2448) ret=0
+2026-07-13 11:05:10 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-13 11:05:10 - Set OffsetX to 0 (max: 176) ret=0
+2026-07-13 11:05:10 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-13 11:05:10 - New payload size: 13686528
+2026-07-13 11:05:10 - Restart grabbing return: 0
+2026-07-13 11:05:10 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-13 11:05:10 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-13 11:05:13 - Stopping grabbing to apply resolution/offset changes...
+2026-07-13 11:05:13 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-07-13 11:05:13 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-13 11:05:13 - Set OffsetX to 0 (max: 360) ret=0
+2026-07-13 11:05:13 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-13 11:05:13 - New payload size: 12578112
+2026-07-13 11:05:13 - Restart grabbing return: 0
+2026-07-13 11:05:13 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-13 11:05:13 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-13 11:09:59 - Exiting frame grab loop and releasing resources.
+2026-07-14 15:59:50 - generate_camera_frames called for cam_idx=1
+2026-07-14 15:59:50 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-07-14 15:59:50 - Target serial for cam_idx=1: DA9551444
+2026-07-14 15:59:50 - Initializing MVS...
+2026-07-14 15:59:50 - Enum devices return: 0, count: 1
+2026-07-14 15:59:50 - Found device serial: DA9551444
+2026-07-14 15:59:50 - Matched target serial: DA9551444
+2026-07-14 15:59:50 - Create handle return: 0
+2026-07-14 15:59:51 - Open device return: 0
+2026-07-14 15:59:51 - Payload size: 15040512
+2026-07-14 15:59:51 - Start grabbing return: 0
+2026-07-14 15:59:51 - Entering frame grab loop...
+2026-07-14 15:59:51 - Stopping grabbing to apply resolution/offset changes...
+2026-07-14 15:59:51 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-07-14 15:59:51 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-07-14 15:59:51 - Set OffsetX to 0 (max: 360) ret=0
+2026-07-14 15:59:51 - Set OffsetY to 0 (max: 40) ret=0
+2026-07-14 15:59:51 - New payload size: 12578112
+2026-07-14 15:59:51 - Restart grabbing return: 0
+2026-07-14 15:59:51 - Set ExposureTime to 13689.0 (original: 13689) ret=0
+2026-07-14 15:59:51 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-14 15:59:57 - Set ExposureTime to 6344.0 (original: 6344) ret=0
+2026-07-14 15:59:57 - Set Gain to 20.0 (original: 20) ret=0
+2026-07-14 16:00:11 - Exiting frame grab loop and releasing resources.
