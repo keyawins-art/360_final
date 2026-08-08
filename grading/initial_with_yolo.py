@@ -1121,7 +1121,7 @@ class ZoneProcessor:
             cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
             total_pixels = cv2.countNonZero(c_mask)
             density = cashew_pixels / max(1, total_pixels)
-            if density < 0.15:  # Lowered to 0.15 to ensure real cashews with shadows/oily surface pass smoothly
+            if density < 0.20:  # Rejects roller background/glare completely
                 continue
                 
             cgx1, cgy1 = x1 + rx, y1 + ry
@@ -1165,6 +1165,7 @@ class ZoneProcessor:
         min_start_line = y + (zone_h * 0.98)  # 98% - allows cashews detected almost anywhere in zone
         trigger_line = y + (zone_h * 0.92)    # 92% - trigger reliably before leaving zone
         disappear_trigger_line = y + (zone_h * 0.15) # 15% - catch any cashew lost in lower 85% of zone
+        MIN_REQUIRED_TRACKED_FRAMES = 3  # Requires continuous tracking for 3+ consecutive frames to filter out flickers!
         
         # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
         for obj_id, obj_info in list(self.tracker.objects.items()):
@@ -1175,7 +1176,7 @@ class ZoneProcessor:
                 if start_y < min_start_line and cy >= trigger_line:
                     max_mm = obj_info['max_mm']
                     frames_tracked = len(obj_info.get('measurements', []))
-                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:  # Allow 1+ frames tracked to ensure no commands are missed
+                    if max_mm >= MIN_MM_SIZE and frames_tracked >= MIN_REQUIRED_TRACKED_FRAMES:
                         # --- VELOCITY OVERSHOOT COMPENSATION ---
                         prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
                         prev_time = obj_info.get('prev_time', frame_timestamp)
@@ -1185,30 +1186,28 @@ class ZoneProcessor:
                         dy = cy - prev_cy
                         dt = curr_time - prev_time
                         
-                        # Use average velocity over the ENTIRE tracking period for extreme precision
-                        # This eliminates 1-pixel jitter from instantaneous frame-to-frame velocity
                         total_dy = cy - start_y
                         total_dt = curr_time - obj_info.get('start_time', curr_time - 0.1)
                         
                         time_overshoot = 0.0
                         if total_dt > 0 and total_dy > 0:
-                            velocity = total_dy / total_dt  # Average pixels per second
+                            velocity = total_dy / total_dt
                             overshoot_px = cy - trigger_line
                             if overshoot_px > 0:
                                 time_overshoot = overshoot_px / velocity
-                                true_exit_time -= time_overshoot # Shift time BACKWARDS!
+                                true_exit_time -= time_overshoot
                                 
                         last_crop = obj_info.get('last_crop')
                         if last_crop is not None:
                             disappeared_crops.append(last_crop)
                             disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
-                            obj_info['command_sent'] = True # NEVER fire for this ID again
-                            self.tracker.remove_object(obj_id) # KILL THE GHOST immediately so it doesn't steal cashews behind it!
+                            obj_info['command_sent'] = True
+                            self.tracker.remove_object(obj_id)
                     else:
-                        reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
-                        print(f"[{self.name}] Cashew ID:{obj_id} crossed 95% line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
-                        obj_info['command_sent'] = True # Stop spamming the log
-                        self.tracker.remove_object(obj_id) # KILL THE GHOST
+                        reason = "Too small" if max_mm < MIN_MM_SIZE else f"Noise/Flicker (Tracked only {frames_tracked} frames)"
+                        print(f"[{self.name}] Cashew ID:{obj_id} crossed line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
+                        obj_info['command_sent'] = True
+                        self.tracker.remove_object(obj_id)
                             
         # 2. DISAPPEARANCE LOGIC: Catch cashews that the tracker lost slightly before the line
         for obj_id in disappeared_ids:
@@ -1221,7 +1220,7 @@ class ZoneProcessor:
                     if start_y < min_start_line and cy >= disappear_trigger_line:
                         max_mm = obj_info['max_mm']
                         frames_tracked = len(obj_info.get('measurements', []))
-                        if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
+                        if max_mm >= MIN_MM_SIZE and frames_tracked >= MIN_REQUIRED_TRACKED_FRAMES:
                             last_crop = obj_info.get('last_crop')
                             if last_crop is not None:
                                 # PREDICT the exit time since we lost tracking before the 95% line
