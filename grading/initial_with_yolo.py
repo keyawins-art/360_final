@@ -1262,7 +1262,7 @@ class ZoneProcessor:
             # --- NOW PROCEED WITH YOLO PROCESSING ---
             processing_start_time = time.time()
             yolo_results = []
-            if quality_filter and quality_filter.model:
+            if quality_filter and (quality_filter.session or quality_filter.model):
                 yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
             else:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
