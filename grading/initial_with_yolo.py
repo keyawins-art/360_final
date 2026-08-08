@@ -1038,7 +1038,7 @@ class ZoneProcessor:
         # --- HYBRID UNBROKEN DETECTION PIPELINE ---
         yolo_detections = []
         if quality_filter and hasattr(quality_filter, 'detect_zone_cashews'):
-            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.35)
+            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.20)
             
         valid_contours = []
         is_good_flags = []
@@ -1096,13 +1096,13 @@ class ZoneProcessor:
             if rw > (w * 0.70) or max(rw, rh) * PIXEL_TO_MM_RATIO > 42.0:
                 continue
                 
-            # Strict Cashew Color Density Check (Rejects Blue Rollers / Glare completely)
+            # Cashew Color Density Check (Rejects Blue Rollers / Glare completely)
             c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
             cv2.drawContours(c_mask, [raw_cnt], -1, 255, -1)
             cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
             total_pixels = cv2.countNonZero(c_mask)
             density = cashew_pixels / max(1, total_pixels)
-            if density < 0.30:  # Rejects blue roller background completely
+            if density < 0.15:  # Lowered to 0.15 to ensure real cashews with shadows/oily surface pass smoothly
                 continue
                 
             cgx1, cgy1 = x1 + rx, y1 + ry
