@@ -92,7 +92,7 @@ def save_zones_config(configs):
 ZONE_CONFIGS = load_zones_config()
 
 # === DETECTION SENSITIVITY CONTROL PANEL (TUNE HERE) ===
-MIN_CASHEW_AREA = 3500       # Increased to 3500 to ignore dust/noise
+MIN_CASHEW_AREA = 2000       # Lowered to 2000 to handle rotating cashews (narrow side has less area)
 MIN_MM_SIZE = 15.0           # Minimum measurement to log/act on cashew
 MAX_CASHEW_MM = 33.0         # Any object larger than 45mm is likely a roller
 MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
@@ -710,7 +710,7 @@ class ObjectTracker:
     - Handles flickering/missing frames
     """
     
-    def __init__(self, zone_name, max_distance=4000, max_disappeared=25):
+    def __init__(self, zone_name, max_distance=4000, max_disappeared=35):
         self.zone_name = zone_name
         self.next_id = 1
         self.objects = {}  # {id: {'centroid': (x,y), 'latest_contour': None, 'is_good': True, ...}}
@@ -989,9 +989,9 @@ class ZoneProcessor:
                 continue # Ignore horizontal rollers
                 
             solidity = area / max(1, w_p * h_p)
-            if solidity < 0.50:
+            if solidity < 0.35:
                 continue
-            if min(w_p, h_p) < 20:
+            if min(w_p, h_p) < 12:
                 continue
                 
             # Crop Extraction
