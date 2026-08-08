@@ -838,9 +838,10 @@ class ObjectTracker:
         self.max_distance = max_distance
         self.max_disappeared = max_disappeared
         
-    def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None):
+    def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None, max_entry_y=None):
         """
-        Update tracked objects with new contours and their quality assessment
+        Update tracked objects with new contours and their quality assessment.
+        Only allows new object creation near the top entry zone (<= max_entry_y).
         """
         if frame_timestamp is None:
             frame_timestamp = time.perf_counter()
@@ -919,9 +920,13 @@ class ObjectTracker:
                 matched_objects.add(min_id)
                 matched_detections.add(i)
         
-        # New objects
+        # New objects: STRICT TOP-ENTRY RULE (No object can be created from the middle/bottom of the zone)
         for i in range(len(current_centroids)):
             if i not in matched_detections:
+                cy = current_centroids[i][1]
+                if max_entry_y is not None and cy > max_entry_y:
+                    continue  # REJECT! Object did not enter from top of zone!
+                    
                 self.objects[self.next_id] = {
                     'centroid': current_centroids[i],
                     'prev_centroid': current_centroids[i],
@@ -1144,8 +1149,11 @@ class ZoneProcessor:
                 grades.append('good')
                 crops.append(crop)
                 
+        x, y, _, zone_h = self.zone
+        max_entry_y = y + (zone_h * 0.20)  # Strict Entry Boundary: New objects ONLY spawn in top 20% of zone!
+        
         # Update tracker with newly determined grades and crops
-        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp)
+        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp, max_entry_y=max_entry_y)
         
         # --- PASS 3: Evaluate Cashews using LINE CROSSING + DISAPPEARANCE LOGIC ---
         disappeared_crops = []
