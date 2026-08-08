@@ -102,7 +102,7 @@ MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
 HSV_LOWER = np.array([5, 60, 80])      # Strict lower bound for cashew color (rejects blue belt & dark gaps)
 HSV_UPPER = np.array([45, 255, 255])  # Upper hue/sat/val for cashew detection
 
-YOLO_CONF_THRESHOLD = 0.40   # [0.1-1.0] AI strictness: Higher = Fewer defect calls
+YOLO_CONF_THRESHOLD = 0.35   # [0.1-1.0] AI strictness threshold for detection & classification
 YOLO_STRICT_BYPASS = 0.85    # [0.1-1.0] If AI is 85% sure it is GOOD, skip heuristics
 
 # OpenCV Heuristic Backups (Only used if AI is not 85% sure)
@@ -877,19 +877,19 @@ class ObjectTracker:
                 prev_cx, prev_cy = obj.get('prev_centroid', (old_cx, old_cy))
                 dt = obj['curr_time'] - obj.get('prev_time', obj['curr_time'] - 0.033)
                 
-                # Velocity prediction for moving & rotating cashews on belt
+                # Velocity prediction for moving & rotating cashews on belt (Clamped to 150ms max)
                 if dt > 0.001 and (old_cy != prev_cy or old_cx != prev_cx):
                     vx = (old_cx - prev_cx) / dt
                     vy = (old_cy - prev_cy) / dt
-                    curr_dt = frame_timestamp - obj['curr_time']
+                    curr_dt = min(frame_timestamp - obj['curr_time'], 0.150) # Clamped extrapolation
                     pred_cx = old_cx + vx * curr_dt
                     pred_cy = old_cy + vy * curr_dt
                 else:
                     pred_cx, pred_cy = old_cx, old_cy
                     
                 dy = curr_centroid[1] - pred_cy
-                if dy < -200:
-                    continue # Prevent backwards stealing
+                if dy < -400:
+                    continue # Relaxed to -400 to accommodate rotation jitter & frame skips
                     
                 dist = math.hypot(curr_centroid[0] - pred_cx, curr_centroid[1] - pred_cy)
                 if dist < min_dist:
@@ -901,7 +901,12 @@ class ObjectTracker:
                 self.objects[min_id]['prev_time'] = self.objects[min_id].get('curr_time', frame_timestamp)
                 self.objects[min_id]['curr_time'] = frame_timestamp
                 
-                self.objects[min_id]['centroid'] = curr_centroid
+                # EMA Centroid Smoothing to eliminate rotational shape-asymmetry jitter
+                alpha = 0.6
+                old_cx, old_cy = self.objects[min_id]['prev_centroid']
+                smoothed_cx = int(alpha * curr_centroid[0] + (1.0 - alpha) * old_cx)
+                smoothed_cy = int(alpha * curr_centroid[1] + (1.0 - alpha) * old_cy)
+                self.objects[min_id]['centroid'] = (smoothed_cx, smoothed_cy)
                 self.objects[min_id]['measurements'].append(current_sizes[i])
                 self.objects[min_id]['max_mm'] = max(self.objects[min_id]['max_mm'], current_sizes[i])
                 
@@ -1165,7 +1170,7 @@ class ZoneProcessor:
         min_start_line = y + (zone_h * 0.98)  # 98% - allows cashews detected almost anywhere in zone
         trigger_line = y + (zone_h * 0.92)    # 92% - trigger reliably before leaving zone
         disappear_trigger_line = y + (zone_h * 0.15) # 15% - catch any cashew lost in lower 85% of zone
-        MIN_REQUIRED_TRACKED_FRAMES = 3  # Requires continuous tracking for 3+ consecutive frames to filter out flickers!
+        MIN_REQUIRED_TRACKED_FRAMES = 2  # Requires tracking for 2+ frames to validate rotating cashews while ignoring 1-frame noise!
         
         # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
         for obj_id, obj_info in list(self.tracker.objects.items()):
