@@ -434,6 +434,73 @@ class CashewQualityFilter:
                 
         return [(None, 0)] * len(crops)
 
+    def detect_zone_cashews(self, zone_bgr, conf_thresh=0.25, nms_thresh=0.40, imgsz=640):
+        """
+        Run GPU YOLO Object Detection on an entire zone frame.
+        Returns a list of (x1, y1, x2, y2, confidence, class_name) for each detected cashew.
+        """
+        if self.session is None or zone_bgr.size == 0:
+            return []
+            
+        try:
+            h_orig, w_orig = zone_bgr.shape[:2]
+            img_resized = cv2.resize(zone_bgr, (imgsz, imgsz))
+            img_in = img_resized.transpose(2, 0, 1).astype(np.float32) / 255.0
+            batch = np.expand_dims(img_in, axis=0)
+            
+            input_name = self.session.get_inputs()[0].name
+            outs = self.session.run(None, {input_name: batch})[0][0] # (11, 8400)
+            
+            boxes = outs[:4, :]
+            cls_scores = outs[4:, :]
+            
+            best_cls = np.argmax(cls_scores, axis=0)
+            best_conf = np.max(cls_scores, axis=0)
+            
+            mask = best_conf >= conf_thresh
+            boxes = boxes[:, mask]
+            best_cls = best_cls[mask]
+            best_conf = best_conf[mask]
+            
+            x_scale = w_orig / float(imgsz)
+            y_scale = h_orig / float(imgsz)
+            
+            raw_boxes = []
+            scores = []
+            classes = []
+            
+            for i in range(boxes.shape[1]):
+                xc, yc, w, h = boxes[:, i]
+                x1 = int((xc - w/2) * x_scale)
+                y1 = int((yc - h/2) * y_scale)
+                w_box = int(w * x_scale)
+                h_box = int(h * y_scale)
+                
+                raw_boxes.append([x1, y1, w_box, h_box])
+                scores.append(float(best_conf[i]))
+                classes.append(int(best_cls[i]))
+                
+            if not raw_boxes:
+                return []
+                
+            indices = cv2.dnn.NMSBoxes(raw_boxes, scores, conf_thresh, nms_thresh)
+            
+            results = []
+            if len(indices) > 0:
+                for idx in indices.flatten():
+                    x1, y1, w_box, h_box = raw_boxes[idx]
+                    x2 = min(w_orig, x1 + w_box)
+                    y2 = min(h_orig, y1 + h_box)
+                    x1 = max(0, x1)
+                    y1 = max(0, y1)
+                    cls_name = self.class_names.get(classes[idx], 'good')
+                    results.append((x1, y1, x2, y2, scores[idx], cls_name))
+                    
+            return results
+        except Exception as e:
+            print(f"    [YOLO ZONE DETECT ERROR] {e}")
+            return []
+
 # =========================================================
 # CAMERA CLASS
 # =========================================================
@@ -966,107 +1033,89 @@ class ZoneProcessor:
         zone_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
         zone_mask[y1:y2, x1:x2] = 255
         
-        # --- ULTRA-PRECISE EDGE SEGMENTATION ---
-        # Step 1: Bilateral filter - smooths texture noise while preserving TRUE edges
-        smooth = cv2.GaussianBlur(zone_frame, (7, 7), 0)
-        gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
-        
-        # Step 2: Clean Otsu threshold on pre-smoothed image (high contrast cashew vs dark belt)
-        _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Step 3: Morphological refinement with ELLIPTICAL kernels
-        kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_OPEN, kernel_e, iterations=1)
-        mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, kernel_close, iterations=1)
-        
-        # Step 4: ULTRA-SMOOTH EDGES - Lighter Gaussian blur for speed
-        mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
-        _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
-        
-        # Step 5: HSV validation mask (for density check only, not contour shape)
-        hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
-        hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
-        
-        # Find contours with ALL edge points for maximum smoothness
-        cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Filter by area and perform COLOR GRADING
+        # --- GPU YOLO DETECTION + TRACKING PIPELINE ---
+        yolo_detections = []
+        if quality_filter and hasattr(quality_filter, 'detect_zone_cashews'):
+            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=YOLO_CONF_THRESHOLD)
+            
         valid_contours = []
         is_good_flags = []
         grades = []
         crops = []
         
-        # --- PASS 1: Apply Filters and Extract Crops ---
-        extracted_crops = []
-        valid_contours_indices = []
-        adjusted_contours = []
-        
-        for i, raw_cnt in enumerate(cnts):
-            # 1. OPTIMIZATION: Filter by area FIRST before expensive operations!
-            raw_area = cv2.contourArea(raw_cnt)
-            if raw_area < MIN_CASHEW_AREA:
-                adjusted_contours.append(None) # keep indices aligned
-                continue
+        if len(yolo_detections) > 0:
+            # 1. Direct GPU YOLO Detection Mode
+            for (zx1, zy1, zx2, zy2, conf, cls_name) in yolo_detections:
+                gx1 = x1 + zx1
+                gy1 = y1 + zy1
+                gx2 = x1 + zx2
+                gy2 = y1 + zy2
                 
-            # 2. Offset and Smooth only valid size contours
-            c_adjusted = raw_cnt.copy()
-            c_adjusted[:, 0, 0] += x1  # Add zone x offset
-            c_adjusted[:, 0, 1] += y1  # Add zone y offset
-            c_adjusted = smooth_contour(c_adjusted, window=5)
-            adjusted_contours.append(c_adjusted)
+                # Bounding box contour for tracker visualization
+                cnt = np.array([
+                    [[gx1, gy1]],
+                    [[gx2, gy1]],
+                    [[gx2, gy2]],
+                    [[gx1, gy2]]
+                ], dtype=np.int32)
+                
+                crop = zone_frame[zy1:zy2, zx1:zx2]
+                if crop.size == 0:
+                    crop = np.zeros((10, 10, 3), dtype=np.uint8)
+                    
+                is_good = (cls_name.lower() in [n.lower() for n in GOOD_CLASS_NAMES])
+                
+                valid_contours.append(cnt)
+                is_good_flags.append(is_good)
+                grades.append(cls_name)
+                crops.append(crop)
+        else:
+            # 2. OpenCV Fallback Mode (if YOLO has no detections for current frame)
+            smooth = cv2.GaussianBlur(zone_frame, (7, 7), 0)
+            gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
+            _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             
-            c = c_adjusted
-            area = cv2.contourArea(c)
+            kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+            kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+            mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_OPEN, kernel_e, iterations=1)
+            mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, kernel_close, iterations=1)
             
-            # Density Check (use original raw contour against zone_mask)
-            c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
-            cv2.drawContours(c_mask, [raw_cnt], -1, 255, -1)
-            cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
-            total_pixels = cv2.countNonZero(c_mask)
-            density = cashew_pixels / max(1, total_pixels)
-            if density < 0.08:
-                continue
-                
-            # Roller / Noise Checks
-            rect = cv2.minAreaRect(c)
-            (w_p, h_p) = rect[1]
-            if max(1, w_p * h_p) == 1: continue
-            mm_size = max(w_p, h_p) * PIXEL_TO_MM_RATIO
+            mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
+            _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
             
-            # Identify rollers by checking if the object spans almost the entire width of the zone
-            x_b, y_b, w_b, h_b = cv2.boundingRect(c)
-            if w_b > (self.zone[2] * 0.90):
-                continue # Ignore horizontal rollers
-                
-            solidity = area / max(1, w_p * h_p)
-            if solidity < 0.25:
-                continue
-            if min(w_p, h_p) < 6:
-                continue
-                
-            # Crop Extraction
-            side = max(w_b, h_b) + 40
-            cx_b, cy_b = x_b + w_b//2, y_b + h_b//2
-            px = max(0, cx_b - side//2)
-            py = max(0, cy_b - side//2)
-            pw = min(frame.shape[1] - px, side)
-            ph = min(frame.shape[0] - py, side)
-            crop = frame[py:py+ph, px:px+pw]
+            hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
+            hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
             
-            if crop.size > 0:
-                extracted_crops.append(crop)
-                valid_contours_indices.append(i)
+            cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            for i, raw_cnt in enumerate(cnts):
+                raw_area = cv2.contourArea(raw_cnt)
+                if raw_area < MIN_CASHEW_AREA:
+                    continue
+                    
+                c_adjusted = raw_cnt.copy()
+                c_adjusted[:, 0, 0] += x1
+                c_adjusted[:, 0, 1] += y1
+                c_adjusted = smooth_contour(c_adjusted, window=5)
                 
-        # --- PASS 2: Pass crops to Tracker ---
-        for idx, crop_idx in enumerate(valid_contours_indices):
-            c = adjusted_contours[crop_idx]
-            crop = extracted_crops[idx]
-            valid_contours.append(c)
-            is_good_flags.append(True)
-            grades.append(None)
-            crops.append(crop)
-        
+                c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
+                cv2.drawContours(c_mask, [raw_cnt], -1, 255, -1)
+                cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
+                total_pixels = cv2.countNonZero(c_mask)
+                density = cashew_pixels / max(1, total_pixels)
+                if density < 0.08:
+                    continue
+                    
+                rx, ry, rw, rh = cv2.boundingRect(raw_cnt)
+                crop = zone_frame[ry:ry+rh, rx:rx+rw]
+                if crop.size == 0:
+                    continue
+                    
+                valid_contours.append(c_adjusted)
+                is_good_flags.append(True)
+                grades.append('good')
+                crops.append(crop)
+                
         # Update tracker with newly determined grades and crops
         disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp)
         
