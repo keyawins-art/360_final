@@ -159,6 +159,7 @@ GOOD_CLASS_NAMES = ['good', 'Good']
 # =========================================================
 # GRADING CONFIGURATION
 # =========================================================
+EJECTION_DELAY_SECONDS = 6.20  # [Seconds] Delay time between exit point line crossing and mechanical valve ejection
 
 # Commands for all grades depending on the zone they are processed in
 ZONE_COMMAND_MAP = {
@@ -1249,7 +1250,7 @@ class ZoneProcessor:
             else:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
                 
-            DELAY_SECONDS = 6.20
+            DELAY_SECONDS = EJECTION_DELAY_SECONDS
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
             
             def send_delayed(cmd, arduino, lock, name, o_id, exit_time, grade):
