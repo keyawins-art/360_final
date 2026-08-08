@@ -336,6 +336,7 @@ class CashewQualityFilter:
     def __init__(self, model_path):
         self.session = None
         self.model = None
+        self.gpu_lock = threading.Lock()
         self.class_names = {0: 'bad', 1: 'blackdot', 2: 'brown', 3: 'good', 4: 'multi', 5: 'oilly', 6: 'unpill'}
         
         # Load torch DLLs for CUDA execution in ONNX runtime
@@ -393,7 +394,8 @@ class CashewQualityFilter:
                 batch = np.stack(imgs).astype(np.float32) / 255.0
                 
                 input_name = self.session.get_inputs()[0].name
-                outs = self.session.run(None, {input_name: batch})[0]
+                with self.gpu_lock:
+                    outs = self.session.run(None, {input_name: batch})[0]
                 
                 batch_results = []
                 for i in range(len(crops)):
@@ -449,7 +451,8 @@ class CashewQualityFilter:
             batch = np.expand_dims(img_in, axis=0)
             
             input_name = self.session.get_inputs()[0].name
-            outs = self.session.run(None, {input_name: batch})[0][0] # (11, 8400)
+            with self.gpu_lock:
+                outs = self.session.run(None, {input_name: batch})[0][0] # (11, 8400)
             
             boxes = outs[:4, :]
             cls_scores = outs[4:, :]
