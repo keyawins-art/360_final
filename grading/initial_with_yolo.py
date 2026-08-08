@@ -99,8 +99,8 @@ MAX_CASHEW_MM = 33.0         # Any object larger than 45mm is likely a roller
 MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
 
 # General Shape/Color Segmentation (Validation only)
-HSV_LOWER = np.array([0, 30, 15])     # Higher Saturation to ensure it's not the belt
-HSV_UPPER = np.array([40, 255, 255])  # Upper hue/sat/val for cashew detection
+HSV_LOWER = np.array([5, 60, 80])      # Strict lower bound for cashew color (rejects blue belt & dark gaps)
+HSV_UPPER = np.array([45, 255, 255])  # Upper hue/sat/val for cashew detection
 
 YOLO_CONF_THRESHOLD = 0.40   # [0.1-1.0] AI strictness: Higher = Fewer defect calls
 YOLO_STRICT_BYPASS = 0.85    # [0.1-1.0] If AI is 85% sure it is GOOD, skip heuristics
@@ -1057,7 +1057,7 @@ class ZoneProcessor:
         # --- HYBRID UNBROKEN DETECTION PIPELINE ---
         yolo_detections = []
         if quality_filter and hasattr(quality_filter, 'detect_zone_cashews'):
-            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.10)
+            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.25)
             
         valid_contours = []
         is_good_flags = []
