@@ -1047,6 +1047,12 @@ class ZoneProcessor:
         
         if len(yolo_detections) > 0:
             for (zx1, zy1, zx2, zy2, conf, cls_name) in yolo_detections:
+                bw = zx2 - zx1
+                bh = zy2 - zy1
+                # Ignore horizontal rollers or giant false detections
+                if bw > (w * 0.70) or max(bw, bh) * PIXEL_TO_MM_RATIO > 42.0:
+                    continue
+                    
                 gx1 = x1 + zx1
                 gy1 = y1 + zy1
                 gx2 = x1 + zx2
@@ -1071,17 +1077,30 @@ class ZoneProcessor:
                 crops.append(crop)
         else:
             # Lightweight OpenCV Fallback Pass (ONLY executed if YOLO returned 0 detections)
-            gray = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2GRAY)
-            _, mask_final = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
+            hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
+            
+            smooth = cv2.GaussianBlur(zone_frame, (5, 5), 0)
+            gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
+            _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            mask_clean = cv2.bitwise_and(mask_raw, hsv_mask)
+            
+            cnts, _ = cv2.findContours(mask_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             
             for i, raw_cnt in enumerate(cnts):
                 if cv2.contourArea(raw_cnt) < MIN_CASHEW_AREA:
                     continue
+                    
+                rx, ry, rw, rh = cv2.boundingRect(raw_cnt)
+                # Ignore horizontal rollers spanning across zone
+                if rw > (w * 0.70) or max(rw, rh) * PIXEL_TO_MM_RATIO > 42.0:
+                    continue
+                    
                 c_adjusted = raw_cnt.copy()
                 c_adjusted[:, 0, 0] += x1
                 c_adjusted[:, 0, 1] += y1
-                rx, ry, rw, rh = cv2.boundingRect(raw_cnt)
+                c_adjusted = smooth_contour(c_adjusted, window=5)
+                
                 crop = zone_frame[ry:ry+rh, rx:rx+rw]
                 if crop.size > 0:
                     valid_contours.append(c_adjusted)
