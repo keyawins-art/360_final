@@ -92,8 +92,8 @@ def save_zones_config(configs):
 ZONE_CONFIGS = load_zones_config()
 
 # === DETECTION SENSITIVITY CONTROL PANEL (TUNE HERE) ===
-MIN_CASHEW_AREA = 2000       # Lowered to 2000 to handle rotating cashews (narrow side has less area)
-MIN_MM_SIZE = 15.0           # Minimum measurement to log/act on cashew
+MIN_CASHEW_AREA = 800        # Lowered to 800 to detect small cashew pieces (chhot/tukde) AND rotating cashews
+MIN_MM_SIZE = 5.0            # Lowered to 5mm so all cashews (including 8-14mm pieces) get ejection commands
 MAX_CASHEW_MM = 33.0         # Any object larger than 45mm is likely a roller
 MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
 
@@ -710,7 +710,7 @@ class ObjectTracker:
     - Handles flickering/missing frames
     """
     
-    def __init__(self, zone_name, max_distance=4000, max_disappeared=35):
+    def __init__(self, zone_name, max_distance=4000, max_disappeared=50):
         self.zone_name = zone_name
         self.next_id = 1
         self.objects = {}  # {id: {'centroid': (x,y), 'latest_contour': None, 'is_good': True, ...}}
@@ -754,7 +754,7 @@ class ObjectTracker:
                 
                 # PREVENT MERGING: Cashews only travel DOWN on the belt.
                 # If dy < -150, the new centroid is ABOVE the old one (preventing new cashews from stealing old IDs!).
-                if dy < -150:
+                if dy < -250:
                     continue
                     
                 dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
@@ -974,7 +974,7 @@ class ZoneProcessor:
             cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
             total_pixels = cv2.countNonZero(c_mask)
             density = cashew_pixels / max(1, total_pixels)
-            if density < 0.15:
+            if density < 0.08:
                 continue
                 
             # Roller / Noise Checks
@@ -989,9 +989,9 @@ class ZoneProcessor:
                 continue # Ignore horizontal rollers
                 
             solidity = area / max(1, w_p * h_p)
-            if solidity < 0.35:
+            if solidity < 0.25:
                 continue
-            if min(w_p, h_p) < 12:
+            if min(w_p, h_p) < 6:
                 continue
                 
             # Crop Extraction
@@ -1026,9 +1026,9 @@ class ZoneProcessor:
         x, y, _, zone_h = self.zone
         
         # Define triggering lines relative to Zone geometry
-        min_start_line = y + (zone_h * 0.85)  # 85% prevents 'ghost' respawns from double-firing, but allows manual drops
-        trigger_line = y + (zone_h * 0.95)
-        disappear_trigger_line = y + (zone_h * 0.20) # If tracker loses it anywhere below 20%, it's definitely an exit
+        min_start_line = y + (zone_h * 0.98)  # 98% - allows cashews detected almost anywhere in zone
+        trigger_line = y + (zone_h * 0.92)    # 92% - trigger reliably before leaving zone
+        disappear_trigger_line = y + (zone_h * 0.15) # 15% - catch any cashew lost in lower 85% of zone
         
         # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
         for obj_id, obj_info in list(self.tracker.objects.items()):
@@ -1039,7 +1039,7 @@ class ZoneProcessor:
                 if start_y < min_start_line and cy >= trigger_line:
                     max_mm = obj_info['max_mm']
                     frames_tracked = len(obj_info.get('measurements', []))
-                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
+                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:  # Allow 1+ frames tracked to ensure no commands are missed
                         # --- VELOCITY OVERSHOOT COMPENSATION ---
                         prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
                         prev_time = obj_info.get('prev_time', frame_timestamp)
