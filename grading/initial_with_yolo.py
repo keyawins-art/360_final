@@ -446,7 +446,7 @@ class CashewQualityFilter:
             
         try:
             h_orig, w_orig = zone_bgr.shape[:2]
-            img_resized = cv2.resize(zone_bgr, (imgsz, imgsz), interpolation=cv2.INTER_NEAREST)
+            img_resized = cv2.resize(zone_bgr, (imgsz, imgsz), interpolation=cv2.INTER_LINEAR)
             batch = np.ascontiguousarray(img_resized.transpose(2, 0, 1)[None], dtype=np.float32) / 255.0
             
             input_name = self.session.get_inputs()[0].name
@@ -1037,76 +1037,91 @@ class ZoneProcessor:
         
         # --- ULTRA-FAST GPU YOLO + OPTIMIZED FALLBACK PIPELINE ---
         yolo_detections = []
+        # --- HYBRID UNBROKEN DETECTION PIPELINE ---
+        yolo_detections = []
         if quality_filter and hasattr(quality_filter, 'detect_zone_cashews'):
-            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.20)
+            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.15)
             
         valid_contours = []
         is_good_flags = []
         grades = []
         crops = []
         
-        if len(yolo_detections) > 0:
-            for (zx1, zy1, zx2, zy2, conf, cls_name) in yolo_detections:
-                bw = zx2 - zx1
-                bh = zy2 - zy1
-                # Ignore horizontal rollers or giant false detections
-                if bw > (w * 0.70) or max(bw, bh) * PIXEL_TO_MM_RATIO > 42.0:
-                    continue
+        yolo_boxes_g = []
+        for (zx1, zy1, zx2, zy2, conf, cls_name) in yolo_detections:
+            bw = zx2 - zx1
+            bh = zy2 - zy1
+            # Ignore horizontal rollers or giant false detections
+            if bw > (w * 0.70) or max(bw, bh) * PIXEL_TO_MM_RATIO > 42.0:
+                continue
+                
+            gx1 = x1 + zx1
+            gy1 = y1 + zy1
+            gx2 = x1 + zx2
+            gy2 = y1 + zy2
+            
+            cnt = np.array([
+                [[gx1, gy1]],
+                [[gx2, gy1]],
+                [[gx2, gy2]],
+                [[gx1, gy2]]
+            ], dtype=np.int32)
+            
+            crop = zone_frame[zy1:zy2, zx1:zx2]
+            if crop.size == 0:
+                crop = np.zeros((10, 10, 3), dtype=np.uint8)
+                
+            is_good = (cls_name.lower() in [n.lower() for n in GOOD_CLASS_NAMES])
+            
+            valid_contours.append(cnt)
+            is_good_flags.append(is_good)
+            grades.append(cls_name)
+            crops.append(crop)
+            yolo_boxes_g.append((gx1, gy1, gx2, gy2))
+            
+        # OpenCV Contour Pass: ALWAYS run to catch any cashew missed by YOLO in the zone
+        hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
+        hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
+        
+        gray = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2GRAY)
+        _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        mask_clean = cv2.bitwise_and(mask_raw, hsv_mask)
+        
+        cnts, _ = cv2.findContours(mask_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        for i, raw_cnt in enumerate(cnts):
+            if cv2.contourArea(raw_cnt) < MIN_CASHEW_AREA:
+                continue
+                
+            rx, ry, rw, rh = cv2.boundingRect(raw_cnt)
+            # Ignore horizontal rollers spanning across zone
+            if rw > (w * 0.70) or max(rw, rh) * PIXEL_TO_MM_RATIO > 42.0:
+                continue
+                
+            cgx1, cgy1 = x1 + rx, y1 + ry
+            cgx2, cgy2 = cgx1 + rw, cgy1 + rh
+            
+            # Check overlap with existing YOLO box
+            overlapped = False
+            for (bx1, by1, bx2, by2) in yolo_boxes_g:
+                if not (cgx2 < bx1 or cgx1 > bx2 or cgy2 < by1 or cgy1 > by2):
+                    overlapped = True
+                    break
                     
-                gx1 = x1 + zx1
-                gy1 = y1 + zy1
-                gx2 = x1 + zx2
-                gy2 = y1 + zy2
+            if overlapped:
+                continue # Already captured by YOLO!
                 
-                cnt = np.array([
-                    [[gx1, gy1]],
-                    [[gx2, gy1]],
-                    [[gx2, gy2]],
-                    [[gx1, gy2]]
-                ], dtype=np.int32)
-                
-                crop = zone_frame[zy1:zy2, zx1:zx2]
-                if crop.size == 0:
-                    crop = np.zeros((10, 10, 3), dtype=np.uint8)
-                    
-                is_good = (cls_name.lower() in [n.lower() for n in GOOD_CLASS_NAMES])
-                
-                valid_contours.append(cnt)
-                is_good_flags.append(is_good)
-                grades.append(cls_name)
+            c_adjusted = raw_cnt.copy()
+            c_adjusted[:, 0, 0] += x1
+            c_adjusted[:, 0, 1] += y1
+            c_adjusted = smooth_contour(c_adjusted, window=5)
+            
+            crop = zone_frame[ry:ry+rh, rx:rx+rw]
+            if crop.size > 0:
+                valid_contours.append(c_adjusted)
+                is_good_flags.append(True)
+                grades.append('good')
                 crops.append(crop)
-        else:
-            # Lightweight OpenCV Fallback Pass (ONLY executed if YOLO returned 0 detections)
-            hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
-            hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
-            
-            smooth = cv2.GaussianBlur(zone_frame, (5, 5), 0)
-            gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
-            _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            mask_clean = cv2.bitwise_and(mask_raw, hsv_mask)
-            
-            cnts, _ = cv2.findContours(mask_clean, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            for i, raw_cnt in enumerate(cnts):
-                if cv2.contourArea(raw_cnt) < MIN_CASHEW_AREA:
-                    continue
-                    
-                rx, ry, rw, rh = cv2.boundingRect(raw_cnt)
-                # Ignore horizontal rollers spanning across zone
-                if rw > (w * 0.70) or max(rw, rh) * PIXEL_TO_MM_RATIO > 42.0:
-                    continue
-                    
-                c_adjusted = raw_cnt.copy()
-                c_adjusted[:, 0, 0] += x1
-                c_adjusted[:, 0, 1] += y1
-                c_adjusted = smooth_contour(c_adjusted, window=5)
-                
-                crop = zone_frame[ry:ry+rh, rx:rx+rw]
-                if crop.size > 0:
-                    valid_contours.append(c_adjusted)
-                    is_good_flags.append(True)
-                    grades.append('good')
-                    crops.append(crop)
                 
         # Update tracker with newly determined grades and crops
         disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp)
