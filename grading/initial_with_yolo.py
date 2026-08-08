@@ -869,17 +869,30 @@ class ObjectTracker:
             min_id = None
             for obj_id in object_ids:
                 if obj_id in matched_objects: continue
-                old_centroid = self.objects[obj_id]['centroid']
-                dy = curr_centroid[1] - old_centroid[1]
                 
-                # PREVENT MERGING: Cashews only travel DOWN on the belt.
-                # If dy < -150, the new centroid is ABOVE the old one (preventing new cashews from stealing old IDs!).
-                if dy < -250:
-                    continue
+                obj = self.objects[obj_id]
+                old_cx, old_cy = obj['centroid']
+                prev_cx, prev_cy = obj.get('prev_centroid', (old_cx, old_cy))
+                dt = obj['curr_time'] - obj.get('prev_time', obj['curr_time'] - 0.033)
+                
+                # Velocity prediction for moving & rotating cashews on belt
+                if dt > 0.001 and (old_cy != prev_cy or old_cx != prev_cx):
+                    vx = (old_cx - prev_cx) / dt
+                    vy = (old_cy - prev_cy) / dt
+                    curr_dt = frame_timestamp - obj['curr_time']
+                    pred_cx = old_cx + vx * curr_dt
+                    pred_cy = old_cy + vy * curr_dt
+                else:
+                    pred_cx, pred_cy = old_cx, old_cy
                     
-                dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
+                dy = curr_centroid[1] - pred_cy
+                if dy < -200:
+                    continue # Prevent backwards stealing
+                    
+                dist = math.hypot(curr_centroid[0] - pred_cx, curr_centroid[1] - pred_cy)
                 if dist < min_dist:
-                    min_dist = dist; min_id = obj_id
+                    min_dist = dist
+                    min_id = obj_id
             
             if min_dist < self.max_distance and min_id is not None:
                 self.objects[min_id]['prev_centroid'] = self.objects[min_id]['centroid']
