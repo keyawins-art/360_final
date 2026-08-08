@@ -1057,7 +1057,7 @@ class ZoneProcessor:
         # --- HYBRID UNBROKEN DETECTION PIPELINE ---
         yolo_detections = []
         if quality_filter and hasattr(quality_filter, 'detect_zone_cashews'):
-            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.20)
+            yolo_detections = quality_filter.detect_zone_cashews(zone_frame, conf_thresh=0.10)
             
         valid_contours = []
         is_good_flags = []
@@ -1150,7 +1150,7 @@ class ZoneProcessor:
                 crops.append(crop)
                 
         x, y, _, zone_h = self.zone
-        max_entry_y = y + (zone_h * 0.20)  # Strict Entry Boundary: New objects ONLY spawn in top 20% of zone!
+        max_entry_y = y + (zone_h * 0.50)  # Entry Boundary: Accepts cashews entering in top half of zone (<= 50%)!
         
         # Update tracker with newly determined grades and crops
         disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp, max_entry_y=max_entry_y)
