@@ -1217,14 +1217,21 @@ class ZoneProcessor:
                 # Memory cleanup is MANDATORY for all disappeared objects!
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
-            # --- START TIMERS IMMEDIATELY (PARALLEL TO PROCESSING) ---
+            # --- 1. GPU YOLO CLASSIFICATION & GRADING ---
+            processing_start_time = time.time()
+            yolo_results = []
+            if quality_filter and (quality_filter.session or quality_filter.model):
+                yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
+            else:
+                yolo_results = [(None, 0)] * len(disappeared_crops)
+                
             DELAY_SECONDS = 6.20
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
             
-            def send_delayed(cmd, arduino, lock, name, o_id, exit_time):
+            def send_delayed(cmd, arduino, lock, name, o_id, exit_time, grade):
                 target_time = exit_time + DELAY_SECONDS
                 
-                # 1. Sleep normally until the last 20 milliseconds (Saves CPU, high precision with timeBeginPeriod)
+                # 1. Sleep normally until the last 20 milliseconds
                 while True:
                     now = time.perf_counter()
                     if target_time - now > 0.020:
@@ -1236,7 +1243,6 @@ class ZoneProcessor:
                 while time.perf_counter() < target_time:
                     pass
                 
-                # Measure exact delay before serial port bottleneck
                 actual_delay = time.perf_counter() - exit_time
                 
                 # Command sends exactly at the target millisecond
@@ -1248,33 +1254,16 @@ class ZoneProcessor:
                             arduino.write(cmd.encode())
                             arduino.flush()
                         now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-                        print(f"\n[{now_str}] [{name}] EXIT ID:{o_id} -> COMMAND SENT (Total Time: {actual_delay:.3f}s) -> Sent:{cmd.strip()}")
+                        print(f"\n[{now_str}] [{name}] EXIT ID:{o_id} -> GRADE: [{str(grade).upper()}] -> COMMAND SENT (Total Time: {actual_delay:.3f}s) -> Sent:{cmd.strip()}")
                     except Exception as e:
                         print(f"\n[{name}] SERIAL WRITE ERROR: {e}")
 
-            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                t = threading.Thread(target=send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id, true_exit_time))
-                t.daemon = True
-                t.start()
-                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-                print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> QUEUED (Overshoot: {time_overshoot*1000:.1f}ms) -> Target: {DELAY_SECONDS}s")
-
-            # --- NOW PROCEED WITH YOLO PROCESSING ---
-            processing_start_time = time.time()
-            yolo_results = []
-            if quality_filter and (quality_filter.session or quality_filter.model):
-                yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
-            else:
-                yolo_results = [(None, 0)] * len(disappeared_crops)
-                
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
                 max_mm = obj_info['max_mm']
                 last_crop = disappeared_crops[idx]
                 yolo_cat, yolo_conf = yolo_results[idx]
                 
                 final_grade = None
-                yolo_confirmed_good = False
-                
                 if yolo_cat:
                     if yolo_cat.lower() in [name.lower() for name in GOOD_CLASS_NAMES]:
                         # YOLO Model says GOOD -> Find size grade based on mm size!
@@ -1301,6 +1290,14 @@ class ZoneProcessor:
                 # Fallback to size grade
                 if not final_grade:
                     final_grade = get_grade(int(max_mm), self.ranges)
+                    
+                # Queue delayed command for this cashew exit with its final grade!
+                t = threading.Thread(target=send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id, true_exit_time, final_grade))
+                t.daemon = True
+                t.start()
+                
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{max_mm:.1f}) -> GRADE: [{str(final_grade).upper()}] -> QUEUED (Overshoot: {time_overshoot*1000:.1f}ms) -> Cmd:{command.strip()} -> Target: {DELAY_SECONDS}s")
                     
                 # --- SAVE FINAL IMAGE (PERFECT BORDERLINE VIEW) ---
                 if last_crop is not None:
