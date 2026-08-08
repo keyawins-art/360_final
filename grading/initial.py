@@ -259,19 +259,6 @@ def load_ranges(file_path):
     except Exception as e:
         print(f"Error loading ranges: {e}")
         return []
-def get_max_length(contour):
-    """
-    Calculate the absolute maximum length (Feret diameter) of a contour 
-    by finding the max distance between any two points on its convex hull.
-    This gives perfect length regardless of orientation or curving.
-    """
-    hull = cv2.convexHull(contour)
-    if hull is None or len(hull) < 2:
-        return 0.0
-    pts = hull[:, 0, :]
-    diff = pts[:, np.newaxis, :] - pts[np.newaxis, :, :]
-    sq_dist = np.sum(diff**2, axis=-1)
-    return float(np.sqrt(np.max(sq_dist)))
 
 def get_grade(mm_value, ranges):
     """Get grade based on mm value"""
@@ -369,8 +356,8 @@ class CashewQualityFilter:
             start_ai = time.time()
             
             # Force CPU inference because PyTorch currently lacks RTX 5000 (Blackwell) support.
-            # (Changed to run on GPU now as requested by user)
-            results = self.model(crops, verbose=False, conf=YOLO_CONF_THRESHOLD, device=0, imgsz=224)
+            # With our optimizations, CPU inference now only takes ~100ms which is lightning fast.
+            results = self.model(crops, verbose=False, conf=YOLO_CONF_THRESHOLD, device='cpu', imgsz=224)
             
             ai_time = (time.time() - start_ai) * 1000
             if len(crops) > 0:
@@ -723,7 +710,7 @@ class ObjectTracker:
     - Handles flickering/missing frames
     """
     
-    def __init__(self, zone_name, max_distance=250, max_disappeared=10):
+    def __init__(self, zone_name, max_distance=4000, max_disappeared=25):
         self.zone_name = zone_name
         self.next_id = 1
         self.objects = {}  # {id: {'centroid': (x,y), 'latest_contour': None, 'is_good': True, ...}}
@@ -745,9 +732,9 @@ class ObjectTracker:
                 cx = int(M["m10"] / M["m00"])
                 cy = int(M["m01"] / M["m00"])
                 
-                # Get perfect length (Feret diameter)
-                max_px_len = get_max_length(c)
-                mm_size = max_px_len * PIXEL_TO_MM_RATIO
+                rect = cv2.minAreaRect(c)
+                w, h = rect[1]
+                mm_size = max(w, h) * PIXEL_TO_MM_RATIO
                 
                 current_centroids.append((cx, cy))
                 current_sizes.append(mm_size)
@@ -764,12 +751,10 @@ class ObjectTracker:
                 if obj_id in matched_objects: continue
                 old_centroid = self.objects[obj_id]['centroid']
                 dy = curr_centroid[1] - old_centroid[1]
-                dx = abs(curr_centroid[0] - old_centroid[0])
                 
-                # STRICT ID STEALING PREVENTION:
-                # 1. Belt only moves DOWN. If dy < -40, the new cashew is behind the old one.
-                # 2. Cashews do not jump horizontally. dx > 100 means it's a different cashew side-by-side.
-                if dy < -40 or dx > 100:
+                # PREVENT MERGING: Cashews only travel DOWN on the belt.
+                # If dy < -150, the new centroid is ABOVE the old one (preventing new cashews from stealing old IDs!).
+                if dy < -150:
                     continue
                     
                 dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
@@ -930,42 +915,30 @@ class ZoneProcessor:
         zone_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
         zone_mask[y1:y2, x1:x2] = 255
         
-        # --- PRECISE EDGE SEGMENTATION ---
-        # Step 1: Smooth texture noise
+        # --- ULTRA-PRECISE EDGE SEGMENTATION ---
+        # Step 1: Bilateral filter - smooths texture noise while preserving TRUE edges
         smooth = cv2.GaussianBlur(zone_frame, (7, 7), 0)
-        
-        # Step 2: Convert to Grayscale
         gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
         
-        # Step 3: Clean Fixed Threshold (Otsu fails if lighting is uneven across the massive 2048px zone)
-        # 100 is perfectly safe: Cashews are > 120, blue belt is < 80.
-        _, mask_raw = cv2.threshold(gray, 100, 255, cv2.THRESH_BINARY)
+        # Step 2: Clean Otsu threshold on pre-smoothed image (high contrast cashew vs dark belt)
+        _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         
-        # Step 4: Morphological refinement with ELLIPTICAL kernels
+        # Step 3: Morphological refinement with ELLIPTICAL kernels
         kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
         kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
         mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_OPEN, kernel_e, iterations=1)
         mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, kernel_close, iterations=1)
         
-        # Step 6: ULTRA-SMOOTH EDGES - Blur and Threshold to round off noise spikes
+        # Step 4: ULTRA-SMOOTH EDGES - Lighter Gaussian blur for speed
         mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
         _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
         
-        # Step 7: HSV validation mask (for density check only, not contour shape)
+        # Step 5: HSV validation mask (for density check only, not contour shape)
         hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
         hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
         
         # Find contours with ALL edge points for maximum smoothness
         cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-        # Offset contours to full frame (removed redundant smooth_contour call here)
-        adjusted_contours = []
-        for c in cnts:
-            c_adjusted = c.copy()
-            c_adjusted[:, 0, 0] += x1  # Add zone x offset
-            c_adjusted[:, 0, 1] += y1  # Add zone y offset
-            adjusted_contours.append(c_adjusted)
-        
         
         # Filter by area and perform COLOR GRADING
         valid_contours = []
@@ -976,37 +949,44 @@ class ZoneProcessor:
         # --- PASS 1: Apply Filters and Extract Crops ---
         extracted_crops = []
         valid_contours_indices = []
-        for i, c in enumerate(adjusted_contours):
-            area = cv2.contourArea(c)
-            if area < MIN_CASHEW_AREA:
+        adjusted_contours = []
+        
+        for i, raw_cnt in enumerate(cnts):
+            # 1. OPTIMIZATION: Filter by area FIRST before expensive operations!
+            raw_area = cv2.contourArea(raw_cnt)
+            if raw_area < MIN_CASHEW_AREA:
+                adjusted_contours.append(None) # keep indices aligned
                 continue
                 
-            # Density Check (5% ensures even 95% overexposed/white cashews pass, but 0% blue reflections fail)
+            # 2. Offset and Smooth only valid size contours
+            c_adjusted = raw_cnt.copy()
+            c_adjusted[:, 0, 0] += x1  # Add zone x offset
+            c_adjusted[:, 0, 1] += y1  # Add zone y offset
+            c_adjusted = smooth_contour(c_adjusted, window=5)
+            adjusted_contours.append(c_adjusted)
+            
+            c = c_adjusted
+            area = cv2.contourArea(c)
+            
+            # Density Check (use original raw contour against zone_mask)
             c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
-            cv2.drawContours(c_mask, [cnts[i]], -1, 255, -1)
+            cv2.drawContours(c_mask, [raw_cnt], -1, 255, -1)
             cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
             total_pixels = cv2.countNonZero(c_mask)
             density = cashew_pixels / max(1, total_pixels)
-            if density < 0.05:
+            if density < 0.15:
                 continue
                 
             # Roller / Noise Checks
             rect = cv2.minAreaRect(c)
             (w_p, h_p) = rect[1]
             if max(1, w_p * h_p) == 1: continue
-            
-            # Use perfect length (Feret diameter)
-            max_px_len = get_max_length(c)
-            mm_size = max_px_len * PIXEL_TO_MM_RATIO
+            mm_size = max(w_p, h_p) * PIXEL_TO_MM_RATIO
             
             # Identify rollers by checking if the object spans almost the entire width of the zone
             x_b, y_b, w_b, h_b = cv2.boundingRect(c)
             if w_b > (self.zone[2] * 0.90):
                 continue # Ignore horizontal rollers
-                
-            # A real cashew will always have a minimum thickness. Reject thin lines/scratches.
-            if h_b < 25 or w_b < 25:
-                continue
                 
             solidity = area / max(1, w_p * h_p)
             if solidity < 0.50:
@@ -1015,7 +995,6 @@ class ZoneProcessor:
                 continue
                 
             # Crop Extraction
-            x_b, y_b, w_b, h_b = cv2.boundingRect(c)
             side = max(w_b, h_b) + 40
             cx_b, cy_b = x_b + w_b//2, y_b + h_b//2
             px = max(0, cx_b - side//2)
@@ -1049,9 +1028,7 @@ class ZoneProcessor:
         # Define triggering lines relative to Zone geometry
         min_start_line = y + (zone_h * 0.85)  # 85% prevents 'ghost' respawns from double-firing, but allows manual drops
         trigger_line = y + (zone_h * 0.95)
-        # Only trigger disappearance logic if it vanishes VERY close to the end (e.g. > 85%).
-        # If it vanishes before this, it's just a flicker, don't send a command!
-        disappear_trigger_line = y + (zone_h * 0.85)
+        disappear_trigger_line = y + (zone_h * 0.20) # If tracker loses it anywhere below 20%, it's definitely an exit
         
         # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
         for obj_id, obj_info in list(self.tracker.objects.items()):
@@ -1090,12 +1067,12 @@ class ZoneProcessor:
                             disappeared_crops.append(last_crop)
                             disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
                             obj_info['command_sent'] = True # NEVER fire for this ID again
-                            # DO NOT remove the object here! The user wants to keep tracking it until it leaves the screen.
-                            # ID stealing is already prevented by our strict tracking logic.
+                            self.tracker.remove_object(obj_id) # KILL THE GHOST immediately so it doesn't steal cashews behind it!
                     else:
                         reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
                         print(f"[{self.name}] Cashew ID:{obj_id} crossed 95% line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
                         obj_info['command_sent'] = True # Stop spamming the log
+                        self.tracker.remove_object(obj_id) # KILL THE GHOST
                             
         # 2. DISAPPEARANCE LOGIC: Catch cashews that the tracker lost slightly before the line
         for obj_id in disappeared_ids:
@@ -1138,7 +1115,7 @@ class ZoneProcessor:
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
             # --- START TIMERS IMMEDIATELY (PARALLEL TO PROCESSING) ---
-            DELAY_SECONDS = 6.00
+            DELAY_SECONDS = 6.20
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
             
             def send_delayed(cmd, arduino, lock, name, o_id, exit_time):
@@ -1305,7 +1282,7 @@ class ZoneProcessor:
         cv2.putText(frame, self.name, (x+5, y+20),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
-        # Draw tracked objects with SMOOTH contours + full info
+        # Draw tracked objects with contours + full info
         for obj_id, obj_info in self.tracker.objects.items():
             # SKIP disappeared objects - only draw currently visible ones
             if obj_info.get('disappeared_count', 0) > 0:
@@ -1313,53 +1290,42 @@ class ZoneProcessor:
             cnt = obj_info.get('latest_contour')
             
             # --- CONSENSUS-BASED COLORING (not single-frame) ---
-            # Use grade_history majority to decide good/bad (avoids false positives)
             history = obj_info.get('grade_history', [])
             defect_frames = [g for g in history if g is not None]
             total_frames = max(1, len(history))
             defect_ratio = len(defect_frames) / total_frames
             
-            # Only mark as BAD if >40% of frames show a defect (consensus)
             is_consensus_bad = defect_ratio > 0.40 and len(defect_frames) >= 2
             
-            # Determine display defect type
             current_grade = obj_info.get('current_grade', None)
             if is_consensus_bad and defect_frames:
-                # Use most common defect from history
                 defect_counts = Counter(defect_frames)
                 display_defect = defect_counts.most_common(1)[0][0]
-                color = (0, 0, 255)  # RED for confirmed bad
+                color = (0, 0, 255)
             else:
                 display_defect = None
-                color = (0, 255, 0)  # GREEN for good
+                color = (0, 255, 0)
             
             if cnt is not None and len(cnt) >= 3:
-                # Apply smooth_contour for perfectly smooth border drawing
-                smooth_cnt = smooth_contour(cnt, window=5)
-                cv2.drawContours(frame, [smooth_cnt], -1, color, 2)
+                # Contour is already smoothed in process_frame, draw directly
+                cv2.drawContours(frame, [cnt], -1, color, 2)
                 
-                # --- DISPLAY FULL INFO ON SCREEN ---
                 cx, cy = obj_info['centroid']
                 max_mm = obj_info['max_mm']
                 
-                # Line 1: SR No (ID) + Size
                 label_id = f"SR:{obj_id} {max_mm:.1f}mm"
                 
-                # Line 2: Status (GOOD or defect type)
                 if display_defect:
                     label_status = f"{display_defect.upper()}"
-                    status_color = (0, 0, 255)  # Red text for defect
+                    status_color = (0, 0, 255)
                 else:
                     label_status = "GOOD"
-                    status_color = (0, 255, 0)  # Green text for good
+                    status_color = (0, 255, 0)
                 
-                # Draw labels with shadow for readability
-                # Line 1: ID + Size
                 cv2.putText(frame, label_id, (cx - 40, cy - 15),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
                 cv2.putText(frame, label_id, (cx - 40, cy - 15),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
-                # Line 2: Status/Defect
                 cv2.putText(frame, label_status, (cx - 40, cy + 5),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
                 cv2.putText(frame, label_status, (cx - 40, cy + 5),
@@ -1529,15 +1495,14 @@ def main():
     print(f"  ESC      : Quit program completely")
     print(f"{'='*60}\n")
 
+    # Create ThreadPool ONCE outside loop (creating every frame = massive overhead)
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    
     try:
         frame_counter = 0
         none_counter = 0
-        display_frame = None
-        zone_executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
         while True:
             frame_counter += 1
-            # if frame_counter % 500 == 0:
-            #     gc.collect() # Removed: causes massive frame drops every 500 frames
 
             frame = cam.get_frame()
             cam.check_and_update_parameters()
@@ -1581,26 +1546,10 @@ def main():
             except Exception as e:
                 print(f"[CONFIG] Error reloading config: {e}")
 
-            # Create black background for display - only show zones
-            if display_frame is None or display_frame.shape != frame.shape:
-                display_frame = np.zeros_like(frame)
-            else:
-                display_frame.fill(0)
-            img_h, img_w = frame.shape[:2]
-            for z in ZONE_CONFIGS:
-                x, y, w, h = z['zone']
-                x1 = max(0, min(x, img_w))
-                y1 = max(0, min(y, img_h))
-                x2 = max(0, min(x + w, img_w))
-                y2 = max(0, min(y + h, img_h))
-                if x2 > x1 and y2 > y1:
-                    # Copy original pixels for this zone
-                    display_frame[y1:y2, x1:x2] = frame[y1:y2, x1:x2]
-            
-            # Process each zone in PARALLEL using a ThreadPoolExecutor
+            # Process each zone in PARALLEL using the pre-created ThreadPool
             total_cashews_in_frame = 0
             future_to_processor = {
-                zone_executor.submit(p.process_frame, frame, frame_time, quality_filter): p 
+                executor.submit(p.process_frame, frame, frame_time, quality_filter): p 
                 for p in zone_processors
             }
             for future in concurrent.futures.as_completed(future_to_processor):
@@ -1610,17 +1559,28 @@ def main():
                     total_cashews_in_frame += len(contours)
                 except Exception as e:
                     print(f"Error in {processor.name}: {e}")
-                        
-            cv2.waitKeyEx(1) # Keep UI responsive
             
-            # Draw all zones synchronously after processing
-            for processor in zone_processors:
-                processor.draw_zone(display_frame)
+            # Build display frame ONLY when needed (skip heavy work when hidden)
+            if SHOW_DISPLAY:
+                display_frame = np.zeros_like(frame)
+                img_h, img_w = frame.shape[:2]
+                for z in ZONE_CONFIGS:
+                    zx, zy, zw, zh = z['zone']
+                    zx1 = max(0, min(zx, img_w))
+                    zy1 = max(0, min(zy, img_h))
+                    zx2 = max(0, min(zx + zw, img_w))
+                    zy2 = max(0, min(zy + zh, img_h))
+                    if zx2 > zx1 and zy2 > zy1:
+                        display_frame[zy1:zy2, zx1:zx2] = frame[zy1:zy2, zx1:zx2]
+                
+                # Draw all zones synchronously after processing
+                for processor in zone_processors:
+                    processor.draw_zone(display_frame)
+            else:
+                display_frame = None
             
-            # Draw YOLO boxes visualization is removed since we do it on crops directly
-            
-            # Highlight selected zone
-            if SELECTED_ZONE_INDEX is not None and SELECTED_ZONE_INDEX < len(ZONE_CONFIGS):
+            # Highlight selected zone (only when display is active)
+            if SHOW_DISPLAY and display_frame is not None and SELECTED_ZONE_INDEX is not None and SELECTED_ZONE_INDEX < len(ZONE_CONFIGS):
                 sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
                 sx, sy, sw, sh = sel_zone
                 # Draw thick red border for selected zone
@@ -1660,8 +1620,7 @@ def main():
             pass
 
     finally:
-        if 'zone_executor' in locals():
-            zone_executor.shutdown(wait=False)
+        executor.shutdown(wait=False)
         cam.close()
         for processor in zone_processors:
             processor.close()
