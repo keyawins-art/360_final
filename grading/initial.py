@@ -1081,7 +1081,7 @@ class ZoneProcessor:
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
             # --- START TIMERS IMMEDIATELY (PARALLEL TO PROCESSING) ---
-            DELAY_SECONDS = 7.20
+            DELAY_SECONDS = 6.500
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
             
             def send_delayed(cmd, arduino, lock, name, o_id, exit_time):

@@ -13,6 +13,14 @@ import threading
 from collections import Counter
 import gc
 import math
+import datetime
+import ctypes
+
+# Make Windows timer 1ms instead of 15.6ms for highly precise time.sleep()
+try:
+    ctypes.windll.winmm.timeBeginPeriod(1)
+except:
+    pass
 
 # ========================================================
 # CONFIG
@@ -555,12 +563,14 @@ class HIKCashewCamera:
                 ret = self.cam.MV_CC_GetOneFrameTimeout(byref(data), current_data_size, frame_info, 1000)
                 
                 if ret == 0:
+                    grab_time = time.perf_counter()
                     # Copy the raw bytes out of the buffer safely using ctypes
                     raw_bytes = string_at(byref(data), frame_info.nFrameLen)
                     
                     with self.frame_lock:
                         self.latest_raw = raw_bytes
                         self.latest_info = (frame_info.nWidth, frame_info.nHeight, frame_info.enPixelType)
+                        self.latest_time = grab_time
                 else:
                     # If ret != 0, camera might be temporarily stopped for param updates
                     time.sleep(0.01)
@@ -644,6 +654,7 @@ class HIKCashewCamera:
                 return None
             raw_bytes = self.latest_raw
             w, h, pf = self.latest_info
+            self.last_returned_time = getattr(self, 'latest_time', time.perf_counter())
 
         # Convert raw bytes to numpy array
         img = np.frombuffer(raw_bytes, dtype=np.uint8)
@@ -706,10 +717,12 @@ class ObjectTracker:
         self.max_distance = max_distance
         self.max_disappeared = max_disappeared
         
-    def update(self, contours, is_good_flags, grades, crops):
+    def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None):
         """
         Update tracked objects with new contours and their quality assessment
         """
+        if frame_timestamp is None:
+            frame_timestamp = time.perf_counter()
         current_centroids = []
         current_sizes = []
         
@@ -749,6 +762,10 @@ class ObjectTracker:
                     min_dist = dist; min_id = obj_id
             
             if min_dist < self.max_distance and min_id is not None:
+                self.objects[min_id]['prev_centroid'] = self.objects[min_id]['centroid']
+                self.objects[min_id]['prev_time'] = self.objects[min_id].get('curr_time', frame_timestamp)
+                self.objects[min_id]['curr_time'] = frame_timestamp
+                
                 self.objects[min_id]['centroid'] = curr_centroid
                 self.objects[min_id]['measurements'].append(current_sizes[i])
                 self.objects[min_id]['max_mm'] = max(self.objects[min_id]['max_mm'], current_sizes[i])
@@ -773,6 +790,9 @@ class ObjectTracker:
             if i not in matched_detections:
                 self.objects[self.next_id] = {
                     'centroid': current_centroids[i],
+                    'prev_centroid': current_centroids[i],
+                    'curr_time': frame_timestamp,
+                    'prev_time': frame_timestamp,
                     'measurements': [current_sizes[i]],
                     'max_mm': current_sizes[i],
                     'grade_history': [grades[i]],
@@ -781,7 +801,7 @@ class ObjectTracker:
                     'is_good': is_good_flags[i],
                     'current_grade': grades[i],
                     'disappeared_count': 0,
-                    'start_time': time.time(),
+                    'start_time': frame_timestamp,
                     'start_y': current_centroids[i][1],
                     'command_sent': False
                 }
@@ -871,10 +891,12 @@ class ZoneProcessor:
             mask[y1:y2, x1:x2] = 255
         return mask
     
-    def process_frame(self, frame, quality_filter=None):
+    def process_frame(self, frame, frame_timestamp=None, quality_filter=None):
         """
         Process frame for this zone
         """
+        if frame_timestamp is None:
+            frame_timestamp = time.perf_counter()
         x, y, w, h = self.zone
         
         img_h, img_w = frame.shape[:2]
@@ -993,7 +1015,7 @@ class ZoneProcessor:
             crops.append(crop)
         
         # Update tracker with newly determined grades and crops
-        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops)
+        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp)
         
         # --- PASS 3: Evaluate Cashews using LINE CROSSING + DISAPPEARANCE LOGIC ---
         disappeared_crops = []
@@ -1012,15 +1034,36 @@ class ZoneProcessor:
                 cy = obj_info['centroid'][1]
                 start_y = obj_info.get('start_y', cy)
                 
-                # If cashew started above the line and has now crossed the trigger line
                 if start_y < min_start_line and cy >= trigger_line:
                     max_mm = obj_info['max_mm']
                     frames_tracked = len(obj_info.get('measurements', []))
                     if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
+                        # --- VELOCITY OVERSHOOT COMPENSATION ---
+                        prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
+                        prev_time = obj_info.get('prev_time', frame_timestamp)
+                        curr_time = obj_info.get('curr_time', frame_timestamp)
+                        
+                        true_exit_time = frame_timestamp
+                        dy = cy - prev_cy
+                        dt = curr_time - prev_time
+                        
+                        # Use average velocity over the ENTIRE tracking period for extreme precision
+                        # This eliminates 1-pixel jitter from instantaneous frame-to-frame velocity
+                        total_dy = cy - start_y
+                        total_dt = curr_time - obj_info.get('start_time', curr_time - 0.1)
+                        
+                        time_overshoot = 0.0
+                        if total_dt > 0 and total_dy > 0:
+                            velocity = total_dy / total_dt  # Average pixels per second
+                            overshoot_px = cy - trigger_line
+                            if overshoot_px > 0:
+                                time_overshoot = overshoot_px / velocity
+                                true_exit_time -= time_overshoot # Shift time BACKWARDS!
+                                
                         last_crop = obj_info.get('last_crop')
                         if last_crop is not None:
                             disappeared_crops.append(last_crop)
-                            disappeared_objs.append((obj_id, obj_info))
+                            disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
                             obj_info['command_sent'] = True # NEVER fire for this ID again
                             self.tracker.remove_object(obj_id) # KILL THE GHOST immediately so it doesn't steal cashews behind it!
                     else:
@@ -1037,15 +1080,26 @@ class ZoneProcessor:
                     cy = obj_info['centroid'][1]
                     start_y = obj_info.get('start_y', cy)
                     
-                    # If it started high enough, and dropped low enough before being lost
                     if start_y < min_start_line and cy >= disappear_trigger_line:
                         max_mm = obj_info['max_mm']
                         frames_tracked = len(obj_info.get('measurements', []))
                         if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
                             last_crop = obj_info.get('last_crop')
                             if last_crop is not None:
+                                # PREDICT the exit time since we lost tracking before the 95% line
+                                curr_time = obj_info.get('curr_time', frame_timestamp)
+                                total_dy = cy - start_y
+                                total_dt = curr_time - obj_info.get('start_time', curr_time - 0.1)
+                                
+                                predicted_exit_time = curr_time
+                                if total_dt > 0 and total_dy > 0:
+                                    velocity = total_dy / total_dt
+                                    distance_remaining = max(0, trigger_line - cy)
+                                    time_to_reach = distance_remaining / velocity
+                                    predicted_exit_time = curr_time + time_to_reach
+                                
                                 disappeared_crops.append(last_crop)
-                                disappeared_objs.append((obj_id, obj_info))
+                                disappeared_objs.append((obj_id, obj_info, predicted_exit_time, 0))
                                 obj_info['command_sent'] = True
                         else:
                             reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
@@ -1059,10 +1113,28 @@ class ZoneProcessor:
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
             # --- START TIMERS IMMEDIATELY (PARALLEL TO PROCESSING) ---
-            DELAY_SECONDS = 19.170
+            DELAY_SECONDS = 7.40
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
             
-            def send_delayed(cmd, arduino, lock, name, o_id):
+            def send_delayed(cmd, arduino, lock, name, o_id, exit_time):
+                target_time = exit_time + DELAY_SECONDS
+                
+                # 1. Sleep normally until the last 20 milliseconds (Saves CPU, high precision with timeBeginPeriod)
+                while True:
+                    now = time.perf_counter()
+                    if target_time - now > 0.020:
+                        time.sleep(0.002)
+                    else:
+                        break
+                        
+                # 2. Busy-wait (Spin) for the final 20 milliseconds for EXTREME precision
+                while time.perf_counter() < target_time:
+                    pass
+                
+                # Measure exact delay before serial port bottleneck
+                actual_delay = time.perf_counter() - exit_time
+                
+                # Command sends exactly at the target millisecond
                 if arduino and lock:
                     try:
                         with lock:
@@ -1070,24 +1142,27 @@ class ZoneProcessor:
                                 arduino.read(arduino.in_waiting)
                             arduino.write(cmd.encode())
                             arduino.flush()
-                        print(f"\n[{name}] [\u23F0 DELAY FIRED - {DELAY_SECONDS}s] ID:{o_id} -> Sent:{cmd.strip()}")
+                        now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                        print(f"\n[{now_str}] [{name}] EXIT ID:{o_id} -> COMMAND SENT (Total Time: {actual_delay:.3f}s) -> Sent:{cmd.strip()}")
                     except Exception as e:
                         print(f"\n[{name}] SERIAL WRITE ERROR: {e}")
 
-            for idx, (obj_id, obj_info) in enumerate(disappeared_objs):
-                t = threading.Timer(DELAY_SECONDS, send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id))
+            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
+                t = threading.Thread(target=send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id, true_exit_time))
                 t.daemon = True
                 t.start()
-                print(f"[{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> QUEUED to send in {DELAY_SECONDS}s...")
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> QUEUED (Overshoot: {time_overshoot*1000:.1f}ms) -> Target: {DELAY_SECONDS}s")
 
             # --- NOW PROCEED WITH YOLO PROCESSING ---
+            processing_start_time = time.time()
             yolo_results = []
             if quality_filter and quality_filter.model:
                 yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
             else:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
                 
-            for idx, (obj_id, obj_info) in enumerate(disappeared_objs):
+            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
                 max_mm = obj_info['max_mm']
                 last_crop = disappeared_crops[idx]
                 yolo_cat, yolo_conf = yolo_results[idx]
@@ -1182,7 +1257,16 @@ class ZoneProcessor:
                 
                 # Object was evaluated and removed during DISAPPEARANCE LOGIC block
                 pass
-        
+            
+            processing_end_time = time.time()
+            processing_duration = processing_end_time - processing_start_time
+            
+            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
+                target_time = true_exit_time + DELAY_SECONDS
+                remaining_hold = max(0, target_time - processing_end_time)
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{self.name}] ID:{obj_id} Processing Done (Took: {processing_duration:.3f}s) -> Remaining Hold: {remaining_hold:.3f}s")
+                
         return valid_contours
     
     def draw_zone(self, frame):
@@ -1437,6 +1521,8 @@ def main():
                 time.sleep(0.005) # Prevent 100% CPU pinning
                 continue
             none_counter = 0
+            
+            frame_time = getattr(cam, 'last_returned_time', time.perf_counter())
 
             # Check for config file updates
             t0 = time.time()
@@ -1485,7 +1571,7 @@ def main():
             total_cashews_in_frame = 0
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 future_to_processor = {
-                    executor.submit(p.process_frame, frame, quality_filter): p 
+                    executor.submit(p.process_frame, frame, frame_time, quality_filter): p 
                     for p in zone_processors
                 }
                 for future in concurrent.futures.as_completed(future_to_processor):

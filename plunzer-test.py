@@ -3,7 +3,7 @@ import time
 
 PORT = "COM4"
 BAUDRATE = 115200
-SEND_INTERVAL = 0.10
+SEND_INTERVAL = 20
 
 try:
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
@@ -21,4 +21,4 @@ except KeyboardInterrupt:
 finally:
     if 'ser' in locals() and ser.is_open:
         ser.close()
-        print("Serial Port Closed")
+        print("Serial Port Closed")xuu
