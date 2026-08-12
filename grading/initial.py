@@ -14,13 +14,22 @@ from collections import Counter
 import gc
 import math
 import datetime
-import ctypes
 
-# Make Windows timer 1ms instead of 15.6ms for highly precise time.sleep()
+# =========================================================
+# TRACKER SELECTION (C++ Kalman → Python Kalman fallback)
+# =========================================================
 try:
-    ctypes.windll.winmm.timeBeginPeriod(1)
-except:
-    pass
+    from tracker_adapter import CppObjectTracker as _TrackerClass
+    _TRACKER_TYPE = "C++ Kalman"
+except ImportError:
+    try:
+        from fallback_tracker import FallbackObjectTracker as _TrackerClass
+        _TRACKER_TYPE = "Python Kalman (fallback)"
+    except ImportError:
+        _TrackerClass = None
+        _TRACKER_TYPE = "Legacy (built-in)"
+
+from ejection_queue import EjectionQueue
 
 # ========================================================
 # CONFIG
@@ -92,8 +101,8 @@ def save_zones_config(configs):
 ZONE_CONFIGS = load_zones_config()
 
 # === DETECTION SENSITIVITY CONTROL PANEL (TUNE HERE) ===
-MIN_CASHEW_AREA = 800        # Lowered to 800 to detect small cashew pieces (chhot/tukde) AND rotating cashews
-MIN_MM_SIZE = 5.0            # Lowered to 5mm so all cashews (including 8-14mm pieces) get ejection commands
+MIN_CASHEW_AREA = 3500       # Increased to 3500 to ignore dust/noise
+MIN_MM_SIZE = 15.0           # Minimum measurement to log/act on cashew
 MAX_CASHEW_MM = 33.0         # Any object larger than 45mm is likely a roller
 MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
 
@@ -563,14 +572,12 @@ class HIKCashewCamera:
                 ret = self.cam.MV_CC_GetOneFrameTimeout(byref(data), current_data_size, frame_info, 1000)
                 
                 if ret == 0:
-                    grab_time = time.perf_counter()
                     # Copy the raw bytes out of the buffer safely using ctypes
                     raw_bytes = string_at(byref(data), frame_info.nFrameLen)
                     
                     with self.frame_lock:
                         self.latest_raw = raw_bytes
                         self.latest_info = (frame_info.nWidth, frame_info.nHeight, frame_info.enPixelType)
-                        self.latest_time = grab_time
                 else:
                     # If ret != 0, camera might be temporarily stopped for param updates
                     time.sleep(0.01)
@@ -654,7 +661,6 @@ class HIKCashewCamera:
                 return None
             raw_bytes = self.latest_raw
             w, h, pf = self.latest_info
-            self.last_returned_time = getattr(self, 'latest_time', time.perf_counter())
 
         # Convert raw bytes to numpy array
         img = np.frombuffer(raw_bytes, dtype=np.uint8)
@@ -699,131 +705,141 @@ class HIKCashewCamera:
 # =========================================================
 # OBJECT TRACKING CLASS
 # =========================================================
+# The old centroid-distance ObjectTracker (max_distance=4000) has been
+# replaced by CppObjectTracker (C++ Kalman) or FallbackObjectTracker
+# (Python Kalman). Both use:
+#   - Constant-velocity Kalman filter per track
+#   - Dynamic gating based on predicted velocity (120-320px)
+#   - Global cost-sorted greedy association
+#   - Direction gate (cashews move downward)
+#   - Size-based association cost
+#   - get_robust_size() / get_consensus_grade() for stable measurement
+#
+# If neither tracker module is available, fall back to a minimal legacy tracker.
 
-class ObjectTracker:
-    """
-    Tracks multiple cashew objects independently within a zone
-    - Assigns unique IDs
-    - Collects size measurements (mm)
-    - Stores largest mm per object
-    - Detects when objects exit ROI
-    - Handles flickering/missing frames
-    """
-    
-    def __init__(self, zone_name, max_distance=4000, max_disappeared=50):
-        self.zone_name = zone_name
-        self.next_id = 1
-        self.objects = {}  # {id: {'centroid': (x,y), 'latest_contour': None, 'is_good': True, ...}}
-        self.max_distance = max_distance
-        self.max_disappeared = max_disappeared
-        
-    def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None):
-        """
-        Update tracked objects with new contours and their quality assessment
-        """
-        if frame_timestamp is None:
-            frame_timestamp = time.perf_counter()
-        current_centroids = []
-        current_sizes = []
-        
-        for i, c in enumerate(contours):
-            M = cv2.moments(c)
-            if M["m00"] != 0:
-                cx = int(M["m10"] / M["m00"])
-                cy = int(M["m01"] / M["m00"])
-                
-                rect = cv2.minAreaRect(c)
-                w, h = rect[1]
-                mm_size = max(w, h) * PIXEL_TO_MM_RATIO
-                
-                current_centroids.append((cx, cy))
-                current_sizes.append(mm_size)
-        
-        # Match current detections to existing objects
-        object_ids = list(self.objects.keys())
-        matched_objects = set()
-        matched_detections = set()
-        
-        for i, curr_centroid in enumerate(current_centroids):
-            min_dist = float('inf')
-            min_id = None
-            for obj_id in object_ids:
-                if obj_id in matched_objects: continue
-                old_centroid = self.objects[obj_id]['centroid']
-                dy = curr_centroid[1] - old_centroid[1]
-                
-                # PREVENT MERGING: Cashews only travel DOWN on the belt.
-                # If dy < -150, the new centroid is ABOVE the old one (preventing new cashews from stealing old IDs!).
-                if dy < -250:
+if _TrackerClass is None:
+    # ---- Legacy fallback: simple centroid-distance tracker ----
+    # Only used if both tracker_adapter.py and fallback_tracker.py are missing.
+    class _LegacyObjectTracker:
+        def __init__(self, zone_name, max_distance=320, max_disappeared=8, pixel_to_mm_ratio=1.0):
+            self.zone_name = zone_name
+            self.next_id = 1
+            self.objects = {}
+            self.max_distance = max_distance
+            self.max_disappeared = max_disappeared
+            self.pixel_to_mm_ratio = pixel_to_mm_ratio
+
+        def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None):
+            if frame_timestamp is None:
+                frame_timestamp = time.perf_counter()
+            current_centroids = []
+            current_sizes = []
+            for i, c in enumerate(contours):
+                if c is None or len(c) < 3:
                     continue
-                    
-                dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
-                if dist < min_dist:
-                    min_dist = dist; min_id = obj_id
-            
-            if min_dist < self.max_distance and min_id is not None:
-                self.objects[min_id]['prev_centroid'] = self.objects[min_id]['centroid']
-                self.objects[min_id]['prev_time'] = self.objects[min_id].get('curr_time', frame_timestamp)
-                self.objects[min_id]['curr_time'] = frame_timestamp
-                
-                self.objects[min_id]['centroid'] = curr_centroid
-                self.objects[min_id]['measurements'].append(current_sizes[i])
-                self.objects[min_id]['max_mm'] = max(self.objects[min_id]['max_mm'], current_sizes[i])
-                
-                # Update quality history for consensus
-                # We record None for 'good' and the class name for defects
-                self.objects[min_id]['grade_history'].append(grades[i])
-                
-                # Store best crop (frame with largest cashew size) for final saving
-                if current_sizes[i] >= self.objects[min_id]['max_mm']:
-                    self.objects[min_id]['last_crop'] = crops[i].copy()
-                self.objects[min_id]['latest_contour'] = contours[i] # Store actual shape
-                self.objects[min_id]['is_good'] = is_good_flags[i]   # Store current quality
-                self.objects[min_id]['current_grade'] = grades[i]    # Store defect type for display
-                
-                self.objects[min_id]['disappeared_count'] = 0
-                matched_objects.add(min_id)
-                matched_detections.add(i)
-        
-        # New objects
-        for i in range(len(current_centroids)):
-            if i not in matched_detections:
-                self.objects[self.next_id] = {
-                    'centroid': current_centroids[i],
-                    'prev_centroid': current_centroids[i],
-                    'curr_time': frame_timestamp,
-                    'prev_time': frame_timestamp,
-                    'measurements': [current_sizes[i]],
-                    'max_mm': current_sizes[i],
-                    'grade_history': [grades[i]],
-                    'last_crop': crops[i].copy(),
-                    'latest_contour': contours[i],
-                    'is_good': is_good_flags[i],
-                    'current_grade': grades[i],
-                    'disappeared_count': 0,
-                    'start_time': frame_timestamp,
-                    'start_y': current_centroids[i][1],
-                    'command_sent': False
-                }
-                self.next_id += 1
-        
-        disappeared = []
-        for obj_id in object_ids:
-            if obj_id not in matched_objects:
-                self.objects[obj_id]['disappeared_count'] += 1
-                if self.objects[obj_id]['disappeared_count'] > self.max_disappeared:
-                    disappeared.append(obj_id)
-        
-        return disappeared
-    
-    def get_object_info(self, obj_id):
-        """Get information about a tracked object"""
-        return self.objects.get(obj_id, None)
-    
-    def remove_object(self, obj_id):
-        """Remove object from tracking (memory cleanup)"""
-        if obj_id in self.objects:
-            del self.objects[obj_id]
+                M = cv2.moments(c)
+                if M["m00"] != 0:
+                    cx = int(M["m10"] / M["m00"])
+                    cy = int(M["m01"] / M["m00"])
+                    rect = cv2.minAreaRect(c)
+                    w, h = rect[1]
+                    mm_size = max(w, h) * self.pixel_to_mm_ratio
+                    current_centroids.append((cx, cy))
+                    current_sizes.append(mm_size)
+            object_ids = list(self.objects.keys())
+            matched_objects = set()
+            matched_detections = set()
+            for i, curr_centroid in enumerate(current_centroids):
+                min_dist = float('inf')
+                min_id = None
+                for obj_id in object_ids:
+                    if obj_id in matched_objects: continue
+                    old_centroid = self.objects[obj_id]['centroid']
+                    dy = curr_centroid[1] - old_centroid[1]
+                    if dy < -150: continue
+                    dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
+                    if dist < min_dist:
+                        min_dist = dist; min_id = obj_id
+                if min_dist < self.max_distance and min_id is not None:
+                    obj = self.objects[min_id]
+                    old_max = obj['max_mm']
+                    obj['prev_centroid'] = obj['centroid']
+                    obj['prev_time'] = obj.get('curr_time', frame_timestamp)
+                    obj['curr_time'] = frame_timestamp
+                    obj['centroid'] = curr_centroid
+                    obj['measurements'].append(current_sizes[i])
+                    obj['max_mm'] = max(old_max, current_sizes[i])
+                    obj['grade_history'].append(grades[i])
+                    if current_sizes[i] > old_max:
+                        obj['last_crop'] = crops[i].copy()
+                    obj['latest_contour'] = contours[i]
+                    obj['is_good'] = is_good_flags[i]
+                    obj['current_grade'] = grades[i]
+                    obj['disappeared_count'] = 0
+                    matched_objects.add(min_id)
+                    matched_detections.add(i)
+            for i in range(len(current_centroids)):
+                if i not in matched_detections:
+                    self.objects[self.next_id] = {
+                        'centroid': current_centroids[i],
+                        'prev_centroid': current_centroids[i],
+                        'curr_time': frame_timestamp,
+                        'prev_time': frame_timestamp,
+                        'measurements': [current_sizes[i]],
+                        'max_mm': current_sizes[i],
+                        'grade_history': [grades[i]],
+                        'last_crop': crops[i].copy(),
+                        'latest_contour': contours[i],
+                        'is_good': is_good_flags[i],
+                        'current_grade': grades[i],
+                        'disappeared_count': 0,
+                        'start_time': frame_timestamp,
+                        'start_y': current_centroids[i][1],
+                        'command_sent': False
+                    }
+                    self.next_id += 1
+            disappeared = []
+            for obj_id in object_ids:
+                if obj_id not in matched_objects:
+                    self.objects[obj_id]['disappeared_count'] += 1
+                    if self.objects[obj_id]['disappeared_count'] > self.max_disappeared:
+                        disappeared.append(obj_id)
+            return disappeared
+
+        def get_object_info(self, obj_id):
+            return self.objects.get(obj_id, None)
+
+        def remove_object(self, obj_id):
+            if obj_id in self.objects:
+                del self.objects[obj_id]
+
+        def reset(self):
+            self.objects.clear()
+
+        def get_robust_size(self, obj_id):
+            obj = self.objects.get(obj_id)
+            if not obj: return 0.0
+            m = obj['measurements']
+            if len(m) < 3: return max(m) if m else 0.0
+            import statistics
+            s = sorted(m)
+            trim = max(1, len(s) // 10)
+            trimmed = s[trim:-trim] if trim < len(s)//2 else s
+            return statistics.median(trimmed)
+
+        def get_consensus_grade(self, obj_id):
+            obj = self.objects.get(obj_id)
+            if not obj: return None
+            history = obj.get('grade_history', [])
+            defects = [g for g in history if g is not None]
+            total = max(1, len(history))
+            if len(defects) / total > 0.40 and len(defects) >= 2:
+                return Counter(defects).most_common(1)[0][0]
+            return None
+
+    _TrackerClass = _LegacyObjectTracker
+
+print(f"[TRACKER] Using: {_TRACKER_TYPE}")
 
 # =========================================================
 # CONTOUR SMOOTHING HELPER
@@ -866,13 +882,19 @@ class ZoneProcessor:
     - Works like a separate camera
     """
     
-    def __init__(self, zone_config, ranges, shared_arduino=None, serial_lock=None):
+    def __init__(self, zone_config, ranges, shared_arduino=None, serial_lock=None, ejection_queue=None):
         self.zone = zone_config['zone']
         self.name = zone_config.get('name', 'Zone-1')
         self.ranges = ranges
-        self.tracker = ObjectTracker(self.name)
+        self.tracker = _TrackerClass(
+            self.name,
+            max_distance=320,
+            max_disappeared=8,
+            pixel_to_mm_ratio=PIXEL_TO_MM_RATIO,
+        )
         self.arduino = shared_arduino
         self.serial_lock = serial_lock
+        self.ejection_queue = ejection_queue
     
     def update_zone(self, new_zone):
         """Update zone coordinates dynamically"""
@@ -891,12 +913,10 @@ class ZoneProcessor:
             mask[y1:y2, x1:x2] = 255
         return mask
     
-    def process_frame(self, frame, frame_timestamp=None, quality_filter=None):
+    def process_frame(self, frame, quality_filter=None):
         """
         Process frame for this zone
         """
-        if frame_timestamp is None:
-            frame_timestamp = time.perf_counter()
         x, y, w, h = self.zone
         
         img_h, img_w = frame.shape[:2]
@@ -940,6 +960,17 @@ class ZoneProcessor:
         # Find contours with ALL edge points for maximum smoothness
         cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
+        # Offset contours to full frame + apply smooth_contour
+        adjusted_contours = []
+        for c in cnts:
+            c_adjusted = c.copy()
+            c_adjusted[:, 0, 0] += x1  # Add zone x offset
+            c_adjusted[:, 0, 1] += y1  # Add zone y offset
+            # Apply circular moving-average smoothing for ultra-clean borders
+            c_adjusted = smooth_contour(c_adjusted, window=5)
+            adjusted_contours.append(c_adjusted)
+        
+        
         # Filter by area and perform COLOR GRADING
         valid_contours = []
         is_good_flags = []
@@ -949,32 +980,18 @@ class ZoneProcessor:
         # --- PASS 1: Apply Filters and Extract Crops ---
         extracted_crops = []
         valid_contours_indices = []
-        adjusted_contours = []
-        
-        for i, raw_cnt in enumerate(cnts):
-            # 1. OPTIMIZATION: Filter by area FIRST before expensive operations!
-            raw_area = cv2.contourArea(raw_cnt)
-            if raw_area < MIN_CASHEW_AREA:
-                adjusted_contours.append(None) # keep indices aligned
+        for i, c in enumerate(adjusted_contours):
+            area = cv2.contourArea(c)
+            if area < MIN_CASHEW_AREA:
                 continue
                 
-            # 2. Offset and Smooth only valid size contours
-            c_adjusted = raw_cnt.copy()
-            c_adjusted[:, 0, 0] += x1  # Add zone x offset
-            c_adjusted[:, 0, 1] += y1  # Add zone y offset
-            c_adjusted = smooth_contour(c_adjusted, window=5)
-            adjusted_contours.append(c_adjusted)
-            
-            c = c_adjusted
-            area = cv2.contourArea(c)
-            
-            # Density Check (use original raw contour against zone_mask)
+            # Density Check
             c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
-            cv2.drawContours(c_mask, [raw_cnt], -1, 255, -1)
+            cv2.drawContours(c_mask, [cnts[i]], -1, 255, -1)
             cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
             total_pixels = cv2.countNonZero(c_mask)
             density = cashew_pixels / max(1, total_pixels)
-            if density < 0.08:
+            if density < 0.15:
                 continue
                 
             # Roller / Noise Checks
@@ -983,18 +1000,23 @@ class ZoneProcessor:
             if max(1, w_p * h_p) == 1: continue
             mm_size = max(w_p, h_p) * PIXEL_TO_MM_RATIO
             
+            # Reject objects larger than MAX_CASHEW_MM (likely rollers or noise)
+            if mm_size > MAX_CASHEW_MM:
+                continue
+            
             # Identify rollers by checking if the object spans almost the entire width of the zone
             x_b, y_b, w_b, h_b = cv2.boundingRect(c)
             if w_b > (self.zone[2] * 0.90):
                 continue # Ignore horizontal rollers
                 
             solidity = area / max(1, w_p * h_p)
-            if solidity < 0.25:
+            if solidity < 0.50:
                 continue
-            if min(w_p, h_p) < 6:
+            if min(w_p, h_p) < 20:
                 continue
                 
             # Crop Extraction
+            x_b, y_b, w_b, h_b = cv2.boundingRect(c)
             side = max(w_b, h_b) + 40
             cx_b, cy_b = x_b + w_b//2, y_b + h_b//2
             px = max(0, cx_b - side//2)
@@ -1017,7 +1039,8 @@ class ZoneProcessor:
             crops.append(crop)
         
         # Update tracker with newly determined grades and crops
-        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp)
+        frame_ts = time.perf_counter()
+        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp=frame_ts)
         
         # --- PASS 3: Evaluate Cashews using LINE CROSSING + DISAPPEARANCE LOGIC ---
         disappeared_crops = []
@@ -1026,9 +1049,9 @@ class ZoneProcessor:
         x, y, _, zone_h = self.zone
         
         # Define triggering lines relative to Zone geometry
-        min_start_line = y + (zone_h * 0.98)  # 98% - allows cashews detected almost anywhere in zone
-        trigger_line = y + (zone_h * 0.92)    # 92% - trigger reliably before leaving zone
-        disappear_trigger_line = y + (zone_h * 0.15) # 15% - catch any cashew lost in lower 85% of zone
+        min_start_line = y + (zone_h * 0.85)  # 85% prevents 'ghost' respawns from double-firing, but allows manual drops
+        trigger_line = y + (zone_h * 0.95)
+        disappear_trigger_line = y + (zone_h * 0.20) # If tracker loses it anywhere below 20%, it's definitely an exit
         
         # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
         for obj_id, obj_info in list(self.tracker.objects.items()):
@@ -1039,24 +1062,18 @@ class ZoneProcessor:
                 if start_y < min_start_line and cy >= trigger_line:
                     max_mm = obj_info['max_mm']
                     frames_tracked = len(obj_info.get('measurements', []))
-                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:  # Allow 1+ frames tracked to ensure no commands are missed
+                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
                         # --- VELOCITY OVERSHOOT COMPENSATION ---
                         prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
-                        prev_time = obj_info.get('prev_time', frame_timestamp)
-                        curr_time = obj_info.get('curr_time', frame_timestamp)
+                        prev_time = obj_info.get('prev_time', time.perf_counter())
+                        curr_time = obj_info.get('curr_time', time.perf_counter())
                         
-                        true_exit_time = frame_timestamp
+                        true_exit_time = time.perf_counter()
                         dy = cy - prev_cy
                         dt = curr_time - prev_time
                         
-                        # Use average velocity over the ENTIRE tracking period for extreme precision
-                        # This eliminates 1-pixel jitter from instantaneous frame-to-frame velocity
-                        total_dy = cy - start_y
-                        total_dt = curr_time - obj_info.get('start_time', curr_time - 0.1)
-                        
-                        time_overshoot = 0.0
-                        if total_dt > 0 and total_dy > 0:
-                            velocity = total_dy / total_dt  # Average pixels per second
+                        if dt > 0 and dy > 0:
+                            velocity = dy / dt  # pixels per second
                             overshoot_px = cy - trigger_line
                             if overshoot_px > 0:
                                 time_overshoot = overshoot_px / velocity
@@ -1088,20 +1105,8 @@ class ZoneProcessor:
                         if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
                             last_crop = obj_info.get('last_crop')
                             if last_crop is not None:
-                                # PREDICT the exit time since we lost tracking before the 95% line
-                                curr_time = obj_info.get('curr_time', frame_timestamp)
-                                total_dy = cy - start_y
-                                total_dt = curr_time - obj_info.get('start_time', curr_time - 0.1)
-                                
-                                predicted_exit_time = curr_time
-                                if total_dt > 0 and total_dy > 0:
-                                    velocity = total_dy / total_dt
-                                    distance_remaining = max(0, trigger_line - cy)
-                                    time_to_reach = distance_remaining / velocity
-                                    predicted_exit_time = curr_time + time_to_reach
-                                
                                 disappeared_crops.append(last_crop)
-                                disappeared_objs.append((obj_id, obj_info, predicted_exit_time, 0))
+                                disappeared_objs.append((obj_id, obj_info, time.perf_counter(), 0))
                                 obj_info['command_sent'] = True
                         else:
                             reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
@@ -1114,47 +1119,22 @@ class ZoneProcessor:
                 # Memory cleanup is MANDATORY for all disappeared objects!
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
-            # --- START TIMERS IMMEDIATELY (PARALLEL TO PROCESSING) ---
-            DELAY_SECONDS = 6.20
+            # --- SCHEDULE EJECTION VIA QUEUE (replaces per-thread timing) ---
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
-            
-            def send_delayed(cmd, arduino, lock, name, o_id, exit_time):
-                target_time = exit_time + DELAY_SECONDS
-                
-                # 1. Sleep normally until the last 20 milliseconds (Saves CPU, high precision with timeBeginPeriod)
-                while True:
-                    now = time.perf_counter()
-                    if target_time - now > 0.020:
-                        time.sleep(0.002)
-                    else:
-                        break
-                        
-                # 2. Busy-wait (Spin) for the final 20 milliseconds for EXTREME precision
-                while time.perf_counter() < target_time:
-                    pass
-                
-                # Measure exact delay before serial port bottleneck
-                actual_delay = time.perf_counter() - exit_time
-                
-                # Command sends exactly at the target millisecond
-                if arduino and lock:
-                    try:
-                        with lock:
-                            if arduino.in_waiting > 0:
-                                arduino.read(arduino.in_waiting)
-                            arduino.write(cmd.encode())
-                            arduino.flush()
-                        now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-                        print(f"\n[{now_str}] [{name}] EXIT ID:{o_id} -> COMMAND SENT (Total Time: {actual_delay:.3f}s) -> Sent:{cmd.strip()}")
-                    except Exception as e:
-                        print(f"\n[{name}] SERIAL WRITE ERROR: {e}")
 
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                t = threading.Thread(target=send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id, true_exit_time))
-                t.daemon = True
-                t.start()
-                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-                print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> QUEUED (Overshoot: {time_overshoot*1000:.1f}ms) -> Target: {DELAY_SECONDS}s")
+                if self.ejection_queue is not None:
+                    self.ejection_queue.schedule(
+                        obj_id=obj_id,
+                        command=command,
+                        exit_time=true_exit_time,
+                        zone_name=self.name,
+                        grade=str(obj_info.get('current_grade', '')),
+                        size_mm=obj_info['max_mm'],
+                    )
+                else:
+                    now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                    print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> NO EJECTION QUEUE")
 
             # --- NOW PROCEED WITH YOLO PROCESSING ---
             processing_start_time = time.time()
@@ -1165,7 +1145,13 @@ class ZoneProcessor:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
                 
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                max_mm = obj_info['max_mm']
+                # Use robust size measurement (trimmed median) instead of max
+                if hasattr(self.tracker, 'get_robust_size'):
+                    max_mm = self.tracker.get_robust_size(obj_id)
+                    if max_mm <= 0:
+                        max_mm = obj_info['max_mm']  # fallback
+                else:
+                    max_mm = obj_info['max_mm']
                 last_crop = disappeared_crops[idx]
                 yolo_cat, yolo_conf = yolo_results[idx]
                 
@@ -1282,7 +1268,7 @@ class ZoneProcessor:
         cv2.putText(frame, self.name, (x+5, y+20),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
-        # Draw tracked objects with contours + full info
+        # Draw tracked objects with SMOOTH contours + full info
         for obj_id, obj_info in self.tracker.objects.items():
             # SKIP disappeared objects - only draw currently visible ones
             if obj_info.get('disappeared_count', 0) > 0:
@@ -1290,42 +1276,53 @@ class ZoneProcessor:
             cnt = obj_info.get('latest_contour')
             
             # --- CONSENSUS-BASED COLORING (not single-frame) ---
+            # Use grade_history majority to decide good/bad (avoids false positives)
             history = obj_info.get('grade_history', [])
             defect_frames = [g for g in history if g is not None]
             total_frames = max(1, len(history))
             defect_ratio = len(defect_frames) / total_frames
             
+            # Only mark as BAD if >40% of frames show a defect (consensus)
             is_consensus_bad = defect_ratio > 0.40 and len(defect_frames) >= 2
             
+            # Determine display defect type
             current_grade = obj_info.get('current_grade', None)
             if is_consensus_bad and defect_frames:
+                # Use most common defect from history
                 defect_counts = Counter(defect_frames)
                 display_defect = defect_counts.most_common(1)[0][0]
-                color = (0, 0, 255)
+                color = (0, 0, 255)  # RED for confirmed bad
             else:
                 display_defect = None
-                color = (0, 255, 0)
+                color = (0, 255, 0)  # GREEN for good
             
             if cnt is not None and len(cnt) >= 3:
-                # Contour is already smoothed in process_frame, draw directly
-                cv2.drawContours(frame, [cnt], -1, color, 2)
+                # Apply smooth_contour for perfectly smooth border drawing
+                smooth_cnt = smooth_contour(cnt, window=5)
+                cv2.drawContours(frame, [smooth_cnt], -1, color, 2)
                 
+                # --- DISPLAY FULL INFO ON SCREEN ---
                 cx, cy = obj_info['centroid']
                 max_mm = obj_info['max_mm']
                 
+                # Line 1: SR No (ID) + Size
                 label_id = f"SR:{obj_id} {max_mm:.1f}mm"
                 
+                # Line 2: Status (GOOD or defect type)
                 if display_defect:
                     label_status = f"{display_defect.upper()}"
-                    status_color = (0, 0, 255)
+                    status_color = (0, 0, 255)  # Red text for defect
                 else:
                     label_status = "GOOD"
-                    status_color = (0, 255, 0)
+                    status_color = (0, 255, 0)  # Green text for good
                 
+                # Draw labels with shadow for readability
+                # Line 1: ID + Size
                 cv2.putText(frame, label_id, (cx - 40, cy - 15),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
                 cv2.putText(frame, label_id, (cx - 40, cy - 15),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+                # Line 2: Status/Defect
                 cv2.putText(frame, label_status, (cx - 40, cy + 5),
                            cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
                 cv2.putText(frame, label_status, (cx - 40, cy + 5),
@@ -1476,10 +1473,14 @@ def main():
     else:
         print("\nNo valid MAIN COM port found.")
 
-    # Initialize zone processors using the shared COM connection
+    # Initialize ejection queue (single writer thread for PLC timing)
+    ejection_q = EjectionQueue(arduino=shared_arduino, delay_seconds=7.20)
+    ejection_q.start()
+
+    # Initialize zone processors using the shared ejection queue
     zone_processors = []
     for zone_config in ZONE_CONFIGS:
-        processor = ZoneProcessor(zone_config, ranges, shared_arduino, serial_lock)
+        processor = ZoneProcessor(zone_config, ranges, shared_arduino, serial_lock, ejection_queue=ejection_q)
         zone_processors.append(processor)
     
     print(f"\n{'='*60}")
@@ -1495,14 +1496,13 @@ def main():
     print(f"  ESC      : Quit program completely")
     print(f"{'='*60}\n")
 
-    # Create ThreadPool ONCE outside loop (creating every frame = massive overhead)
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
-    
     try:
         frame_counter = 0
         none_counter = 0
         while True:
             frame_counter += 1
+            if frame_counter % 500 == 0:
+                gc.collect()
 
             frame = cam.get_frame()
             cam.check_and_update_parameters()
@@ -1513,8 +1513,6 @@ def main():
                 time.sleep(0.005) # Prevent 100% CPU pinning
                 continue
             none_counter = 0
-            
-            frame_time = getattr(cam, 'last_returned_time', time.perf_counter())
 
             # Check for config file updates
             t0 = time.time()
@@ -1541,46 +1539,49 @@ def main():
                         # If new zones were added, initialize new processors
                         if len(ZONE_CONFIGS) > len(zone_processors):
                             for i in range(len(zone_processors), len(ZONE_CONFIGS)):
-                                processor = ZoneProcessor(ZONE_CONFIGS[i], ranges, shared_arduino, serial_lock)
+                                processor = ZoneProcessor(ZONE_CONFIGS[i], ranges, shared_arduino, serial_lock, ejection_queue=ejection_q)
                                 zone_processors.append(processor)
             except Exception as e:
                 print(f"[CONFIG] Error reloading config: {e}")
 
-            # Process each zone in PARALLEL using the pre-created ThreadPool
+            # Create black background for display - only show zones
+            display_frame = np.zeros_like(frame)
+            img_h, img_w = frame.shape[:2]
+            for z in ZONE_CONFIGS:
+                x, y, w, h = z['zone']
+                x1 = max(0, min(x, img_w))
+                y1 = max(0, min(y, img_h))
+                x2 = max(0, min(x + w, img_w))
+                y2 = max(0, min(y + h, img_h))
+                if x2 > x1 and y2 > y1:
+                    # Copy original pixels for this zone
+                    display_frame[y1:y2, x1:x2] = frame[y1:y2, x1:x2]
+            
+            # Process each zone in PARALLEL using a ThreadPoolExecutor
             total_cashews_in_frame = 0
-            future_to_processor = {
-                executor.submit(p.process_frame, frame, frame_time, quality_filter): p 
-                for p in zone_processors
-            }
-            for future in concurrent.futures.as_completed(future_to_processor):
-                processor = future_to_processor[future]
-                try:
-                    contours = future.result()
-                    total_cashews_in_frame += len(contours)
-                except Exception as e:
-                    print(f"Error in {processor.name}: {e}")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                future_to_processor = {
+                    executor.submit(p.process_frame, frame, quality_filter): p 
+                    for p in zone_processors
+                }
+                for future in concurrent.futures.as_completed(future_to_processor):
+                    processor = future_to_processor[future]
+                    try:
+                        contours = future.result()
+                        total_cashews_in_frame += len(contours)
+                    except Exception as e:
+                        print(f"Error in {processor.name}: {e}")
+                        
+            cv2.waitKeyEx(1) # Keep UI responsive
             
-            # Build display frame ONLY when needed (skip heavy work when hidden)
-            if SHOW_DISPLAY:
-                display_frame = np.zeros_like(frame)
-                img_h, img_w = frame.shape[:2]
-                for z in ZONE_CONFIGS:
-                    zx, zy, zw, zh = z['zone']
-                    zx1 = max(0, min(zx, img_w))
-                    zy1 = max(0, min(zy, img_h))
-                    zx2 = max(0, min(zx + zw, img_w))
-                    zy2 = max(0, min(zy + zh, img_h))
-                    if zx2 > zx1 and zy2 > zy1:
-                        display_frame[zy1:zy2, zx1:zx2] = frame[zy1:zy2, zx1:zx2]
-                
-                # Draw all zones synchronously after processing
-                for processor in zone_processors:
-                    processor.draw_zone(display_frame)
-            else:
-                display_frame = None
+            # Draw all zones synchronously after processing
+            for processor in zone_processors:
+                processor.draw_zone(display_frame)
             
-            # Highlight selected zone (only when display is active)
-            if SHOW_DISPLAY and display_frame is not None and SELECTED_ZONE_INDEX is not None and SELECTED_ZONE_INDEX < len(ZONE_CONFIGS):
+            # Draw YOLO boxes visualization is removed since we do it on crops directly
+            
+            # Highlight selected zone
+            if SELECTED_ZONE_INDEX is not None and SELECTED_ZONE_INDEX < len(ZONE_CONFIGS):
                 sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
                 sx, sy, sw, sh = sel_zone
                 # Draw thick red border for selected zone
@@ -1620,10 +1621,12 @@ def main():
             pass
 
     finally:
-        executor.shutdown(wait=False)
         cam.close()
         for processor in zone_processors:
             processor.close()
+        # Stop ejection queue before closing serial
+        if 'ejection_q' in locals():
+            ejection_q.stop()
         cv2.destroyAllWindows()
         if 'shared_arduino' in locals() and shared_arduino:
             try:
