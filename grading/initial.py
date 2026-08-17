@@ -1,4 +1,5 @@
 import sys, os, platform
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from ctypes import *
 import numpy as np
 import cv2
@@ -19,7 +20,9 @@ import datetime
 # TRACKER SELECTION (C++ Kalman → Python Kalman fallback)
 # =========================================================
 try:
-    from tracker_adapter import CppObjectTracker as _TrackerClass
+    from tracker_adapter import CppObjectTracker as _TrackerClass, CPP_AVAILABLE
+    if not CPP_AVAILABLE:
+        raise ImportError("cashew_tracker_core extension not compiled")
     _TRACKER_TYPE = "C++ Kalman"
 except ImportError:
     try:
@@ -122,6 +125,7 @@ BLACKDOT_MIN_COUNT = 1       # [Count] Minimum number of internal dots to eject
 
 PIXEL_TO_MM_RATIO = 0.111  # 1 px = 0.0937 mm
 MAX_TRACKING_DISTANCE = 250 # Increased to 250 to follow fast-moving cashews without duplicate IDs
+DELAY_SECONDS = 5.50    # Default PLC ejection delay in seconds
 
 # =========================================================
 # COLOR GRADING SAMPLES (FROM REFERENCE)
@@ -1249,8 +1253,9 @@ class ZoneProcessor:
             processing_end_time = time.time()
             processing_duration = processing_end_time - processing_start_time
             
+            delay_sec = self.ejection_queue.delay_seconds if self.ejection_queue else DELAY_SECONDS
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                target_time = true_exit_time + DELAY_SECONDS
+                target_time = true_exit_time + delay_sec
                 remaining_hold = max(0, target_time - processing_end_time)
                 now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
                 print(f"[{now_str}] [{self.name}] ID:{obj_id} Processing Done (Took: {processing_duration:.3f}s) -> Remaining Hold: {remaining_hold:.3f}s")

@@ -124,8 +124,19 @@ def output_reader(proc, filename):
         last_terminal_message = f"Error reading {filename}: {e}"
         print(f"Stdout read error: {e}")
 
+camera_preview_active = False
+camera_stream_id = 0
+
+def stop_camera_preview():
+    global camera_preview_active, camera_stream_id
+    log_camera("stop_camera_preview requested")
+    camera_preview_active = False
+    camera_stream_id += 1
+    time.sleep(0.3)
+
 def run_scripts_in_folder(folder_name: str):
     global active_processes
+    stop_camera_preview()
     reset_counts()
     
     folder_path = os.path.join(BASE_DIR, folder_name)
@@ -183,6 +194,7 @@ def run_color():
 @app.post("/api/stop-all")
 def stop_all():
     global active_processes, current_mode
+    stop_camera_preview()
     killed_count = 0
     for process in active_processes:
         try:
@@ -221,7 +233,15 @@ def log_camera(message: str):
         pass
 
 def generate_camera_frames(cam_idx: str):
-    log_camera(f"generate_camera_frames called for cam_idx={cam_idx}")
+    global camera_preview_active, camera_stream_id
+    stop_camera_preview()
+    time.sleep(0.2)
+    
+    camera_preview_active = True
+    my_stream_id = time.time()
+    camera_stream_id = my_stream_id
+
+    log_camera(f"generate_camera_frames called for cam_idx={cam_idx}, stream_id={my_stream_id}")
     refs_file = CAMERA_REF_FILE
     params_file = CAMERA_PARAMS_FILE
     
@@ -330,9 +350,9 @@ def generate_camera_frames(cam_idx: str):
     last_check_time = 0
     
     try:
-        log_camera("Entering frame grab loop...")
+        log_camera(f"Entering frame grab loop for stream_id={my_stream_id}...")
         consecutive_failures = 0
-        while True:
+        while camera_preview_active and camera_stream_id == my_stream_id:
             current_time = time.time()
             if current_time - last_check_time > 0.5:
                 try:
@@ -438,6 +458,9 @@ def generate_camera_frames(cam_idx: str):
                 except Exception as pe:
                     log_camera(f"Error updating params: {pe}")
                 last_check_time = current_time
+            
+            if not (camera_preview_active and camera_stream_id == my_stream_id):
+                break
                 
             ret = cam.MV_CC_GetOneFrameTimeout(ctypes.byref(data), nPayloadSize, frame_info, 1000)
             if ret == 0:
@@ -515,10 +538,24 @@ def generate_camera_frames(cam_idx: str):
                     log_camera(f"GetOneFrameTimeout returned error code: {ret} ({consecutive_failures} consecutive failures)")
                 time.sleep(0.03)
     finally:
-        log_camera("Exiting frame grab loop and releasing resources.")
-        cam.MV_CC_StopGrabbing()
-        cam.MV_CC_CloseDevice()
-        cam.MV_CC_DestroyHandle()
+        log_camera(f"Exiting frame grab loop and releasing resources for stream_id={my_stream_id}")
+        try:
+            cam.MV_CC_StopGrabbing()
+        except Exception:
+            pass
+        try:
+            cam.MV_CC_CloseDevice()
+        except Exception:
+            pass
+        try:
+            cam.MV_CC_DestroyHandle()
+        except Exception:
+            pass
+
+@app.post("/api/stop-preview")
+def stop_preview():
+    stop_camera_preview()
+    return {"status": "success", "message": "Camera preview stopped and device released."}
 
 @app.get("/api/video_feed/{cam_idx}")
 def video_feed(cam_idx: str):

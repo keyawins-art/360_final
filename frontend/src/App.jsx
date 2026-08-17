@@ -241,6 +241,12 @@ function App() {
     }
   }, [activePage]);
 
+  useEffect(() => {
+    if (activePage !== 'Camera Setting' && isPreviewing) {
+      stopPreviewBackend();
+    }
+  }, [activePage]);
+
   const saveCameraParamsData = async () => {
     try {
       await axios.post(`${API_URL}/camera-params`, { params: cameraParams });
@@ -400,8 +406,18 @@ function App() {
     }
   };
 
+  const stopPreviewBackend = async () => {
+    setIsPreviewing(false);
+    try {
+      await axios.post(`${API_URL}/stop-preview`);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   const handleAction = async (endpoint, modeName) => {
     try {
+      await stopPreviewBackend();
       setStatus(`Starting ${modeName}...`);
       const res = await axios.post(`${API_URL}/${endpoint}`);
       setStatus(res.data.message || `${modeName} executed.`);
@@ -1414,7 +1430,7 @@ function App() {
                   Live Preview
                 </button>
                 <button
-                  onClick={() => setIsPreviewing(false)}
+                  onClick={stopPreviewBackend}
                   className="px-4 py-2 bg-rose-100 text-rose-700 hover:bg-rose-200 font-bold rounded-lg transition-colors flex items-center gap-2"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -1430,12 +1446,12 @@ function App() {
                 {["1", "2", "3"].map(camIdx => (
                   <button
                     key={camIdx}
-                    onClick={() => {
-                      setActiveCamParamIdx(camIdx);
+                    onClick={async () => {
                       if (isPreviewing) {
-                        setIsPreviewing(false);
-                        setTimeout(() => setIsPreviewing(true), 50);
+                        await stopPreviewBackend();
                       }
+                      setActiveCamParamIdx(camIdx);
+                      setTimeout(() => setIsPreviewing(true), 200);
                     }}
                     className={`flex-1 md:flex-1 py-3 md:py-0 rounded-xl font-bold text-sm transition-all border-2 flex items-center justify-center ${activeCamParamIdx === camIdx ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
                   >
