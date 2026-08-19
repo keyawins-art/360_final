@@ -190,8 +190,11 @@ class _PythonKalmanTracker:
                 if dist > gate:
                     continue
 
-                # Direction gate
-                if det["y"] < t.y - max(80.0, gate * 0.65):
+                # Direction gate: allow small backward jitter from rotated cashews.
+                # We still reject large reverse jumps, but not a few pixels of contour wobble.
+                if det["y"] < t.y - max(120.0, gate * 0.85):
+                    continue
+                if det["y"] < t.pred_y - 150.0 and det["y"] < t.y - 35.0:
                     continue
 
                 # Size penalty
@@ -299,12 +302,12 @@ class FallbackObjectTracker:
         self.pixel_to_mm_ratio = pixel_to_mm_ratio
         self.max_disappeared = max_disappeared
         self.core = _PythonKalmanTracker(
-            base_gate_px=120.0,
-            gate_per_sec_px=2500.0,
-            max_gate_px=float(max_distance),
+            base_gate_px=180.0,
+            gate_per_sec_px=4000.0,
+            max_gate_px=max(float(max_distance), 420.0),
             max_missed=int(max_disappeared),
-            process_noise=35.0,
-            measurement_noise=8.0,
+            process_noise=60.0,
+            measurement_noise=12.0,
         )
         self.objects = {}
         self.next_id = 1
@@ -329,8 +332,13 @@ class FallbackObjectTracker:
             cx = M["m10"] / M["m00"]
             cy = M["m01"] / M["m00"]
 
-            rect = cv2.minAreaRect(c)
-            w, h = rect[1]
+            # Use fitEllipse for rotation-stable size measurement
+            if len(c) >= 15:
+                ellipse = cv2.fitEllipse(c)
+                w, h = ellipse[1]  # (major_axis, minor_axis)
+            else:
+                rect = cv2.minAreaRect(c)
+                w, h = rect[1]
             mm_size = max(w, h) * self.pixel_to_mm_ratio
 
             detections.append({"x": float(cx), "y": float(cy), "size_mm": float(mm_size)})
@@ -453,7 +461,7 @@ class FallbackObjectTracker:
         self.core.reset()
 
     def get_robust_size(self, obj_id):
-        """Trimmed median size estimate, resistant to rotation outliers."""
+        """Trimmed median of last 30 measurements, resistant to rotation outliers."""
         obj = self.objects.get(obj_id)
         if obj is None:
             return 0.0
@@ -463,9 +471,12 @@ class FallbackObjectTracker:
         if n < 3:
             return max(measurements) if measurements else 0.0
 
-        sorted_m = sorted(measurements)
-        trim = max(1, n // 10)
-        if trim < n // 2:
+        # Use last 30 measurements — most recent and relevant
+        recent = measurements[-30:] if n > 30 else measurements
+        sorted_m = sorted(recent)
+        n_recent = len(sorted_m)
+        trim = max(1, n_recent // 10)
+        if trim < n_recent // 2:
             trimmed = sorted_m[trim:-trim]
         else:
             trimmed = sorted_m

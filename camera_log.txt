@@ -2883,3 +2883,155 @@
 2026-08-12 14:38:31 - stop_camera_preview requested
 2026-08-12 14:38:32 - stop_camera_preview requested
 2026-08-12 14:38:32 - stop_camera_preview requested
+2026-08-13 09:56:01 - stop_camera_preview requested
+2026-08-13 09:56:02 - generate_camera_frames called for cam_idx=1, stream_id=1786595162.514165
+2026-08-13 09:56:02 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-13 09:56:02 - Target serial for cam_idx=1: DA9551444
+2026-08-13 09:56:02 - Initializing MVS...
+2026-08-13 09:56:03 - Enum devices return: 0, count: 1
+2026-08-13 09:56:03 - Found device serial: DA9551444
+2026-08-13 09:56:03 - Matched target serial: DA9551444
+2026-08-13 09:56:03 - Create handle return: 0
+2026-08-13 09:56:03 - Open device return: 0
+2026-08-13 09:56:03 - Payload size: 15040512
+2026-08-13 09:56:03 - Start grabbing return: 0
+2026-08-13 09:56:03 - Entering frame grab loop for stream_id=1786595162.514165...
+2026-08-13 09:56:03 - Stopping grabbing to apply resolution/offset changes...
+2026-08-13 09:56:03 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-08-13 09:56:03 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-08-13 09:56:03 - Set OffsetX to 0 (max: 360) ret=0
+2026-08-13 09:56:03 - Set OffsetY to 0 (max: 40) ret=0
+2026-08-13 09:56:04 - New payload size: 12578112
+2026-08-13 09:56:04 - Restart grabbing return: 0
+2026-08-13 09:56:04 - Set ExposureTime to 28381.0 (original: 28381) ret=0
+2026-08-13 09:56:04 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-13 09:56:13 - stop_camera_preview requested
+2026-08-13 09:56:13 - Exiting frame grab loop and releasing resources for stream_id=1786595162.514165
+2026-08-14 15:02:21 - stop_camera_preview requested
+2026-08-14 15:02:21 - generate_camera_frames called for cam_idx=1, stream_id=1786699941.9284446
+2026-08-14 15:02:21 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-14 15:02:21 - Target serial for cam_idx=1: DA9551444
+2026-08-14 15:02:21 - Initializing MVS...
+2026-08-14 15:02:22 - Enum devices return: 0, count: 1
+2026-08-14 15:02:22 - Found device serial: DA9551444
+2026-08-14 15:02:22 - Matched target serial: DA9551444
+2026-08-14 15:02:22 - Create handle return: 0
+2026-08-14 15:02:22 - Open device return: 2147484163
+2026-08-14 15:03:09 - stop_camera_preview requested
+2026-08-14 15:03:09 - generate_camera_frames called for cam_idx=1, stream_id=1786699989.9705682
+2026-08-14 15:03:09 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-14 15:03:09 - Target serial for cam_idx=1: DA9551444
+2026-08-14 15:03:09 - Initializing MVS...
+2026-08-14 15:03:10 - Enum devices return: 0, count: 1
+2026-08-14 15:03:10 - Found device serial: DA9551444
+2026-08-14 15:03:10 - Matched target serial: DA9551444
+2026-08-14 15:03:10 - Create handle return: 0
+2026-08-14 15:03:11 - Open device return: 0
+2026-08-14 15:03:11 - Payload size: 15040512
+2026-08-14 15:03:11 - Start grabbing return: 0
+2026-08-14 15:03:11 - Entering frame grab loop for stream_id=1786699989.9705682...
+2026-08-14 15:03:11 - Stopping grabbing to apply resolution/offset changes...
+2026-08-14 15:03:11 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-08-14 15:03:11 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-08-14 15:03:11 - Set OffsetX to 0 (max: 360) ret=0
+2026-08-14 15:03:11 - Set OffsetY to 0 (max: 40) ret=0
+2026-08-14 15:03:11 - New payload size: 12578112
+2026-08-14 15:03:11 - Restart grabbing return: 0
+2026-08-14 15:03:11 - Set ExposureTime to 23973.0 (original: 23973) ret=0
+2026-08-14 15:03:11 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:03:12 - Set ExposureTime to 36093.0 (original: 36093) ret=0
+2026-08-14 15:03:12 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:03:14 - Set ExposureTime to 2304.0 (original: 2304) ret=0
+2026-08-14 15:03:14 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:03:19 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:03:19 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:03:27 - stop_camera_preview requested
+2026-08-14 15:03:27 - Exiting frame grab loop and releasing resources for stream_id=1786699989.9705682
+2026-08-14 15:08:11 - stop_camera_preview requested
+2026-08-14 15:08:12 - generate_camera_frames called for cam_idx=1, stream_id=1786700292.2362823
+2026-08-14 15:08:12 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-14 15:08:12 - Target serial for cam_idx=1: DA9551444
+2026-08-14 15:08:12 - Initializing MVS...
+2026-08-14 15:08:12 - Enum devices return: 0, count: 1
+2026-08-14 15:08:12 - Found device serial: DA9551444
+2026-08-14 15:08:12 - Matched target serial: DA9551444
+2026-08-14 15:08:12 - Create handle return: 0
+2026-08-14 15:08:12 - Open device return: 2147484163
+2026-08-14 15:08:35 - stop_camera_preview requested
+2026-08-14 15:08:51 - stop_camera_preview requested
+2026-08-14 15:09:02 - stop_camera_preview requested
+2026-08-14 15:09:37 - stop_camera_preview requested
+2026-08-14 15:09:45 - stop_camera_preview requested
+2026-08-14 15:09:45 - stop_camera_preview requested
+2026-08-14 15:09:53 - stop_camera_preview requested
+2026-08-14 15:09:53 - generate_camera_frames called for cam_idx=1, stream_id=1786700393.7594686
+2026-08-14 15:09:53 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-14 15:09:53 - Target serial for cam_idx=1: DA9551444
+2026-08-14 15:09:53 - Initializing MVS...
+2026-08-14 15:09:54 - Enum devices return: 0, count: 1
+2026-08-14 15:09:54 - Found device serial: DA9551444
+2026-08-14 15:09:54 - Matched target serial: DA9551444
+2026-08-14 15:09:54 - Create handle return: 0
+2026-08-14 15:09:55 - Open device return: 0
+2026-08-14 15:09:55 - Payload size: 15040512
+2026-08-14 15:09:55 - Start grabbing return: 0
+2026-08-14 15:09:55 - Entering frame grab loop for stream_id=1786700393.7594686...
+2026-08-14 15:09:55 - Stopping grabbing to apply resolution/offset changes...
+2026-08-14 15:09:55 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-08-14 15:09:55 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-08-14 15:09:55 - Set OffsetX to 0 (max: 360) ret=0
+2026-08-14 15:09:55 - Set OffsetY to 0 (max: 40) ret=0
+2026-08-14 15:09:55 - New payload size: 12578112
+2026-08-14 15:09:55 - Restart grabbing return: 0
+2026-08-14 15:09:55 - Set ExposureTime to 39399.0 (original: 39399) ret=0
+2026-08-14 15:09:55 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:09:55 - Set ExposureTime to 26177.0 (original: 26177) ret=0
+2026-08-14 15:09:55 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:09:56 - Set ExposureTime to 54090.0 (original: 54090) ret=0
+2026-08-14 15:09:56 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:09:57 - Set ExposureTime to 11486.0 (original: 11486) ret=0
+2026-08-14 15:09:57 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:09:58 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:09:58 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:10:01 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:01 - Set Gain to 6.0 (original: 6) ret=0
+2026-08-14 15:10:01 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:02 - Set Gain to 4.0 (original: 4) ret=0
+2026-08-14 15:10:04 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:04 - Set Gain to 2.0 (original: 2) ret=0
+2026-08-14 15:10:05 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:05 - Set Gain to 5.0 (original: 5) ret=0
+2026-08-14 15:10:06 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:06 - Set Gain to 2.0 (original: 2) ret=0
+2026-08-14 15:10:08 - stop_camera_preview requested
+2026-08-14 15:10:08 - Exiting frame grab loop and releasing resources for stream_id=1786700393.7594686
+2026-08-14 15:10:23 - stop_camera_preview requested
+2026-08-14 15:10:27 - stop_camera_preview requested
+2026-08-14 15:10:28 - generate_camera_frames called for cam_idx=1, stream_id=1786700428.1253493
+2026-08-14 15:10:28 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-14 15:10:28 - Target serial for cam_idx=1: DA9551444
+2026-08-14 15:10:28 - Initializing MVS...
+2026-08-14 15:10:28 - Enum devices return: 0, count: 1
+2026-08-14 15:10:28 - Found device serial: DA9551444
+2026-08-14 15:10:28 - Matched target serial: DA9551444
+2026-08-14 15:10:28 - Create handle return: 0
+2026-08-14 15:10:29 - Open device return: 0
+2026-08-14 15:10:29 - Payload size: 15040512
+2026-08-14 15:10:29 - Start grabbing return: 0
+2026-08-14 15:10:29 - Entering frame grab loop for stream_id=1786700428.1253493...
+2026-08-14 15:10:29 - Stopping grabbing to apply resolution/offset changes...
+2026-08-14 15:10:29 - Set Width to 2088 (limits: 32-2448) ret=0
+2026-08-14 15:10:29 - Set Height to 2008 (limits: 8-2048) ret=0
+2026-08-14 15:10:29 - Set OffsetX to 0 (max: 360) ret=0
+2026-08-14 15:10:29 - Set OffsetY to 0 (max: 40) ret=0
+2026-08-14 15:10:29 - New payload size: 12578112
+2026-08-14 15:10:29 - Restart grabbing return: 0
+2026-08-14 15:10:29 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:29 - Set Gain to 20.0 (original: 20) ret=0
+2026-08-14 15:10:31 - Set ExposureTime to 100.0 (original: 100) ret=0
+2026-08-14 15:10:31 - Set Gain to 0.0 (original: 0) ret=0
+2026-08-14 15:10:34 - stop_camera_preview requested
+2026-08-14 15:10:35 - Exiting frame grab loop and releasing resources for stream_id=1786700428.1253493
+2026-08-14 15:10:35 - stop_camera_preview requested
+2026-08-14 15:10:35 - stop_camera_preview requested
+2026-08-14 15:10:35 - stop_camera_preview requested

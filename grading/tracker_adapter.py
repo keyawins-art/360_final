@@ -49,12 +49,12 @@ class CppObjectTracker:
         self.pixel_to_mm_ratio = pixel_to_mm_ratio
         self.max_disappeared = max_disappeared
         self.core = cashew_tracker_core.CashewTracker(
-            120.0,                  # base_gate_px — minimum position gate
-            2500.0,                 # gate_per_sec_px — extra gate allowance per second
-            float(max_distance),    # max_gate_px — hard ceiling
+            180.0,                  # base_gate_px — minimum position gate
+            4000.0,                 # gate_per_sec_px — extra gate allowance per second
+            max(float(max_distance), 420.0),  # max_gate_px — hard ceiling
             int(max_disappeared),   # max_missed
-            35.0,                   # process_noise
-            8.0,                    # measurement_noise
+            60.0,                   # process_noise
+            12.0,                   # measurement_noise
         )
         self.objects = {}
         self.next_id = 1  # kept for compatibility, but C++ manages real IDs
@@ -100,8 +100,13 @@ class CppObjectTracker:
             cx = M["m10"] / M["m00"]
             cy = M["m01"] / M["m00"]
 
-            rect = cv2.minAreaRect(c)
-            w, h = rect[1]
+            # Use fitEllipse for rotation-stable size measurement
+            if len(c) >= 15:
+                ellipse = cv2.fitEllipse(c)
+                w, h = ellipse[1]  # (major_axis, minor_axis)
+            else:
+                rect = cv2.minAreaRect(c)
+                w, h = rect[1]
             mm_size = max(w, h) * self.pixel_to_mm_ratio
 
             d = cashew_tracker_core.Detection()
@@ -249,11 +254,11 @@ class CppObjectTracker:
 
     def get_robust_size(self, obj_id):
         """
-        Return a robust size estimate using trimmed median.
+        Return a robust size estimate using trimmed median of last 30 measurements.
 
-        This is more stable than max() because a single rotation frame
-        can inflate the contour's bounding box, producing an artificially
-        large measurement.
+        Uses last 30 measurements (most recent/relevant) instead of all history,
+        and trims top/bottom 10% before computing median to reject outliers
+        from partial contours or rotation spikes.
         """
         obj = self.objects.get(obj_id)
         if obj is None:
@@ -266,11 +271,14 @@ class CppObjectTracker:
             # Too few for statistics — use max as fallback
             return max(measurements) if measurements else 0.0
 
-        sorted_m = sorted(measurements)
+        # Use last 30 measurements — most recent and relevant
+        recent = measurements[-30:] if n > 30 else measurements
+        sorted_m = sorted(recent)
+        n_recent = len(sorted_m)
 
         # Trim top and bottom 10%
-        trim = max(1, n // 10)
-        if trim < n // 2:
+        trim = max(1, n_recent // 10)
+        if trim < n_recent // 2:
             trimmed = sorted_m[trim:-trim]
         else:
             trimmed = sorted_m

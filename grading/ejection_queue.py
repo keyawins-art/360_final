@@ -65,6 +65,8 @@ class EjectionQueue:
         self._running = False
         self._worker = None
         self._seq = 0  # Monotonic sequence for tiebreaking
+        self._pending_obj_ids = set()  # Prevent duplicate scheduling of the same object while still pending
+        self._sent_obj_ids = {}  # obj_id -> expiry_time; blocks duplicate sends for a short cool-down window
 
     def start(self):
         """Start the ejection worker thread."""
@@ -105,6 +107,17 @@ class EjectionQueue:
         target_time = exit_time + self.delay_seconds
 
         with self._lock:
+            now = time.perf_counter()
+            expires = self._sent_obj_ids.get(obj_id)
+            if expires is not None and now < expires:
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{zone_name}] EXIT ID:{obj_id} -> DUPLICATE SCHEDULE BLOCKED (already fired recently)")
+                return
+            if obj_id in self._pending_obj_ids:
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{zone_name}] EXIT ID:{obj_id} -> DUPLICATE SCHEDULE BLOCKED (already queued)")
+                return
+
             self._seq += 1
             event = EjectionEvent(
                 target_time=target_time,
@@ -116,6 +129,12 @@ class EjectionQueue:
                 seq=self._seq,
             )
             heapq.heappush(self._heap, event)
+            self._pending_obj_ids.add(obj_id)
+
+            # Clean out old sent IDs after their cool-down window expires.
+            expired_ids = [k for k, v in self._sent_obj_ids.items() if now >= v]
+            for k in expired_ids:
+                del self._sent_obj_ids[k]
 
         now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
         remaining = target_time - time.perf_counter()
@@ -170,11 +189,14 @@ class EjectionQueue:
             with self._lock:
                 if self._heap and self._heap[0] is next_event:
                     heapq.heappop(self._heap)
+                    self._pending_obj_ids.discard(next_event.obj_id)
                 else:
                     continue  # Event was removed by someone else
 
             # Fire the command
             self._fire(next_event)
+            with self._lock:
+                self._sent_obj_ids[next_event.obj_id] = time.perf_counter() + 8.0
 
     def _fire(self, event):
         """Send the serial command and log the result."""
@@ -195,6 +217,7 @@ class EjectionQueue:
                     f"-> COMMAND SENT (Total: {actual_delay:.3f}s) "
                     f"-> Sent:{event.command.strip()}"
                 )
+                print(f"[{now_str}] [QUEUE] Fired: obj_id={event.obj_id}, zone={event.zone_name}, command={event.command.strip()}, delay={actual_delay:.3f}s")
             except Exception as e:
                 print(f"\n[{event.zone_name}] SERIAL WRITE ERROR for ID:{event.obj_id}: {e}")
         else:

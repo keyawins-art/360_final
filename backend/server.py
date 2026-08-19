@@ -439,22 +439,23 @@ def generate_camera_frames(cam_idx: str):
                                 ret = cam.MV_CC_StartGrabbing()
                                 log_camera(f"Restart grabbing return: {ret}")
                                 
-                            # ExposureTime and Gain can be updated while grabbing
+                            # Keep ExposureTime and Gain applied continuously while grabbing.
+                            # This ensures manual adjustments remain active even when the JSON file
+                            # has not changed since the last refresh.
                             if "exposure" in current_params and current_params["exposure"] is not None:
                                 exp_val = float(current_params["exposure"])
-                                # Clip to valid camera range [100.0, 100000.0]
                                 exp_val = max(100.0, min(100000.0, exp_val))
                                 r = cam.MV_CC_SetFloatValue("ExposureTime", exp_val)
                                 log_camera(f"Set ExposureTime to {exp_val} (original: {current_params['exposure']}) ret={r}")
                                 
                             if "gain" in current_params and current_params["gain"] is not None:
                                 g_val = float(current_params["gain"])
-                                # Clip to valid camera range [0.0, 23.98]
                                 g_val = max(0.0, min(23.98, g_val))
                                 r = cam.MV_CC_SetFloatValue("Gain", g_val)
                                 log_camera(f"Set Gain to {g_val} (original: {current_params['gain']}) ret={r}")
                                 
-                            last_params = current_params.copy()
+                            if current_params != last_params:
+                                last_params = current_params.copy()
                 except Exception as pe:
                     log_camera(f"Error updating params: {pe}")
                 last_check_time = current_time

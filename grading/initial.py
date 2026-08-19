@@ -15,6 +15,7 @@ from collections import Counter
 import gc
 import math
 import datetime
+import queue
 
 # =========================================================
 # TRACKER SELECTION (C++ Kalman → Python Kalman fallback)
@@ -78,6 +79,90 @@ if not os.path.exists(DETECTIONS_FOLDER):
     os.makedirs(DETECTIONS_FOLDER)
     print(f"Created detections folder: {DETECTIONS_FOLDER}")
 
+class AsyncImageSaver:
+    """
+    Non-blocking background thread for saving detection images to disk.
+    Prevents cv2.imwrite disk I/O latency from stalling vision processing threads.
+    """
+    def __init__(self, max_queue_size=200):
+        self.queue = queue.Queue(maxsize=max_queue_size)
+        self.worker = threading.Thread(target=self._worker_loop, daemon=True, name="AsyncImageSaver")
+        self.worker.start()
+
+    def submit(self, crop, obj_id, final_grade, max_mm, tracked_cnt):
+        if crop is None or crop.size == 0:
+            return
+        try:
+            cnt_copy = tracked_cnt.copy() if tracked_cnt is not None else None
+            self.queue.put_nowait((crop.copy(), obj_id, final_grade, max_mm, cnt_copy))
+        except queue.Full:
+            pass  # Drop save if queue is full to preserve real-time vision performance
+
+    def _worker_loop(self):
+        while True:
+            try:
+                item = self.queue.get()
+                if item is None:
+                    break
+                crop, obj_id, final_grade, max_mm, tracked_cnt = item
+                self._save(crop, obj_id, final_grade, max_mm, tracked_cnt)
+                self.queue.task_done()
+            except Exception:
+                pass
+
+    def _save(self, last_crop, obj_id, final_grade, max_mm, tracked_cnt):
+        try:
+            save_img = last_crop.copy()
+            h_s, w_s = save_img.shape[:2]
+            is_defect = final_grade and not any(size in str(final_grade) for size in ['400', '320', '240', '210', '180'])
+            color_border = (0, 0, 255) if is_defect else (0, 255, 0)
+
+            x_b, y_b, w_b, h_b = cv2.boundingRect(tracked_cnt) if tracked_cnt is not None else (0, 0, w_s, h_s)
+            side = max(w_b, h_b) + 40
+            cx_b, cy_b = x_b + w_b // 2, y_b + h_b // 2
+            crop_ox = max(0, cx_b - side // 2)
+            crop_oy = max(0, cy_b - side // 2)
+
+            contour_drawn = False
+            if tracked_cnt is not None and len(tracked_cnt) >= 3:
+                local_cnt = tracked_cnt.copy()
+                local_cnt[:, 0, 0] -= crop_ox
+                local_cnt[:, 0, 1] -= crop_oy
+                smooth_cnt = smooth_contour(local_cnt, window=11)
+                if len(smooth_cnt) >= 3:
+                    cv2.drawContours(save_img, [smooth_cnt], -1, color_border, 2)
+                    contour_drawn = True
+
+            if not contour_drawn:
+                smooth_s = cv2.GaussianBlur(save_img, (7, 7), 0)
+                gray_s = cv2.cvtColor(smooth_s, cv2.COLOR_BGR2GRAY)
+                _, mask_s = cv2.threshold(gray_s, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                kernel_e_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                mask_s = cv2.morphologyEx(mask_s, cv2.MORPH_CLOSE, kernel_e_s, iterations=2)
+                mask_s = cv2.GaussianBlur(mask_s, (15, 15), 0)
+                _, mask_s = cv2.threshold(mask_s, 127, 255, cv2.THRESH_BINARY)
+                cnts_s, _ = cv2.findContours(mask_s, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if cnts_s:
+                    best_cnt = max(cnts_s, key=cv2.contourArea)
+                    smooth_cnt_s = smooth_contour(best_cnt, window=11)
+                    cv2.drawContours(save_img, [smooth_cnt_s], -1, color_border, 2)
+                else:
+                    cv2.rectangle(save_img, (0, 0), (w_s - 1, h_s - 1), color_border, 2)
+
+            label_grade = f"{final_grade or 'None'}"
+            label_size = f"{max_mm:.1f}mm"
+            cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            filename = f"ID{obj_id}_{final_grade}_{int(max_mm)}mm_{int(time.time())}.jpg"
+            filepath = os.path.join(DETECTIONS_FOLDER, filename)
+            cv2.imwrite(filepath, save_img)
+        except Exception:
+            pass
+
+ASYNC_IMAGE_SAVER = AsyncImageSaver()
+
 def load_zones_config():
     if os.path.exists(ZONES_CONFIG_FILE):
         try:
@@ -116,44 +201,11 @@ HSV_UPPER = np.array([40, 255, 255])  # Upper hue/sat/val for cashew detection
 YOLO_CONF_THRESHOLD = 0.40   # [0.1-1.0] AI strictness: Higher = Fewer defect calls
 YOLO_STRICT_BYPASS = 0.85    # [0.1-1.0] If AI is 85% sure it is GOOD, skip heuristics
 
-# OpenCV Heuristic Backups (Only used if AI is not 85% sure)
-OILY_RATIO_THRESHOLD = 0.95  # [0.1-1.0] Coverage needed to call it OILY 
-SHELL_PIXEL_THRESHOLD = 15000 # [Pixels] Brown area needed for SHELL/UNPEEL
-BLACKDOT_RATIO_THRESHOLD = 0.015 # [Ratio] INCREASE this to ignore small dots on good ones
-BLACKDOT_MIN_COUNT = 1       # [Count] Minimum number of internal dots to eject
 # =========================================================
 
 PIXEL_TO_MM_RATIO = 0.111  # 1 px = 0.0937 mm
 MAX_TRACKING_DISTANCE = 250 # Increased to 250 to follow fast-moving cashews without duplicate IDs
 DELAY_SECONDS = 5.50    # Default PLC ejection delay in seconds
-
-# =========================================================
-# COLOR GRADING SAMPLES (FROM REFERENCE)
-# =========================================================
-samples = np.array([
-    [35.3, 75, 51], [38.2, 74, 29], [34.1, 74, 44], [34.7, 78, 48],
-    [38.1, 81, 47], [39.5, 57, 54], [34.7, 82, 40], [35.4, 74, 41],
-    [31.5, 71, 33], [39.2, 66, 47], [35.6, 75, 53], [44.5, 57, 43],
-    [38.4, 90, 39], [36.3, 73, 38], [43.1, 78, 20], [42.7, 79, 33],
-    [29.6, 76, 38], [33.6, 48, 18], [33.6, 100, 93], [37.1, 82, 20]
-])
-hsv_cv = samples.astype(np.float32)
-hsv_cv[:, 0] /= 2            # Hue 0-179
-hsv_cv[:, 1:] *= 2.55        # Sat/Val 0-255
-H, S, V = hsv_cv[:, 0], hsv_cv[:, 1], hsv_cv[:, 2]
-H_tol, S_tol, V_tol = 2, 5, 5
-
-LOWER_OILY = np.array([
-    max(int(H.min()) - H_tol, 0),
-    max(int(S.min()) - S_tol, 0),
-    max(int(V.min()) - V_tol, 0)
-], dtype=np.uint8)
-
-UPPER_OILY = np.array([
-    min(int(H.max()) + H_tol, 179),
-    min(int(S.max()) + S_tol, 255),
-    min(int(V.max()) + V_tol, 255)
-], dtype=np.uint8)
 
 # =========================================================
 # KEYBOARD CONTROL CONFIGURATION
@@ -279,67 +331,6 @@ def get_grade(mm_value, ranges):
         if start <= mm_value <= end:
             return grade
     return None
-
-# =========================================================
-# COLOR GRADING FUNCTIONS (EXTRACTED)
-# =========================================================
-
-def is_oily_cashew(img_bgr, min_oily_ratio=None):
-    """Detect if a cashew is oily based on HSV mask ratio"""
-    if min_oily_ratio is None:
-        min_oily_ratio = OILY_RATIO_THRESHOLD
-    hsv = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2HSV)
-    oily = cv2.inRange(hsv, LOWER_OILY, UPPER_OILY)
-
-    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-    _, cashew_bin = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    cashew_pixels = np.count_nonzero(cashew_bin)
-    if cashew_pixels == 0:
-        return False
-    oily_pixels = np.count_nonzero(cv2.bitwise_and(oily, cashew_bin))
-    ratio = oily_pixels / cashew_pixels
-    return ratio >= min_oily_ratio
-
-def check_rgb_defects(image):
-    """Check for Shell, Orange, and Color defects using HSV ranges"""
-    try:
-        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    except Exception as e:
-        return False, False, False
-
-    mask_shell = cv2.inRange(hsv, np.array([8, 30, 9]), np.array([13, 255, 90]))
-    mask_orange = cv2.inRange(hsv, np.array([26, 21, 20]), np.array([26, 91, 81])) 
-    mask_color = cv2.inRange(hsv, np.array([10, 162, 32]), np.array([26, 255, 72]))
-
-    # Use manual pixel thresholds from the Control Panel at top
-    shell = np.count_nonzero(mask_shell) > SHELL_PIXEL_THRESHOLD
-    orange = np.count_nonzero(mask_orange) > 1000
-    color = np.count_nonzero(mask_color) > 1000
-
-    return shell, orange, color
-
-def detect_black_dots(gray_crop, min_dot_ratio=None, min_dot_count=None):
-    """Detect black dots using contour hierarchy (holes)"""
-    if min_dot_ratio is None: min_dot_ratio = BLACKDOT_RATIO_THRESHOLD
-    if min_dot_count is None: min_dot_count = BLACKDOT_MIN_COUNT
-    blurred = cv2.GaussianBlur(gray_crop, (5, 5), 0)
-    _, bin_crop = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    total_area = np.count_nonzero(bin_crop)
-    if total_area == 0:
-        return False, 0
-
-    contours, hierarchy = cv2.findContours(bin_crop, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
-
-    black_dots = 0
-    if hierarchy is not None:
-        for i, contour in enumerate(contours):
-            if hierarchy[0][i][3] != -1:  # Has a parent (it's a hole)
-                area = cv2.contourArea(contour)
-                if area >= total_area * min_dot_ratio:
-                    black_dots += 1
-
-    return black_dots >= min_dot_count, black_dots
 
 # =========================================================
 # YOLO FILTER CLASS
@@ -745,8 +736,13 @@ if _TrackerClass is None:
                 if M["m00"] != 0:
                     cx = int(M["m10"] / M["m00"])
                     cy = int(M["m01"] / M["m00"])
-                    rect = cv2.minAreaRect(c)
-                    w, h = rect[1]
+                    # Use fitEllipse for rotation-stable size measurement
+                    if len(c) >= 15:
+                        ellipse = cv2.fitEllipse(c)
+                        w, h = ellipse[1]
+                    else:
+                        rect = cv2.minAreaRect(c)
+                        w, h = rect[1]
                     mm_size = max(w, h) * self.pixel_to_mm_ratio
                     current_centroids.append((cx, cy))
                     current_sizes.append(mm_size)
@@ -826,7 +822,9 @@ if _TrackerClass is None:
             m = obj['measurements']
             if len(m) < 3: return max(m) if m else 0.0
             import statistics
-            s = sorted(m)
+            # Use last 30 measurements — most recent and relevant
+            recent = m[-30:] if len(m) > 30 else m
+            s = sorted(recent)
             trim = max(1, len(s) // 10)
             trimmed = s[trim:-trim] if trim < len(s)//2 else s
             return statistics.median(trimmed)
@@ -873,6 +871,13 @@ def smooth_contour(contour, window=9):
     
     smoothed = np.stack([smooth_x, smooth_y], axis=1).astype(np.int32)
     return smoothed.reshape(-1, 1, 2)
+
+# Global pre-allocated kernels for high-speed morphological operations
+KERNEL_E_5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+KERNEL_CLOSE_9 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+
+# Pre-allocated CLAHE for lighting-robust segmentation
+CLAHE_OBJ = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
 
 # =========================================================
 # ZONE PROCESSOR CLASS
@@ -939,21 +944,29 @@ class ZoneProcessor:
         zone_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
         zone_mask[y1:y2, x1:x2] = 255
         
-        # --- ULTRA-PRECISE EDGE SEGMENTATION ---
-        # Step 1: Bilateral filter - smooths texture noise while preserving TRUE edges
-        smooth = cv2.GaussianBlur(zone_frame, (7, 7), 0)
-        gray = cv2.cvtColor(smooth, cv2.COLOR_BGR2GRAY)
+        # --- LIGHTING-ROBUST SEGMENTATION (CLAHE + Adaptive Threshold) ---
+        # Step 1: Grayscale conversion
+        gray = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2GRAY)
         
-        # Step 2: Clean Otsu threshold on pre-smoothed image (high contrast cashew vs dark belt)
-        _, mask_raw = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        # Step 2: CLAHE for local contrast enhancement (handles shadows, LED flicker, dust)
+        clahe_img = CLAHE_OBJ.apply(gray)
         
-        # Step 3: Morphological refinement with ELLIPTICAL kernels
-        kernel_e = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-        kernel_close = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
-        mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_OPEN, kernel_e, iterations=1)
-        mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, kernel_close, iterations=1)
+        # Step 3: Light blur to suppress sensor noise before thresholding
+        smooth = cv2.GaussianBlur(clahe_img, (5, 5), 0)
         
-        # Step 4: ULTRA-SMOOTH EDGES - Lighter Gaussian blur for speed
+        # Step 4: Adaptive threshold — uses local neighborhood instead of single global value
+        # blockSize=51: evaluates local area around each pixel (good for cashew-sized objects)
+        # C=-8: threshold is set 8 below local mean, captures cashew edges reliably
+        mask_raw = cv2.adaptiveThreshold(
+            smooth, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, blockSize=51, C=-8
+        )
+        
+        # Step 5: Morphological refinement using pre-allocated elliptical kernels
+        mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_CLOSE, KERNEL_CLOSE_9, iterations=1)
+        mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_OPEN, KERNEL_E_5, iterations=1)
+        
+        # Step 6: ULTRA-SMOOTH EDGES - Gaussian blur for clean contour borders
         mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
         _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
         
@@ -999,8 +1012,13 @@ class ZoneProcessor:
                 continue
                 
             # Roller / Noise Checks
-            rect = cv2.minAreaRect(c)
-            (w_p, h_p) = rect[1]
+            # Use fitEllipse for rotation-stable size (fallback to minAreaRect for small contours)
+            if len(c) >= 15:
+                ellipse = cv2.fitEllipse(c)
+                (w_p, h_p) = ellipse[1]  # (major_axis, minor_axis)
+            else:
+                rect = cv2.minAreaRect(c)
+                (w_p, h_p) = rect[1]
             if max(1, w_p * h_p) == 1: continue
             mm_size = max(w_p, h_p) * PIXEL_TO_MM_RATIO
             
@@ -1049,6 +1067,8 @@ class ZoneProcessor:
         # --- PASS 3: Evaluate Cashews using LINE CROSSING + DISAPPEARANCE LOGIC ---
         disappeared_crops = []
         disappeared_objs = []
+        already_handled_ids = set()  # Track IDs handled by line-crossing to prevent double-fire
+        already_scheduled_ids = set()  # Prevent a single cashew from being queued twice in one frame
         
         x, y, _, zone_h = self.zone
         
@@ -1057,63 +1077,102 @@ class ZoneProcessor:
         trigger_line = y + (zone_h * 0.95)
         disappear_trigger_line = y + (zone_h * 0.20) # If tracker loses it anywhere below 20%, it's definitely an exit
         
-        # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line
+        # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line.
+        # IMPORTANT: a single noisy frame should not trigger a pass. We require the object to stay past
+        # the trigger line for a short confirmation window so brief tracker gaps do not silently skip cashews.
         for obj_id, obj_info in list(self.tracker.objects.items()):
-            if not obj_info.get('command_sent', False):
-                cy = obj_info['centroid'][1]
-                start_y = obj_info.get('start_y', cy)
-                
-                if start_y < min_start_line and cy >= trigger_line:
-                    max_mm = obj_info['max_mm']
-                    frames_tracked = len(obj_info.get('measurements', []))
-                    if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
-                        # --- VELOCITY OVERSHOOT COMPENSATION ---
-                        prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
-                        prev_time = obj_info.get('prev_time', time.perf_counter())
-                        curr_time = obj_info.get('curr_time', time.perf_counter())
-                        
-                        true_exit_time = time.perf_counter()
-                        dy = cy - prev_cy
-                        dt = curr_time - prev_time
-                        
-                        if dt > 0 and dy > 0:
-                            velocity = dy / dt  # pixels per second
-                            overshoot_px = cy - trigger_line
-                            if overshoot_px > 0:
-                                time_overshoot = overshoot_px / velocity
-                                true_exit_time -= time_overshoot # Shift time BACKWARDS!
-                                
-                        last_crop = obj_info.get('last_crop')
-                        if last_crop is not None:
-                            disappeared_crops.append(last_crop)
-                            disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
-                            obj_info['command_sent'] = True # NEVER fire for this ID again
-                            self.tracker.remove_object(obj_id) # KILL THE GHOST immediately so it doesn't steal cashews behind it!
-                    else:
-                        reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
-                        print(f"[{self.name}] Cashew ID:{obj_id} crossed 95% line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
-                        obj_info['command_sent'] = True # Stop spamming the log
-                        self.tracker.remove_object(obj_id) # KILL THE GHOST
-                            
+            if obj_info.get('command_sent', False):
+                continue
+            if obj_id in already_scheduled_ids:
+                continue
+
+            cy = obj_info['centroid'][1]
+            start_y = obj_info.get('start_y', cy)
+            prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
+
+            # Do not require the object to have started above 85% of the zone. In real belts, a valid cashew
+            # can first appear closer to the exit line or briefly flicker there before it is tracked cleanly.
+            # We only require that it is moving downward and has either started above the early-warning line
+            # or was seen below the trigger line in the previous frame.
+            if cy >= trigger_line and (start_y < min_start_line or prev_cy < trigger_line):
+                confirm_count = obj_info.setdefault('line_cross_confirm', 0)
+
+                # Require stable crossing instead of one noisy frame to avoid random mid-stream skips.
+                if cy >= prev_cy or prev_cy <= trigger_line:
+                    confirm_count += 1
+                else:
+                    confirm_count = max(0, confirm_count - 1)
+
+                obj_info['line_cross_confirm'] = confirm_count
+
+                if confirm_count < 2:
+                    continue
+
+                max_mm = obj_info['max_mm']
+                frames_tracked = len(obj_info.get('measurements', []))
+                if max_mm >= MIN_MM_SIZE and frames_tracked >= 3:
+                    # --- VELOCITY OVERSHOOT COMPENSATION ---
+                    prev_time = obj_info.get('prev_time', time.perf_counter())
+                    curr_time = obj_info.get('curr_time', time.perf_counter())
+
+                    true_exit_time = time.perf_counter()
+                    time_overshoot = 0
+                    dy = cy - prev_cy
+                    dt = curr_time - prev_time
+
+                    if dt > 0 and dy > 0:
+                        velocity = dy / dt
+                        overshoot_px = cy - trigger_line
+                        if overshoot_px > 0:
+                            time_overshoot = overshoot_px / velocity
+                            true_exit_time -= time_overshoot
+
+                    last_crop = obj_info.get('last_crop')
+                    if last_crop is not None:
+                        disappeared_crops.append(last_crop)
+                        disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
+                        obj_info['command_sent'] = True
+                        obj_info['crossed_trigger_line'] = True
+                        already_handled_ids.add(obj_id)
+                        already_scheduled_ids.add(obj_id)
+                        self.tracker.remove_object(obj_id)
+                else:
+                    reason = "Too small" if max_mm < MIN_MM_SIZE else f"Ghost/Flicker (Only {frames_tracked} frames, need 3+)"
+                    print(f"[{self.name}] Cashew ID:{obj_id} crossed 95% line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
+                    obj_info['command_sent'] = True
+                    obj_info['line_cross_confirm'] = 0
+                    already_handled_ids.add(obj_id)
+                    self.tracker.remove_object(obj_id)
+            else:
+                obj_info['line_cross_confirm'] = 0
+
         # 2. DISAPPEARANCE LOGIC: Catch cashews that the tracker lost slightly before the line
         for obj_id in disappeared_ids:
+            if obj_id in already_handled_ids:
+                continue  # Already fired by line-crossing above, skip completely
             obj_info = self.tracker.get_object_info(obj_id)
             if obj_info:
                 if not obj_info.get('command_sent', False):
+                    if obj_id in already_scheduled_ids:
+                        self.tracker.remove_object(obj_id)
+                        continue
+
                     cy = obj_info['centroid'][1]
                     start_y = obj_info.get('start_y', cy)
-                    
-                    if start_y < min_start_line and cy >= disappear_trigger_line:
+                    prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
+
+                    if cy >= disappear_trigger_line and (start_y < min_start_line or prev_cy < disappear_trigger_line):
                         max_mm = obj_info['max_mm']
                         frames_tracked = len(obj_info.get('measurements', []))
-                        if max_mm >= MIN_MM_SIZE and frames_tracked >= 1:
+                        if max_mm >= MIN_MM_SIZE and frames_tracked >= 3:
                             last_crop = obj_info.get('last_crop')
                             if last_crop is not None:
                                 disappeared_crops.append(last_crop)
                                 disappeared_objs.append((obj_id, obj_info, time.perf_counter(), 0))
                                 obj_info['command_sent'] = True
+                                already_scheduled_ids.add(obj_id)
                         else:
-                            reason = "Too small" if max_mm < MIN_MM_SIZE else "Noise/Flicker (Tracked 1 frame)"
+                            reason = "Too small" if max_mm < MIN_MM_SIZE else f"Ghost/Flicker (Only {frames_tracked} frames, need 3+)"
                             print(f"[{self.name}] Cashew ID:{obj_id} disappeared but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
                             obj_info['command_sent'] = True
                     else:
@@ -1127,6 +1186,9 @@ class ZoneProcessor:
             command = ZONE_COMMAND_MAP.get(self.name, '16|')
 
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
+                if obj_id in already_scheduled_ids:
+                    continue
+                already_scheduled_ids.add(obj_id)
                 if self.ejection_queue is not None:
                     self.ejection_queue.schedule(
                         obj_id=obj_id,
@@ -1170,82 +1232,12 @@ class ZoneProcessor:
                         final_grade = yolo_cat
                         
                 if not final_grade and not yolo_confirmed_good:
-                    if is_oily_cashew(last_crop):
-                        final_grade = 'oily'
-                    if not final_grade:
-                        shell, orange, color = check_rgb_defects(last_crop)
-                        if shell: final_grade = 'shell'
-                        elif orange: final_grade = 'orange'
-                        elif color: final_grade = 'color'
-                    if not final_grade:
-                        gray_crop = cv2.cvtColor(last_crop, cv2.COLOR_BGR2GRAY)
-                        dot_found, _ = detect_black_dots(gray_crop)
-                        if dot_found:
-                            final_grade = 'blackdot'
-                            
-                # If no defect, use size-based grading
-                if not final_grade:
                     final_grade = get_grade(int(max_mm), self.ranges)
                     
-                # --- SAVE FINAL IMAGE (PERFECT BORDERLINE VIEW) ---
+                # --- SAVE FINAL IMAGE ASYNCHRONOUSLY (NON-BLOCKING) ---
                 if last_crop is not None:
-                    try:
-                        save_img = last_crop.copy()
-                        h_s, w_s = save_img.shape[:2]
-                        is_defect = final_grade and not any(size in str(final_grade) for size in ['400', '320', '240', '210', '180'])
-                        color_border = (0, 0, 255) if is_defect else (0, 255, 0)
-                        
-                        # --- USE TRACKED CONTOUR (MOST ACCURATE) ---
-                        tracked_cnt = obj_info.get('latest_contour')
-                        x_b, y_b, w_b, h_b = cv2.boundingRect(tracked_cnt) if tracked_cnt is not None else (0, 0, w_s, h_s)
-                        
-                        # Compute crop origin to translate contour into crop space
-                        side = max(w_b, h_b) + 40
-                        cx_b, cy_b = x_b + w_b//2, y_b + h_b//2
-                        crop_ox = max(0, cx_b - side//2)
-                        crop_oy = max(0, cy_b - side//2)
-                        
-                        contour_drawn = False
-                        if tracked_cnt is not None and len(tracked_cnt) >= 3:
-                            # Translate the tracked contour to crop-local coordinates
-                            local_cnt = tracked_cnt.copy()
-                            local_cnt[:, 0, 0] -= crop_ox
-                            local_cnt[:, 0, 1] -= crop_oy
-                            
-                            # Apply smooth_contour for perfect border
-                            smooth_cnt = smooth_contour(local_cnt, window=11)
-                            if len(smooth_cnt) >= 3:
-                                cv2.drawContours(save_img, [smooth_cnt], -1, color_border, 2)
-                                contour_drawn = True
-                        
-                        if not contour_drawn:
-                            # Fallback: re-detect on crop using Gaussian+Otsu+heavy blur
-                            smooth_s = cv2.GaussianBlur(save_img, (7, 7), 0)
-                            gray_s = cv2.cvtColor(smooth_s, cv2.COLOR_BGR2GRAY)
-                            _, mask_s = cv2.threshold(gray_s, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-                            kernel_e_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
-                            mask_s = cv2.morphologyEx(mask_s, cv2.MORPH_CLOSE, kernel_e_s, iterations=2)
-                            mask_s = cv2.GaussianBlur(mask_s, (15, 15), 0)
-                            _, mask_s = cv2.threshold(mask_s, 127, 255, cv2.THRESH_BINARY)
-                            cnts_s, _ = cv2.findContours(mask_s, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-                            if cnts_s:
-                                best_cnt = max(cnts_s, key=cv2.contourArea)
-                                smooth_cnt_s = smooth_contour(best_cnt, window=11)
-                                cv2.drawContours(save_img, [smooth_cnt_s], -1, color_border, 2)
-                            else:
-                                cv2.rectangle(save_img, (0, 0), (w_s-1, h_s-1), color_border, 2)
-                        
-                        label_grade = f"{final_grade or 'None'}"
-                        label_size = f"{max_mm:.1f}mm"
-                        cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                        cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                        cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
-                        cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-                        filename = f"ID{obj_id}_{final_grade}_{int(max_mm)}mm_{int(time.time())}.jpg"
-                        filepath = os.path.join(DETECTIONS_FOLDER, filename)
-                        cv2.imwrite(filepath, save_img)
-                    except Exception as e:
-                        pass
+                    tracked_cnt = obj_info.get('latest_contour')
+                    ASYNC_IMAGE_SAVER.submit(last_crop, obj_id, final_grade, max_mm, tracked_cnt)
                 
                 # Object was evaluated and removed during DISAPPEARANCE LOGIC block
                 pass
@@ -1479,7 +1471,7 @@ def main():
         print("\nNo valid MAIN COM port found.")
 
     # Initialize ejection queue (single writer thread for PLC timing)
-    ejection_q = EjectionQueue(arduino=shared_arduino, delay_seconds=7.20)
+    ejection_q = EjectionQueue(arduino=shared_arduino, delay_seconds=DELAY_SECONDS)
     ejection_q.start()
 
     # Initialize zone processors using the shared ejection queue
