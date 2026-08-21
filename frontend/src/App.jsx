@@ -3,6 +3,26 @@ import axios from 'axios';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 const API_URL = 'http://127.0.0.1:8000/api';
 
+// Air Valve Ports Configuration for each Belt (1 to 15 / Belt A to O)
+// Yahan aap kisi bhi Belt ke 7 port numbers directly badal sakte hain:
+const BELT_PORTS_MAP = {
+  1: [11, 12, 13, 14, 15, 16, 21], // Belt 1 (A)
+  2: [22, 23, 24, 25, 26, 27, 28], // Belt 2 (B)
+  3: [11, 12, 13, 14, 15, 16, 21], // Belt 3 (C)
+  4: [11, 12, 13, 14, 15, 16, 21], // Belt 4 (D)
+  5: [11, 12, 13, 14, 15, 16, 21], // Belt 5 (E)
+  6: [11, 12, 13, 14, 15, 16, 21], // Belt 6
+  7: [11, 12, 13, 14, 15, 16, 21], // Belt 7
+  8: [11, 12, 13, 14, 15, 16, 21], // Belt 8
+  9: [11, 12, 13, 14, 15, 16, 21], // Belt 9
+  10: [11, 12, 13, 14, 15, 16, 21], // Belt 10
+  11: [11, 12, 13, 14, 15, 16, 21], // Belt 11
+  12: [11, 12, 13, 14, 15, 16, 21], // Belt 12
+  13: [11, 12, 13, 14, 15, 16, 21], // Belt 13
+  14: [11, 12, 13, 14, 15, 16, 21], // Belt 14
+  15: [11, 12, 13, 14, 15, 16, 21], // Belt 15
+};
+
 function App() {
   const [status, setStatus] = useState('System Ready');
   const [telemetry, setTelemetry] = useState({ cpu_load: 0, gpu_load: 0, gpu_temp: 0, uptime: '0h 0m', fps: 0 });
@@ -15,6 +35,7 @@ function App() {
 
   // Pagination state for Air Valve
   const [airValvePage, setAirValvePage] = useState(1);
+  const beltPortsMap = BELT_PORTS_MAP;
 
   // Main Settings Page State
   const [mainSettingsValue, setMainSettingsValue] = useState("");
@@ -79,15 +100,15 @@ function App() {
     "3": { ...defaultCameraParams }
   });
   const [activeCamParamIdx, setActiveCamParamIdx] = useState("1");
-  
+
   // Zones Configuration State
   const [zonesTab, setZonesTab] = useState('camera'); // 'camera' or 'zones'
   const [zones, setZones] = useState([
-    {"name": "Zone-1", "zone": [100, 100, 370, 1920]},
-    {"name": "Zone-2", "zone": [540, 100, 350, 1910]},
-    {"name": "Zone-3", "zone": [960, 100, 360, 1910]},
-    {"name": "Zone-4", "zone": [1400, 100, 340, 1910]},
-    {"name": "Zone-5", "zone": [1840, 100, 370, 1910]}
+    { "name": "Zone-1", "zone": [100, 100, 370, 1920] },
+    { "name": "Zone-2", "zone": [540, 100, 350, 1910] },
+    { "name": "Zone-3", "zone": [960, 100, 360, 1910] },
+    { "name": "Zone-4", "zone": [1400, 100, 340, 1910] },
+    { "name": "Zone-5", "zone": [1840, 100, 370, 1910] }
   ]);
   const [activeZoneIdx, setActiveZoneIdx] = useState(0);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -384,9 +405,9 @@ function App() {
       return;
     }
     try {
-      await axios.post(`${API_URL}/main-settings`, { 
-        value: mainSettingsValue, 
-        belt_number: beltNum 
+      await axios.post(`${API_URL}/main-settings`, {
+        value: mainSettingsValue,
+        belt_number: beltNum
       });
       showToast(`Value ${mainSettingsValue} saved to Belt ${beltNum} successfully!`);
     } catch (err) {
@@ -432,7 +453,7 @@ function App() {
       handleAction('open-keyboard', 'Virtual Keyboard');
       return;
     }
-    
+
     if (item.type === 'page') {
       if (item.name === 'Team Viewer') {
         handleAction('open-teamviewer', 'Team Viewer');
@@ -495,8 +516,8 @@ function App() {
                 key={page.name}
                 onClick={() => { handleNavClick(page); setMobileMenuOpen(false); }}
                 className={`group flex items-center justify-start gap-4 px-4 py-3.5 rounded-2xl font-bold transition-all duration-300 ${isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 translate-x-1'
-                    : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30 translate-x-1'
+                  : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                   }`}
               >
                 <div className={`transition-colors ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-blue-500'}`}>
@@ -554,7 +575,7 @@ function App() {
         <div className="md:hidden flex items-center justify-between bg-white/80 backdrop-blur-md border border-slate-200/60 p-3 rounded-2xl shadow-sm mb-4 shrink-0">
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileMenuOpen(true)} className="text-slate-600 p-1 hover:bg-slate-100 rounded-lg">
-              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
             </button>
             <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow-sm overflow-hidden relative ring-1 ring-slate-100">
               <img src="/video.gif" alt="Logo" className="absolute w-full h-full object-cover scale-[1.35]" />
@@ -592,11 +613,11 @@ function App() {
               {activePage !== 'Control Hub' && activePage !== 'Air Valve' && activePage}
             </h2>
             <p className="text-slate-500 text-sm font-medium mt-2 max-w-lg">
-              {activePage === 'Control Hub' && "Manage Python automation, grading scripts, and real-time operations."}
+              {activePage === 'Control Hub'}
               {activePage === 'Air Valve' && "Manual testing interface for 15 belts and their respective 7 ports."}
             </p>
           </div>
-
+          03++003++++++
           {/* Live Date/Time Display */}
           <div className="flex flex-col items-start lg:items-end text-left lg:text-right bg-white/60 backdrop-blur-md border border-slate-200/60 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl shadow-sm w-full lg:w-auto">
             <span className="text-xl md:text-2xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
@@ -617,17 +638,17 @@ function App() {
             </div>
             <div className="w-px h-3 md:h-4 bg-slate-300"></div>
             <div className="flex items-center gap-1.5 md:gap-2">
-              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
               <span>CPU: <span className={telemetry.cpu_load > 80 ? 'text-red-500' : 'text-slate-900'}>{telemetry.cpu_load}%</span></span>
             </div>
             <div className="w-px h-3 md:h-4 bg-slate-300"></div>
             <div className="flex items-center gap-1.5 md:gap-2">
-              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
               <span>GPU: <span className={telemetry.gpu_load > 80 ? 'text-red-500' : 'text-slate-900'}>{telemetry.gpu_load}%</span></span>
             </div>
             <div className="w-px h-3 md:h-4 bg-slate-300"></div>
             <div className="flex items-center gap-1.5 md:gap-2">
-              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <svg className="w-3 h-3 md:w-4 md:h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
               <span>Uptime: <span className="text-slate-900">{telemetry.uptime}</span></span>
             </div>
           </div>
@@ -797,8 +818,8 @@ function App() {
                     key={pageNum}
                     onClick={() => setAirValvePage(pageNum)}
                     className={`px-3 py-2 md:px-8 md:py-3 rounded-lg md:rounded-xl font-bold text-xs md:text-lg transition-all border ${airValvePage === pageNum
-                        ? 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-500/20'
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
+                      ? 'bg-blue-600 text-white border-blue-700 shadow-md shadow-blue-500/20'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50'
                       }`}
                   >
                     Page {pageNum} <span className="text-[10px] md:text-sm font-medium opacity-80 ml-0.5 md:ml-1">(Belt {(pageNum - 1) * 5 + 1}-{pageNum * 5})</span>
@@ -814,7 +835,7 @@ function App() {
                         Belt {beltId}
                       </div>
                       <div className="grid grid-cols-7 gap-1.5 md:gap-3 flex-1 md:h-full">
-                        {[11, 12, 13, 14, 15, 16, 21].map(portId => (
+                        {(beltPortsMap[beltId] || [11, 12, 13, 14, 15, 16, 21]).map(portId => (
                           <button
                             key={portId}
                             onClick={async (e) => {
@@ -1143,82 +1164,82 @@ function App() {
                   <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                   System Configuration
                 </h2>
-                
-                <div className="w-full max-w-2xl bg-slate-50 border border-slate-200 p-8 rounded-3xl shadow-sm flex flex-col items-center gap-6">
-                   <div className="flex w-full items-center gap-4">
-                     <div 
-                        onClick={() => {
-                          if (!showMainSettingsNumpad) {
-                            setMainSettingsValue("");
-                            setShowMainSettingsNumpad(true);
-                            setShowBeltsGrid(false);
-                            setMainSettingsSelectedBelt(null);
-                          }
-                        }}
-                        className={`flex-1 h-16 bg-white border-2 rounded-2xl flex items-center px-6 text-3xl tracking-widest font-black cursor-pointer transition-all ${showMainSettingsNumpad ? 'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.15)] text-blue-600 scale-[1.02]' : 'border-slate-200 text-slate-800 hover:border-blue-300'}`}
-                     >
-                       {mainSettingsValue || <span className="text-slate-300 font-medium tracking-normal text-xl">Enter Value...</span>}
-                     </div>
-                     <button 
-                       onClick={() => {
-                         setShowMainSettingsNumpad(false);
-                         setShowBeltsGrid(true);
-                       }}
-                       className="h-16 px-12 bg-indigo-600 hover:bg-indigo-700 text-white text-xl font-bold rounded-2xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2"
-                     >
-                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                       OK
-                     </button>
-                   </div>
 
-                   {/* Inline Numpad */}
-                   {showMainSettingsNumpad && (
-                     <div className="w-[320px] bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xl mt-2 animate-in zoom-in-95 fade-in duration-200">
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-sm font-bold text-slate-400 tracking-widest">NUMPAD</h3>
-                          <button onClick={() => { setShowMainSettingsNumpad(false); setShowBeltsGrid(true); }} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-1 transition-colors">
-                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <div className="w-full max-w-2xl bg-slate-50 border border-slate-200 p-8 rounded-3xl shadow-sm flex flex-col items-center gap-6">
+                  <div className="flex w-full items-center gap-4">
+                    <div
+                      onClick={() => {
+                        if (!showMainSettingsNumpad) {
+                          setMainSettingsValue("");
+                          setShowMainSettingsNumpad(true);
+                          setShowBeltsGrid(false);
+                          setMainSettingsSelectedBelt(null);
+                        }
+                      }}
+                      className={`flex-1 h-16 bg-white border-2 rounded-2xl flex items-center px-6 text-3xl tracking-widest font-black cursor-pointer transition-all ${showMainSettingsNumpad ? 'border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.15)] text-blue-600 scale-[1.02]' : 'border-slate-200 text-slate-800 hover:border-blue-300'}`}
+                    >
+                      {mainSettingsValue || <span className="text-slate-300 font-medium tracking-normal text-xl">Enter Value...</span>}
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowMainSettingsNumpad(false);
+                        setShowBeltsGrid(true);
+                      }}
+                      className="h-16 px-12 bg-indigo-600 hover:bg-indigo-700 text-white text-xl font-bold rounded-2xl shadow-lg shadow-indigo-500/30 transition-all active:scale-95 flex items-center gap-2"
+                    >
+                      <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                      OK
+                    </button>
+                  </div>
+
+                  {/* Inline Numpad */}
+                  {showMainSettingsNumpad && (
+                    <div className="w-[320px] bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xl mt-2 animate-in zoom-in-95 fade-in duration-200">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-sm font-bold text-slate-400 tracking-widest">NUMPAD</h3>
+                        <button onClick={() => { setShowMainSettingsNumpad(false); setShowBeltsGrid(true); }} className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-full p-1 transition-colors">
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'DEL'].map((num) => (
+                          <button
+                            key={num}
+                            disabled={num === '.'}
+                            onClick={() => {
+                              if (num === 'DEL') {
+                                setMainSettingsValue(prev => prev.slice(0, -1));
+                              } else {
+                                setMainSettingsValue(prev => prev.length >= 8 ? num.toString() : prev + num);
+                              }
+                            }}
+                            className={`h-14 rounded-xl font-black text-xl transition-all active:scale-95 flex justify-center items-center shadow-sm ${num === 'DEL' ? 'bg-red-50 text-red-600 hover:bg-red-100' : num === '.' ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-50 text-slate-800 border border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
+                          >
+                            {num === 'DEL' ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"></path></svg> : num}
                           </button>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, '.', 0, 'DEL'].map((num) => (
-                            <button
-                              key={num}
-                              disabled={num === '.'}
-                              onClick={() => {
-                                if (num === 'DEL') {
-                                  setMainSettingsValue(prev => prev.slice(0, -1));
-                                } else {
-                                  setMainSettingsValue(prev => prev.length >= 8 ? num.toString() : prev + num);
-                                }
-                              }}
-                              className={`h-14 rounded-xl font-black text-xl transition-all active:scale-95 flex justify-center items-center shadow-sm ${num === 'DEL' ? 'bg-red-50 text-red-600 hover:bg-red-100' : num === '.' ? 'bg-slate-100 text-slate-300 cursor-not-allowed' : 'bg-slate-50 text-slate-800 border border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
-                            >
-                              {num === 'DEL' ? <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M3 12l6.414 6.414a2 2 0 001.414.586H19a2 2 0 002-2V7a2 2 0 00-2-2h-8.172a2 2 0 00-1.414.586L3 12z"></path></svg> : num}
-                            </button>
-                          ))}
-                        </div>
-                     </div>
-                   )}
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {showBeltsGrid && (
                   <div className="w-full mt-12 px-2 animate-in slide-in-from-bottom-4 fade-in duration-300">
-                     <h3 className="text-lg font-bold text-slate-600 mb-4 flex items-center gap-2">
-                       <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
-                       Select Target Belt
-                     </h3>
-                     <div className="grid grid-cols-5 gap-4">
-                       {[...Array(15)].map((_, i) => (
-                         <button
-                           key={i+1}
-                           onClick={() => saveMainSettingsToBelt(i+1)}
-                           className={`h-16 rounded-2xl font-bold text-lg border-2 transition-all flex items-center justify-center ${mainSettingsSelectedBelt === i+1 ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-[0_0_0_4px_rgba(59,130,246,0.15)] scale-105 z-10' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'}`}
-                         >
-                           Belt {i+1}
-                         </button>
-                       ))}
-                     </div>
+                    <h3 className="text-lg font-bold text-slate-600 mb-4 flex items-center gap-2">
+                      <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+                      Select Target Belt
+                    </h3>
+                    <div className="grid grid-cols-5 gap-4">
+                      {[...Array(15)].map((_, i) => (
+                        <button
+                          key={i + 1}
+                          onClick={() => saveMainSettingsToBelt(i + 1)}
+                          className={`h-16 rounded-2xl font-bold text-lg border-2 transition-all flex items-center justify-center ${mainSettingsSelectedBelt === i + 1 ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-[0_0_0_4px_rgba(59,130,246,0.15)] scale-105 z-10' : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-md'}`}
+                        >
+                          Belt {i + 1}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
@@ -1292,7 +1313,7 @@ function App() {
 
               {/* Scrollable Matrix Table */}
               <div className="flex-1 overflow-auto custom-scrollbar border border-slate-200 rounded-xl bg-slate-50/50">
-                <table className="w-full text-center border-collapse" style={{minWidth: '500px'}}>
+                <table className="w-full text-center border-collapse" style={{ minWidth: '500px' }}>
                   <thead className="sticky top-0 bg-slate-100/90 backdrop-blur-sm shadow-sm z-10">
                     <tr>
                       <th className="p-2 md:p-4 text-slate-500 font-bold text-[10px] md:text-sm border-b border-slate-200 sticky left-0 bg-slate-100/90 z-20">BELT</th>
@@ -1440,7 +1461,7 @@ function App() {
             </div>
 
             <div className="flex flex-col md:flex-row h-full w-full p-4 gap-4 bg-slate-50/50 overflow-y-auto md:overflow-hidden">
-              
+
               {/* Camera Selection - Horizontal on mobile, Vertical sidebar on desktop */}
               <div className="flex flex-row md:flex-col gap-2 md:w-24 shrink-0">
                 {["1", "2", "3"].map(camIdx => (
@@ -1471,9 +1492,9 @@ function App() {
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
                 </button>
                 {isPreviewing ? (
-                  <img 
+                  <img
                     key={activeCamParamIdx}
-                    src={`${API_URL}/video_feed/${activeCamParamIdx}`} 
+                    src={`${API_URL}/video_feed/${activeCamParamIdx}`}
                     className="w-full h-full object-contain"
                     alt={`Camera ${activeCamParamIdx} Live Feed`}
                     onError={(e) => {
@@ -1512,7 +1533,7 @@ function App() {
                     Zones Config
                   </button>
                 </div>
-                
+
                 {zonesTab === 'camera' ? (
                   <>
                     <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
@@ -1536,10 +1557,10 @@ function App() {
                               className="w-20 p-1 bg-white border border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-blue-500 text-center"
                             />
                           </div>
-                          <input 
-                            type="range" 
-                            min={param.min} 
-                            max={param.max} 
+                          <input
+                            type="range"
+                            min={param.min}
+                            max={param.max}
                             value={cameraParams[activeCamParamIdx]?.[param.key] ?? 0}
                             onChange={(e) => updateCameraParam(param.key, e.target.value)}
                             className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -1593,10 +1614,10 @@ function App() {
                                 className="w-20 p-1 bg-white border border-slate-200 rounded-lg font-bold text-xs text-slate-800 outline-none focus:border-blue-500 text-center"
                               />
                             </div>
-                            <input 
-                              type="range" 
-                              min={0} 
-                              max={param.max} 
+                            <input
+                              type="range"
+                              min={0}
+                              max={param.max}
                               value={zones[activeZoneIdx].zone[param.idx] ?? 0}
                               onChange={(e) => updateZoneParam(activeZoneIdx, param.idx, e.target.value)}
                               className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
@@ -1827,11 +1848,10 @@ function App() {
 
       {/* Toast Notification */}
       {toast.show && (
-        <div className={`fixed top-8 right-[320px] z-[100] px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4 animate-in slide-in-from-top-5 fade-in duration-300 ${
-          toast.type === 'error' ? 'bg-red-600 text-white shadow-red-500/30' : 
-          toast.type === 'info' ? 'bg-blue-600 text-white shadow-blue-500/30' : 
-          'bg-slate-800 text-white shadow-slate-800/30'
-        }`}>
+        <div className={`fixed top-8 right-[320px] z-[100] px-6 py-3 rounded-2xl shadow-xl flex items-center gap-4 animate-in slide-in-from-top-5 fade-in duration-300 ${toast.type === 'error' ? 'bg-red-600 text-white shadow-red-500/30' :
+          toast.type === 'info' ? 'bg-blue-600 text-white shadow-blue-500/30' :
+            'bg-slate-800 text-white shadow-slate-800/30'
+          }`}>
           {toast.type === 'error' ? (
             <svg className="w-6 h-6 text-red-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
           ) : toast.type === 'info' ? (

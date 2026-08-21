@@ -3035,3 +3035,39 @@
 2026-08-14 15:10:35 - stop_camera_preview requested
 2026-08-14 15:10:35 - stop_camera_preview requested
 2026-08-14 15:10:35 - stop_camera_preview requested
+2026-08-19 16:26:06 - stop_camera_preview requested
+2026-08-19 16:26:07 - stop_camera_preview requested
+2026-08-19 16:27:22 - stop_camera_preview requested
+2026-08-19 16:27:23 - stop_camera_preview requested
+2026-08-19 16:27:29 - stop_camera_preview requested
+2026-08-19 16:27:29 - stop_camera_preview requested
+2026-08-19 16:34:50 - stop_camera_preview requested
+2026-08-19 16:34:54 - stop_camera_preview requested
+2026-08-19 16:34:54 - generate_camera_frames called for cam_idx=2, stream_id=1787137494.7245216
+2026-08-19 16:34:54 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-19 16:34:54 - Target serial for cam_idx=2: 
+2026-08-19 16:34:54 - No target serial found, returning.
+2026-08-19 16:34:55 - stop_camera_preview requested
+2026-08-19 16:34:55 - stop_camera_preview requested
+2026-08-19 16:34:56 - generate_camera_frames called for cam_idx=1, stream_id=1787137496.1386282
+2026-08-19 16:34:56 - Refs file content: {"references": ["DA9551444", "", ""]}
+2026-08-19 16:34:56 - Target serial for cam_idx=1: DA9551444
+2026-08-19 16:34:56 - Initializing MVS...
+2026-08-19 16:34:56 - Enum devices return: 0, count: 0
+2026-08-19 16:34:56 - No matching device found, returning.
+2026-08-19 16:34:56 - stop_camera_preview requested
+2026-08-19 16:34:57 - stop_camera_preview requested
+2026-08-21 13:31:15 - stop_camera_preview requested
+2026-08-21 13:31:16 - stop_camera_preview requested
+2026-08-21 13:31:57 - stop_camera_preview requested
+2026-08-21 13:31:58 - stop_camera_preview requested
+2026-08-21 13:32:06 - stop_camera_preview requested
+2026-08-21 13:32:11 - stop_camera_preview requested
+2026-08-21 13:32:11 - stop_camera_preview requested
+2026-08-21 13:32:53 - stop_camera_preview requested
+2026-08-21 13:32:53 - stop_camera_preview requested
+2026-08-21 13:32:58 - stop_camera_preview requested
+2026-08-21 13:46:04 - stop_camera_preview requested
+2026-08-21 13:46:04 - stop_camera_preview requested
+2026-08-21 13:46:10 - stop_camera_preview requested
+2026-08-21 13:46:10 - stop_camera_preview requested

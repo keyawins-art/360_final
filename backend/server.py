@@ -798,20 +798,39 @@ class ValveCommand(BaseModel):
 def fire_valve(cmd: ValveCommand):
     print(f"[ACTION] Firing air for Belt {cmd.belt_id}, Port {cmd.port_id}", flush=True)
     
-    # Read the COM port from the shared configuration file
-    com_file = r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt"
+    # 5 Belts per Controller/Arduino:
+    # Belts 1-5  -> Module 'a' (com_port(a).txt)
+    # Belts 6-10 -> Module 'b' (com_port(b).txt)
+    # Belts 11-15 -> Module 'c' (com_port(c).txt)
+    if cmd.belt_id <= 5:
+        belt_char = 'a'
+    elif cmd.belt_id <= 10:
+        belt_char = 'b'
+    else:
+        belt_char = 'c'
+    
+    possible_paths = [
+        rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt",
+        rf"D:\Keya Work\360\wate\com_port({belt_char}).txt",
+        rf"D:\4_belt_main\4_belt\comport info\comport({belt_char}).txt",
+        rf"c:\Users\i7\Desktop\360\wate\com_port({belt_char}).txt",
+        r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt"
+    ]
+    
     com_port = None
-    if os.path.exists(com_file):
-        try:
-            with open(com_file, 'r') as f:
-                content = f.read().strip()
-                if content.startswith("COM"):
-                    com_port = content
-        except Exception as e:
-            print(f"Error reading COM file: {e}")
+    for p in possible_paths:
+        if os.path.exists(p):
+            try:
+                with open(p, 'r') as f:
+                    content = f.read().strip()
+                    if content.startswith("COM"):
+                        com_port = content
+                        break
+            except Exception as e:
+                print(f"Error reading COM file {p}: {e}")
             
     if not com_port:
-        return {"status": "error", "message": "COM port file not found or invalid."}
+        return {"status": "error", "message": f"COM port file for Belt {cmd.belt_id} ({belt_char}) not found or invalid."}
         
     try:
         # Open port, send command, close port immediately
