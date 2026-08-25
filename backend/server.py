@@ -1108,25 +1108,15 @@ COMPORT_REF_FILE = os.path.join(BASE_DIR, "wate", "comport_ref.txt")
 def comport_check():
     try:
         import serial.tools.list_ports
+        import re
         ports = serial.tools.list_ports.comports()
-        comports = []
-        for p in ports:
-            # Filter for actual active USB/serial devices (exclude dummy motherboard ACPI headers)
-            is_usb_or_active = bool(
-                (p.vid is not None) or 
-                ("USB" in (p.hwid or "").upper()) or 
-                ("USB" in (p.description or "").upper()) or
-                (p.description and "Communications Port" not in p.description)
-            )
-            if is_usb_or_active:
-                comports.append(p.device)
         
-        # If no USB port found, exclude dummy ACPI motherboard ports
-        if not comports:
-            for p in ports:
-                if not (p.hwid or "").upper().startswith("ACPI"):
-                    comports.append(p.device)
-
+        def sort_key(p):
+            m = re.search(r'\d+', p.device)
+            return int(m.group()) if m else 999
+            
+        ports_sorted = sorted(ports, key=sort_key)
+        comports = [p.device for p in ports_sorted]
         return {"status": "success", "comports": comports}
     except Exception as e:
         return {"status": "error", "message": str(e), "comports": []}
