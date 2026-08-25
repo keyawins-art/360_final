@@ -1236,33 +1236,65 @@ if __name__ == "__main__":
     import uvicorn
     import webview
 
+    # Free port 8000 if occupied by a previous zombie instance
+    try:
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                for conns in proc.net_connections(kind='inet'):
+                    if conns.laddr and conns.laddr.port == 8000:
+                        if proc.pid != os.getpid():
+                            proc.terminate()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
     # 1. Start FastAPI / Uvicorn server in a background daemon thread
     server_config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
     server_instance = uvicorn.Server(server_config)
 
     server_thread = threading.Thread(target=server_instance.run, daemon=True)
     server_thread.start()
+    time.sleep(0.5)
 
-    # 2. Launch Native Desktop Window (No browser/Chrome needed)
-    window = webview.create_window(
-        title="360 Cashew Sorting & Grading System",
-        url="http://127.0.0.1:8000",
-        width=1600,
-        height=920,
-        min_size=(1024, 700),
-        resizable=True,
-        fullscreen=False,
-        easy_drag=True
-    )
-    
+    # 2. Launch Dedicated Desktop Window
     try:
+        window = webview.create_window(
+            title="360 Cashew Sorting & Grading System",
+            url="http://127.0.0.1:8000",
+            width=1600,
+            height=920,
+            min_size=(1024, 700),
+            resizable=True,
+            fullscreen=False,
+            easy_drag=True
+        )
         webview.start(gui="edgechromium", debug=False)
     except Exception as e:
-        print(f"Webview error, falling back to default gui: {e}")
+        print(f"Webview edgechromium error: {e}")
         try:
             webview.start(debug=False)
         except Exception as e2:
             print(f"Fallback webview error: {e2}")
+            # Standalone App Window fallback (No URL bar, no tabs)
+            try:
+                msedge_paths = [
+                    r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+                    r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+                    r"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+                ]
+                launched = False
+                for ep in msedge_paths:
+                    if os.path.exists(ep):
+                        subprocess.Popen([ep, "--app=http://127.0.0.1:8000", "--window-size=1600,920"])
+                        launched = True
+                        break
+                if not launched:
+                    import webbrowser
+                    webbrowser.open("http://127.0.0.1:8000")
+            except Exception:
+                pass
             server_thread.join()
 
     # 3. Clean exit when the window is closed
