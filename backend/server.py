@@ -1111,23 +1111,22 @@ def comport_check():
         ports = serial.tools.list_ports.comports()
         comports = []
         for p in ports:
-            comports.append(p.device)
-        return {"status": "success", "comports": comports}
-    except ImportError:
-        # Fallback: scan common COM ports manually
-        import ctypes
-        comports = []
-        for i in range(1, 21):
-            try:
-                port = f"COM{i}"
-                handle = ctypes.windll.kernel32.CreateFileW(
-                    f"\\\\.\\{port}", 0xC0000000, 0, None, 3, 0, None
-                )
-                if handle != -1:
-                    ctypes.windll.kernel32.CloseHandle(handle)
-                    comports.append(port)
-            except:
-                pass
+            # Filter for actual active USB/serial devices (exclude dummy motherboard ACPI headers)
+            is_usb_or_active = bool(
+                (p.vid is not None) or 
+                ("USB" in (p.hwid or "").upper()) or 
+                ("USB" in (p.description or "").upper()) or
+                (p.description and "Communications Port" not in p.description)
+            )
+            if is_usb_or_active:
+                comports.append(p.device)
+        
+        # If no USB port found, exclude dummy ACPI motherboard ports
+        if not comports:
+            for p in ports:
+                if not (p.hwid or "").upper().startswith("ACPI"):
+                    comports.append(p.device)
+
         return {"status": "success", "comports": comports}
     except Exception as e:
         return {"status": "error", "message": str(e), "comports": []}

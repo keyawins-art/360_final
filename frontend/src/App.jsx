@@ -341,8 +341,8 @@ function App() {
     }
   };
 
-  const checkComports = () => {
-    setIsCheckingComports(true);
+  const checkComports = (showSpinner = false) => {
+    if (showSpinner) setIsCheckingComports(true);
     axios.get(`${API_URL}/comport-check`)
       .then(res => {
         if (res.data && res.data.comports) {
@@ -351,10 +351,28 @@ function App() {
       })
       .catch(err => {
         console.error(err);
-        setConnectedComports(["COM1", "COM2", "COM3", "COM4"]);
+        setConnectedComports([]);
       })
-      .finally(() => setIsCheckingComports(false));
+      .finally(() => {
+        if (showSpinner) setIsCheckingComports(false);
+      });
   };
+
+  useEffect(() => {
+    if (activeSettingsModule === 'Comports') {
+      axios.get(`${API_URL}/comport-ref`)
+        .then(res => {
+          if (res.data && res.data.references) {
+            setComportRefs(res.data.references);
+          }
+        })
+        .catch(err => console.error(err));
+
+      checkComports(true);
+      const interval = setInterval(() => checkComports(false), 2000);
+      return () => clearInterval(interval);
+    }
+  }, [activeSettingsModule]);
 
   const saveComportRefs = async () => {
     try {
@@ -1142,7 +1160,7 @@ function App() {
 
                     <div className="mt-6">
                       <button
-                        onClick={checkComports}
+                        onClick={() => checkComports(true)}
                         disabled={isCheckingComports}
                         className="w-full py-3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-base font-bold rounded-xl shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                       >
