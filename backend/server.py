@@ -135,6 +135,9 @@ app.add_middleware(
 )
 
 active_processes = []
+current_mode = "Stopped"
+last_terminal_message = "System Ready"
+
 # Helper to find first existing path from candidates, or fallback to default
 def get_existing_path(candidates, default_path):
     for c in candidates:

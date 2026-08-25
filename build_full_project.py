@@ -11,6 +11,12 @@ def build():
     print(" [START] BUILDING 360 SORTING SYSTEM STANDALONE APPLICATION (.EXE)")
     print("=" * 70)
 
+    # 0. Kill any existing running instance
+    try:
+        subprocess.run(["taskkill", "/F", "/IM", "360_App.exe", "/T"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
+
     # 1. Build Frontend (React + Vite)
     print("\n[STEP 1/4] Building Frontend (React + Vite)...")
     frontend_dir = os.path.join(BASE_DIR, "frontend")
