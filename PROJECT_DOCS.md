@@ -31,11 +31,20 @@ The system uses a **Constant-Velocity Kalman Filter**:
 - Calculates a "robust size" using a trimmed median of the last 30 measurements.
 
 ## 5. Decision & Ejection
-1. **Line Crossing:** When a tracked cashew crosses the 95% Y-coordinate of the zone, its final size and grade are evaluated.
-2. **Disappearance:** If a cashew is lost near the exit line, it is assumed to have exited and is also evaluated.
-3. **Command Queuing:** The final grade maps to a serial command, scheduled for execution after a configurable delay (e.g., 5.5 seconds).
+1. **Line Crossing:** When a tracked cashew crosses the 95% Y-coordinate of the zone, its final size and defect status are evaluated.
+2. **GPU Defect Classification (`CashewQualityFilter`):** Uses an ONNX Runtime CUDA Execution Provider on NVIDIA RTX 5050 GPU (~9.9ms) to identify defects: `Bad`, `Blackdot`, `Brown`, `Multi`, `Oilly`, `Unpill`.
+3. **Size Grading:** For confirmed good cashews, `get_grade(max_mm, ranges)` maps size to grade levels (`400`, `320`, `240`, `210`, `180`).
+4. **Command Queuing:** The final grade maps to `GRADE_PORT_MAP` and is scheduled asynchronously in `EjectionQueue` with per-zone delay timing (`ZONE_DELAY_MAP`).
 
-## 6. Air Valve Testing & Multi-Controller Mapping
+## 6. Multi-Grade Port Mapping (`GRADE_PORT_MAP`)
+Commands are assigned distinctly per grade and zone:
+- **Zone 1:** `400` -> `11|`, `320` -> `12|`, `240` -> `13|`, `210` -> `14|`, `180` -> `15|`, `default/defect` -> `16|`
+- **Zone 2:** `400` -> `21|`, `320` -> `22|`, `240` -> `23|`, `210` -> `24|`, `180` -> `25|`, `default/defect` -> `26|`
+- **Zone 3:** `400` -> `31|`, `320` -> `32|`, `240` -> `33|`, `210` -> `34|`, `180` -> `35|`, `default/defect` -> `36|`
+- **Zone 4:** `400` -> `41|`, `320` -> `42|`, `240` -> `43|`, `210` -> `44|`, `180` -> `45|`, `default/defect` -> `46|`
+- **Zone 5:** `400` -> `51|`, `320` -> `52|`, `240` -> `53|`, `210` -> `54|`, `180` -> `55|`, `default/defect` -> `56|`
+
+## 7. Air Valve Testing & Multi-Controller Mapping
 The UI provides manual testing interfaces for up to 15 belts across 3 distinct pages/controllers:
 - **Controller A (`com_port(a).txt`)**: Controls Page 1 (Belts 1 to 5)
 - **Controller B (`com_port(b).txt`)**: Controls Page 2 (Belts 6 to 10)

@@ -7,20 +7,20 @@ const API_URL = 'http://127.0.0.1:8000/api';
 // Yahan aap kisi bhi Belt ke 7 port numbers directly badal sakte hain:
 const BELT_PORTS_MAP = {
   1: [11, 12, 13, 14, 15, 16, 21], // Belt 1 (A)
-  2: [22, 23, 24, 25, 26, 27, 28], // Belt 2 (B)
-  3: [11, 12, 13, 14, 15, 16, 21], // Belt 3 (C)
-  4: [11, 12, 13, 14, 15, 16, 21], // Belt 4 (D)
-  5: [11, 12, 13, 14, 15, 16, 21], // Belt 5 (E)
+  2: [22, 23, 24, 25, 26, 31, 32], // Belt 2 (B)
+  3: [33, 34, 35, 36, 41, 42, 43], // Belt 3 (C)
+  4: [44, 45, 46, 51, 52, 53, 54], // Belt 4 (D)
+  5: [55, 56, 61, 62, 63, 64, 65], // Belt 5 (E)
   6: [11, 12, 13, 14, 15, 16, 21], // Belt 6
-  7: [11, 12, 13, 14, 15, 16, 21], // Belt 7
-  8: [11, 12, 13, 14, 15, 16, 21], // Belt 8
-  9: [11, 12, 13, 14, 15, 16, 21], // Belt 9
-  10: [11, 12, 13, 14, 15, 16, 21], // Belt 10
+  7: [22, 23, 24, 25, 26, 31, 32], // Belt 7
+  8: [33, 34, 35, 36, 41, 42, 43], // Belt 8
+  9: [44, 45, 46, 51, 52, 53, 54], // Belt 9
+  10: [55, 56, 61, 62, 63, 64, 65], // Belt 10
   11: [11, 12, 13, 14, 15, 16, 21], // Belt 11
-  12: [11, 12, 13, 14, 15, 16, 21], // Belt 12
-  13: [11, 12, 13, 14, 15, 16, 21], // Belt 13
-  14: [11, 12, 13, 14, 15, 16, 21], // Belt 14
-  15: [11, 12, 13, 14, 15, 16, 21], // Belt 15
+  12: [22, 23, 24, 25, 26, 31, 32], // Belt 12
+  13: [33, 34, 35, 36, 41, 42, 43], // Belt 13
+  14: [44, 45, 46, 51, 52, 53, 54], // Belt 14
+  15: [55, 56, 61, 62, 63, 64, 65], // Belt 15
 };
 
 function App() {
@@ -617,7 +617,6 @@ function App() {
               {activePage === 'Air Valve' && "Manual testing interface for 15 belts and their respective 7 ports."}
             </p>
           </div>
-          03++003++++++
           {/* Live Date/Time Display */}
           <div className="flex flex-col items-start lg:items-end text-left lg:text-right bg-white/60 backdrop-blur-md border border-slate-200/60 px-4 py-2 md:px-6 md:py-3 rounded-xl md:rounded-2xl shadow-sm w-full lg:w-auto">
             <span className="text-xl md:text-2xl font-black text-slate-800 tabular-nums tracking-tight leading-none">
@@ -828,7 +827,7 @@ function App() {
               </div>
 
               <div className="flex-1 flex flex-col min-h-0">
-                <div className="flex-1 flex flex-col gap-3 h-full">
+                <div className="flex- konsi  flex flex-col gap-3 h-full">
                   {Array.from({ length: 5 }, (_, i) => (airValvePage - 1) * 5 + i + 1).map(beltId => (
                     <div key={beltId} className="flex-1 flex flex-col md:flex-row md:items-center gap-2 md:gap-4 p-2 md:p-3 bg-slate-50 border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-sm transition-all group min-h-0">
                       <div className="w-full md:w-32 xl:w-40 py-2 md:py-0 md:h-full font-black text-slate-800 text-lg md:text-2xl xl:text-3xl bg-white rounded-lg border border-slate-200 flex items-center justify-center shadow-sm group-hover:border-blue-400 group-hover:text-blue-700 transition-colors shrink-0">
@@ -878,7 +877,6 @@ function App() {
                   <div className="flex-1 text-center">Min</div>
                   <div className="flex-1 text-center">Max</div>
                 </div>
-
                 <div className="flex flex-col gap-3 md:gap-5 flex-1 px-2 md:px-4 mb-4">
                   {['400', '320', '240', '210', '180'].map(level => (
                     <div key={level} className="flex gap-2 md:gap-6 items-center flex-1 min-h-[48px] md:min-h-0">

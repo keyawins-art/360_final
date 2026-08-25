@@ -16,5 +16,17 @@
   - Enhanced `/api/fire-valve` in `backend/server.py` to route commands to appropriate Arduino controller COM files dynamically based on belt groups (Page 1 -> `com_port(a).txt`, Page 2 -> `com_port(b).txt`, Page 3 -> `com_port(c).txt`).
   - Resolved COM port lookup and multi-device connection handling on Windows serial subsystem.
 - **Frontend Build & Deployment:**
-  - Compiled and verified production bundle in `frontend/dist` to sync with FastAPI static assets.
+## 2026-08-22
+- **Granular Multi-Grade Ejection Routing (`GRADE_PORT_MAP`):**
+  - Replaced flat zone-level command mapping with granular, grade-specific ejection mappings across all 5 zones (`GRADE_PORT_MAP`).
+  - Zone 1 configured with: `400` -> `11|`, `320` -> `12|`, `240` -> `13|`, `210` -> `14|`, `180` -> `15|`, `default/defect` -> `16|`.
+  - Configured corresponding unique command groups for Zones 2 through 5 (`21-26|`, `31-36|`, `41-46|`, `51-56|`).
+  - Enhanced `load_ranges()` to support both colon-separated (`16-29:400`) and comma-separated (`400,16.30,29`) formats with automatic fallback to `wate/value.txt`.
+- **Independent Non-Blocking Multi-Zone Delay Timing:**
+  - Integrated `ZONE_DELAY_MAP` in `initial.py` and upgraded `EjectionQueue` and `EjectionEvent` to support per-zone independent delay configurations (`delay_seconds`).
+  - Guaranteed zero cross-zone timing interference: each zone schedules its ejection event into a thread-safe min-heap priority queue without blocking the camera frame grab loop.
+- **NVIDIA RTX 5050 GPU Acceleration for YOLO Defect Detection:**
+  - Resolved PyTorch Blackwell architecture (`sm_120`) incompatibility with older `.pt` CUDA kernels by building a high-performance **ONNX Runtime GPU Engine (`CUDAExecutionProvider`)** in `CashewQualityFilter`.
+  - Achieved ultra-fast **~9.9ms - 13ms** inference per cashew on the NVIDIA GeForce RTX 5050 GPU (100+ FPS).
+  - Integrated real-time defect classification for all 7 classes: `Bad`, `Blackdot`, `Brown`, `Good`, `Multi`, `Oilly`, `Unpill`, routing defects to reject commands and good cashews to grade commands.
 

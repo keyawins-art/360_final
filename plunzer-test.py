@@ -3,7 +3,7 @@ import time
 
 PORT = "COM4"
 BAUDRATE = 115200
-SEND_INTERVAL = 20
+SEND_INTERVAL = 0.5
 
 try:
     ser = serial.Serial(PORT, BAUDRATE, timeout=1)
@@ -11,8 +11,8 @@ try:
     time.sleep(2)
 
     while True:
-        ser.write(b"11|")
-        print(f"Sent: 11|  Time: {time.strftime('%H:%M:%S')}")
+        ser.write(b"26|")
+        print(f"Sent: 26|  Time: {time.strftime('%H:%M:%S')}")
         time.sleep(SEND_INTERVAL)
 
 except KeyboardInterrupt:
@@ -21,4 +21,4 @@ except KeyboardInterrupt:
 finally:
     if 'ser' in locals() and ser.is_open:
         ser.close()
-        print("Serial Port Closed")xuu
+        print("Serial Port Closed")

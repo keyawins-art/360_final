@@ -1,15 +1,48 @@
 import cv2
 import numpy as np
 import os
+import sys
 import time
 import serial
 from queue import Queue
 import threading
 
-input_folder = r"D:\Keya Work\360\wate\Con_3_Images"
-ranges_file = r"D:\Keya Work\360\wate\value.txt"
-timing_file = r"D:\Keya Work\360\wate\4(C)-time.txt"
-com_port_file = r"D:\Keya Work\360\wate\com_port(c).txt"
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_existing_path(candidates, default_path):
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return default_path
+
+input_folder = get_existing_path([
+    r"D:\Keya Work\360\wate\Con_3_Images",
+    r"D:\Kesyu_250524_4_Belts\Images\Con_3_Images",
+    os.path.join(BASE_DIR, "wate", "Con_3_Images")
+], os.path.join(BASE_DIR, "wate", "Con_3_Images"))
+
+ranges_file = get_existing_path([
+    r"D:\Keya Work\360\wate\value.txt",
+    r"D:\4_belt_main\4_belt\range\value.txt",
+    os.path.join(BASE_DIR, "wate", "value.txt")
+], os.path.join(BASE_DIR, "wate", "value.txt"))
+
+timing_file = get_existing_path([
+    r"D:\Keya Work\360\wate\4(C)-time.txt",
+    r"D:\4_belt_main\4_belt\time\4(C)-time.txt",
+    os.path.join(BASE_DIR, "wate", "4(C)-time.txt")
+], os.path.join(BASE_DIR, "wate", "4(C)-time.txt"))
+
+com_port_file = get_existing_path([
+    r"D:\Keya Work\360\wate\com_port(c).txt",
+    r"D:\4_belt_main\4_belt\Test_checkup\com_port(c).txt",
+    os.path.join(BASE_DIR, "wate", "com_port(c).txt")
+], os.path.join(BASE_DIR, "wate", "com_port(c).txt"))
+
+os.makedirs(input_folder, exist_ok=True)
 
 # --- Globals ---
 command_queue = Queue()

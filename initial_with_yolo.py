@@ -161,14 +161,52 @@ GOOD_CLASS_NAMES = ['good', 'Good']
 # =========================================================
 EJECTION_DELAY_SECONDS = 6.20  # [Seconds] Delay time between exit point line crossing and mechanical valve ejection
 
-# Commands for all grades depending on the zone they are processed in
-ZONE_COMMAND_MAP = {
-    'Zone-1': '11|',
-    'Zone-2': '16|',
-    'Zone-3': '12|',
-    'Zone-4': '13|',
-    'Zone-5': '14|'
+# Individual commands for each grade per zone
+GRADE_PORT_MAP = {
+    'Zone-1': {
+        '400': '11|',
+        '320': '12|',
+        '240': '13|',
+        '210': '14|',
+        '180': '15|',
+        'default': '11|'
+    },
+    'Zone-2': {
+        '400': '21|',
+        '320': '22|',
+        '240': '23|',
+        '210': '24|',
+        '180': '25|',
+        'default': '21|'
+    },
+    'Zone-3': {
+        '400': '31|',
+        '320': '32|',
+        '240': '33|',
+        '210': '34|',
+        '180': '35|',
+        'default': '31|'
+    },
+    'Zone-4': {
+        '400': '41|',
+        '320': '42|',
+        '240': '43|',
+        '210': '44|',
+        '180': '45|',
+        'default': '41|'
+    },
+    'Zone-5': {
+        '400': '51|',
+        '320': '52|',
+        '240': '53|',
+        '210': '54|',
+        '180': '55|',
+        'default': '51|'
+    }
 }
+
+# Backward compatibility alias
+ZONE_COMMAND_MAP = {zone: cmds['default'] for zone, cmds in GRADE_PORT_MAP.items()}
 
 # =========================================================
 # LOAD SDK
@@ -1263,7 +1301,7 @@ class ZoneProcessor:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
                 
             DELAY_SECONDS = EJECTION_DELAY_SECONDS
-            command = ZONE_COMMAND_MAP.get(self.name, '16|')
+            zone_map = GRADE_PORT_MAP.get(self.name, GRADE_PORT_MAP.get('Zone-1', {}))
             
             def send_delayed(cmd, arduino, lock, name, o_id, exit_time, grade):
                 target_time = exit_time + DELAY_SECONDS
@@ -1328,6 +1366,9 @@ class ZoneProcessor:
                 if not final_grade:
                     final_grade = get_grade(int(max_mm), self.ranges)
                     
+                grade_str = str(final_grade).strip() if final_grade is not None else 'default'
+                command = zone_map.get(grade_str, zone_map.get('default', '11|'))
+
                 # Queue delayed command for this cashew exit with its final grade!
                 t = threading.Thread(target=send_delayed, args=(command, self.arduino, self.serial_lock, self.name, obj_id, true_exit_time, final_grade))
                 t.daemon = True

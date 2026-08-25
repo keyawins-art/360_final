@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+camera_log.txt
+dist/
+build/
+node_modules/

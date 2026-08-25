@@ -1,13 +1,36 @@
 import cv2
 import numpy as np
 import os
+import sys
 import time
-#import serial
 from queue import Queue
 import threading
 
-input_folder = r"D:\Keya Work\360\wate\Con_1_Images"
-output_folder = r"D:\Keya Work\360\wate\Con_2_Images"
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def get_existing_path(candidates, default_path):
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return default_path
+
+input_folder = get_existing_path([
+    r"D:\Keya Work\360\wate\Con_1_Images",
+    r"D:\Kesyu_250524_4_Belts\Images\Con_1_Images",
+    os.path.join(BASE_DIR, "wate", "Con_1_Images")
+], os.path.join(BASE_DIR, "wate", "Con_1_Images"))
+
+output_folder = get_existing_path([
+    r"D:\Keya Work\360\wate\Con_2_Images",
+    r"D:\Kesyu_250524_4_Belts\Images\Con_2_Images",
+    os.path.join(BASE_DIR, "wate", "Con_2_Images")
+], os.path.join(BASE_DIR, "wate", "Con_2_Images"))
+
+os.makedirs(input_folder, exist_ok=True)
+os.makedirs(output_folder, exist_ok=True)
 
 
 def check_rgb(image):

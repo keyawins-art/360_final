@@ -1,14 +1,58 @@
+import sys
+import os
+
+# --- STANDALONE WORKER MODE ---
+# Allows PyInstaller frozen exe to run any internal Python script directly without external Python
+if len(sys.argv) > 2 and sys.argv[1] == "--run-script":
+    raw_target = sys.argv[2]
+    script_args = sys.argv[3:]
+    
+    if getattr(sys, 'frozen', False):
+        _base = os.path.dirname(sys.executable)
+        _bundle = getattr(sys, '_MEIPASS', _base)
+    else:
+        _base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        _bundle = _base
+        
+    target_script = None
+    candidates = [
+        raw_target,
+        os.path.abspath(raw_target),
+        os.path.join(_base, raw_target),
+        os.path.join(_bundle, raw_target),
+    ]
+    for folder in ["grading", "defoult", "grading_color"]:
+        candidates.append(os.path.join(_base, folder, os.path.basename(raw_target)))
+        candidates.append(os.path.join(_bundle, folder, os.path.basename(raw_target)))
+
+    for c in candidates:
+        if c and os.path.exists(c) and os.path.isfile(c):
+            target_script = os.path.abspath(c)
+            break
+
+    if not target_script:
+        print(f"[ERROR] Worker could not find script: {raw_target}", file=sys.stderr)
+        sys.exit(1)
+
+    sys.argv = [target_script] + script_args
+    import runpy
+    script_dir = os.path.dirname(target_script)
+    for _p in [script_dir, _base, _bundle, os.path.join(_bundle, "MvImport"), os.path.join(_base, "Python", "MvImport")]:
+        if os.path.exists(_p) and _p not in sys.path:
+            sys.path.insert(0, _p)
+            
+    runpy.run_path(target_script, run_name="__main__")
+    sys.exit(0)
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import subprocess
-import os
 import psutil
 import glob
 import threading
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
-import sys
 import ctypes
 import numpy as np
 import cv2
@@ -16,14 +60,30 @@ import time
 import json
 import serial
 
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    BUNDLE_DIR = getattr(sys, '_MEIPASS', BASE_DIR)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BUNDLE_DIR = BASE_DIR
+
+# Add MvImport to sys.path
+for candidate in [
+    os.path.join(BASE_DIR, "Python", "MvImport"),
+    os.path.join(BUNDLE_DIR, "Python", "MvImport"),
+    os.path.join(BUNDLE_DIR, "MvImport"),
+    r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
+]:
+    if os.path.exists(candidate) and candidate not in sys.path:
+        sys.path.append(candidate)
+
+SDK_IMPORTED = False
 try:
     from MvCameraControl_class import *
-except:
-    sys.path.append(r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport")
-    try:
-        from MvCameraControl_class import *
-    except:
-        pass
+    SDK_IMPORTED = True
+except Exception as e:
+    SDK_IMPORTED = False
+
 
 app = FastAPI()
 
@@ -75,10 +135,34 @@ app.add_middleware(
 )
 
 active_processes = []
-current_mode = "Stopped"
-last_terminal_message = "System Ready"
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-VALUE_FILE = os.path.join(BASE_DIR, "wate", "value.txt")
+# Helper to find first existing path from candidates, or fallback to default
+def get_existing_path(candidates, default_path):
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return default_path
+
+def get_value_file():
+    return get_existing_path([
+        r"D:\4_belt_main\4_belt\range\value.txt",
+        r"D:\Keya Work\360\wate\value.txt",
+        os.path.join(BASE_DIR, "wate", "value.txt")
+    ], os.path.join(BASE_DIR, "wate", "value.txt"))
+
+def get_camera_ref_file():
+    return get_existing_path([
+        r"C:\Users\i7\Desktop\camera_serial(b).txt",
+        r"D:\Keya Work\360\camera_ref.json",
+        os.path.join(BASE_DIR, "wate", "camera_ref.txt")
+    ], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
+
+def get_time_settings_dir():
+    for p in [r"D:\4_belt_main\4_belt\time", r"D:\Keya Work\360\wate", os.path.join(BASE_DIR, "wate")]:
+        if os.path.exists(p) and os.path.isdir(p):
+            return p
+    return os.path.join(BASE_DIR, "wate")
+
+VALUE_FILE = get_value_file()
 CAMERA_PARAMS_FILE = os.path.join(BASE_DIR, "camera_params.json")
 
 grade_counts = {
@@ -118,7 +202,7 @@ def output_reader(proc, filename):
             
         proc.wait()
         if proc.returncode != 0:
-            last_terminal_message = f"Error: {filename} crashed (code {proc.returncode})"
+            last_terminal_message = f"Error: {filename} exited (code {proc.returncode})"
             print(last_terminal_message)
     except Exception as e:
         last_terminal_message = f"Error reading {filename}: {e}"
@@ -141,9 +225,28 @@ def run_scripts_in_folder(folder_name: str):
     
     folder_path = os.path.join(BASE_DIR, folder_name)
     if not os.path.exists(folder_path):
+        folder_path = os.path.join(BUNDLE_DIR, folder_name)
+    if not os.path.exists(folder_path):
         return {"error": f"Folder '{folder_name}' not found at {folder_path}"}
     
-    python_files = glob.glob(os.path.join(folder_path, "*.py"))
+    if folder_name == "grading":
+        initial_file = os.path.join(folder_path, "initial.py")
+        if os.path.exists(initial_file):
+            python_files = [initial_file]
+        else:
+            python_files = glob.glob(os.path.join(folder_path, "*.py"))
+    elif folder_name == "defoult":
+        python_files = [
+            os.path.join(folder_path, f) for f in os.listdir(folder_path)
+            if f.endswith(".py") and not f.startswith("close_")
+        ]
+    elif folder_name == "grading_color":
+        python_files = [
+            os.path.join(folder_path, f) for f in os.listdir(folder_path)
+            if f.endswith(".py") and not f.startswith("close_")
+        ]
+    else:
+        python_files = glob.glob(os.path.join(folder_path, "*.py"))
     
     if not python_files:
          return {"message": f"No Python files found in {folder_name}"}
@@ -151,8 +254,13 @@ def run_scripts_in_folder(folder_name: str):
     started_count = 0
     for py_file in python_files:
         try:
+            if getattr(sys, 'frozen', False):
+                cmd = [sys.executable, "--run-script", py_file]
+            else:
+                cmd = [sys.executable, "-u", py_file]
+
             process = subprocess.Popen(
-                ["python", "-u", py_file],
+                cmd,
                 cwd=folder_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -599,41 +707,31 @@ def save_camera_params(req: CameraParamsData):
 
 @app.post("/api/customizations")
 def save_customizations(req: CustomizationsData):
-    os.makedirs(os.path.dirname(VALUE_FILE), exist_ok=True)
-    with open(VALUE_FILE, "w") as f:
-        levels = ["400", "320", "240", "210", "180"]
-        for level in levels:
-            if level in req.values:
-                val = req.values[level]
-                f.write(f"{level},{val['min']},{val['max']}\n")
+    target_files = [get_value_file(), os.path.join(BASE_DIR, "wate", "value.txt")]
+    for tf in set(target_files):
+        try:
+            os.makedirs(os.path.dirname(tf), exist_ok=True)
+            with open(tf, "w") as f:
+                levels = ["400", "320", "240", "210", "180"]
+                for level in levels:
+                    if level in req.values:
+                        val = req.values[level]
+                        f.write(f"{level},{val['min']},{val['max']}\n")
+        except Exception as e:
+            print(f"Error saving customizations to {tf}: {e}")
     return {"message": "Customizations saved successfully"}
 
-@app.get("/api/camera-params")
-def get_camera_params():
-    if os.path.exists(CAMERA_PARAMS_FILE):
-        import json
-        try:
-            with open(CAMERA_PARAMS_FILE, "r") as f:
-                return json.load(f)
-        except Exception as e:
-            return {}
-    return {}
-
-@app.post("/api/camera-params")
-def save_camera_params(req: CameraParamsData):
-    import json
-    os.makedirs(os.path.dirname(CAMERA_PARAMS_FILE), exist_ok=True)
-    with open(CAMERA_PARAMS_FILE, "w") as f:
-        json.dump(req.params, f)
-    return {"message": "Camera parameters saved successfully"}
-
 # ----------------- TIME SETTINGS -----------------
-TIME_SETTINGS_DIR = os.path.join(BASE_DIR, "wate")
+TIME_SETTINGS_DIR = get_time_settings_dir()
 
 @app.get("/api/time-settings/{belt_id}")
 def get_time_settings(belt_id: int):
-    file_path = os.path.join(TIME_SETTINGS_DIR, f"{belt_id}(A)-time.txt")
-    if not os.path.exists(file_path):
+    candidates = [
+        os.path.join(get_time_settings_dir(), f"{belt_id}(A)-time.txt"),
+        os.path.join(BASE_DIR, "wate", f"{belt_id}(A)-time.txt")
+    ]
+    file_path = next((p for p in candidates if os.path.exists(p)), None)
+    if not file_path:
         return {"values": ["", "", "", "", "", "", ""]}
     
     try:
@@ -666,17 +764,20 @@ def save_time_settings(belt_id: int, payload: TimeSettingInput):
         else:
             box_str += str(val).zfill(4)[:4]
             
-    extra_zeros = "0000" * 4 # 4 remaining zero blocks since 11 total
-    # wait, the example had 6 numbers + 5 zero blocks = 11 total. So 7 boxes + 4 zero blocks = 11.
+    extra_zeros = "0000" * 4 
     final_str = f"0000{belt_code}{box_str}{extra_zeros}0099|"
     
-    file_path = os.path.join(TIME_SETTINGS_DIR, f"{belt_id}(A)-time.txt")
-    try:
-        with open(file_path, "w") as f:
-            f.write(final_str)
-        return {"status": "success", "message": f"Saved {belt_id}(A)-time.txt"}
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
+    target_dirs = set([get_time_settings_dir(), os.path.join(BASE_DIR, "wate")])
+    for td in target_dirs:
+        try:
+            os.makedirs(td, exist_ok=True)
+            file_path = os.path.join(td, f"{belt_id}(A)-time.txt")
+            with open(file_path, "w") as f:
+                f.write(final_str)
+        except Exception as e:
+            print(f"Error writing time setting to {td}: {e}")
+            
+    return {"status": "success", "message": f"Saved {belt_id}(A)-time.txt"}
         
 # -------------------------------------------------
 
@@ -687,9 +788,13 @@ class TimeSettingsAllInput(BaseModel):
 def get_time_settings_all():
     all_values = {}
     for belt_id in range(1, 16):
-        file_path = os.path.join(TIME_SETTINGS_DIR, f"{belt_id}(A)-time.txt")
+        candidates = [
+            os.path.join(get_time_settings_dir(), f"{belt_id}(A)-time.txt"),
+            os.path.join(BASE_DIR, "wate", f"{belt_id}(A)-time.txt")
+        ]
+        file_path = next((p for p in candidates if os.path.exists(p)), None)
         values = ["", "", "", "", "", "", ""]
-        if os.path.exists(file_path):
+        if file_path and os.path.exists(file_path):
             try:
                 with open(file_path, "r") as f:
                     content = f.read().strip()
@@ -706,6 +811,7 @@ def get_time_settings_all():
 @app.post("/api/time-settings-all")
 def save_time_settings_all(payload: TimeSettingsAllInput):
     try:
+        target_dirs = set([get_time_settings_dir(), os.path.join(BASE_DIR, "wate")])
         for belt_id_str, values in payload.belts.items():
             belt_id = int(belt_id_str)
             belt_code = str(10 + belt_id)
@@ -720,9 +826,14 @@ def save_time_settings_all(payload: TimeSettingsAllInput):
             extra_zeros = "0000" * 4 
             final_str = f"0000{belt_code}{box_str}{extra_zeros}0099|"
             
-            file_path = os.path.join(TIME_SETTINGS_DIR, f"{belt_id}(A)-time.txt")
-            with open(file_path, "w") as f:
-                f.write(final_str)
+            for td in target_dirs:
+                try:
+                    os.makedirs(td, exist_ok=True)
+                    file_path = os.path.join(td, f"{belt_id}(A)-time.txt")
+                    with open(file_path, "w") as f:
+                        f.write(final_str)
+                except Exception as e:
+                    print(f"Error saving all time settings to {td}: {e}")
                 
         return {"status": "success", "message": "Saved all belts"}
     except Exception as e:
@@ -810,11 +921,11 @@ def fire_valve(cmd: ValveCommand):
         belt_char = 'c'
     
     possible_paths = [
+        os.path.join(BASE_DIR, "wate", f"com_port({belt_char}).txt"),
+        os.path.join(BASE_DIR, "wate", f"comport({belt_char}).txt"),
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
         rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt",
         rf"D:\Keya Work\360\wate\com_port({belt_char}).txt",
-        rf"D:\4_belt_main\4_belt\comport info\comport({belt_char}).txt",
-        rf"c:\Users\i7\Desktop\360\wate\com_port({belt_char}).txt",
-        r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt"
     ]
     
     com_port = None
@@ -823,8 +934,8 @@ def fire_valve(cmd: ValveCommand):
             try:
                 with open(p, 'r') as f:
                     content = f.read().strip()
-                    if content.startswith("COM"):
-                        com_port = content
+                    if content.startswith("COM") or content.isdigit():
+                        com_port = content if content.startswith("COM") else f"COM{content}"
                         break
             except Exception as e:
                 print(f"Error reading COM file {p}: {e}")
@@ -870,6 +981,8 @@ class CameraRefInput(BaseModel):
 
 @app.get("/api/camera-check")
 def check_cameras():
+    if not SDK_IMPORTED:
+        return {"status": "success", "cameras": []}
     try:
         MvCamera.MV_CC_Initialize()
         deviceList = MV_CC_DEVICE_INFO_LIST()
@@ -909,9 +1022,9 @@ def save_main_settings(payload: MainSettingsInput):
         letters = "abcdefghijklmno"
         if 1 <= payload.belt_number <= 15:
             letter = letters[payload.belt_number - 1]
-            comport_dir = r"D:\4_belt_main\4_belt\comport info"
+            comport_dir = os.path.join(BASE_DIR, "wate")
             os.makedirs(comport_dir, exist_ok=True)
-            file_path = os.path.join(comport_dir, f"comport({letter}).txt")
+            file_path = os.path.join(comport_dir, f"com_port({letter}).txt")
             with open(file_path, "w") as f:
                 f.write(str(payload.value))
             return {"status": "success", "message": f"Saved setting for Belt {payload.belt_number}"}
@@ -1012,10 +1125,14 @@ async def save_zones(request: Request):
 
 # Serve static frontend files
 FRONTEND_DIST = os.path.join(BASE_DIR, "frontend", "dist")
+if not os.path.exists(FRONTEND_DIST):
+    FRONTEND_DIST = os.path.join(BUNDLE_DIR, "frontend", "dist")
 
 # Mount everything except index.html as static assets
 if os.path.exists(FRONTEND_DIST) and os.path.isdir(FRONTEND_DIST):
-    app.mount("/assets", StaticFiles(directory=os.path.join(FRONTEND_DIST, "assets")), name="assets")
+    assets_dir = os.path.join(FRONTEND_DIST, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
     
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
@@ -1028,4 +1145,41 @@ if os.path.exists(FRONTEND_DIST) and os.path.isdir(FRONTEND_DIST):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    import webview
+
+    # 1. Start FastAPI / Uvicorn server in a background daemon thread
+    server_config = uvicorn.Config(app, host="127.0.0.1", port=8000, log_level="warning")
+    server_instance = uvicorn.Server(server_config)
+
+    server_thread = threading.Thread(target=server_instance.run, daemon=True)
+    server_thread.start()
+
+    # 2. Launch Native Desktop Window (No browser/Chrome needed)
+    window = webview.create_window(
+        title="360 Cashew Sorting & Grading System",
+        url="http://127.0.0.1:8000",
+        width=1600,
+        height=920,
+        min_size=(1024, 700),
+        resizable=True,
+        fullscreen=False,
+        easy_drag=True
+    )
+    
+    try:
+        webview.start(gui="edgechromium", debug=False)
+    except Exception as e:
+        print(f"Webview error, falling back to default gui: {e}")
+        try:
+            webview.start(debug=False)
+        except Exception as e2:
+            print(f"Fallback webview error: {e2}")
+            server_thread.join()
+
+    # 3. Clean exit when the window is closed
+    try:
+        stop_all()
+    except Exception:
+        pass
+    server_instance.should_exit = True
+    sys.exit(0)

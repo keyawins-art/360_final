@@ -7,8 +7,30 @@ import serial
 import time
 import re
 import json
-# YOLO is disabled permanently to ensure lightning-fast OpenCV processing (< 50ms per cashew)
-YOLO_AVAILABLE = False
+
+# Setup CUDA DLL paths for ONNX GPU (NVIDIA RTX 5050 Blackwell sm_120)
+try:
+    import torch
+    _torch_lib = os.path.join(os.path.dirname(torch.__file__), 'lib')
+    if os.path.exists(_torch_lib):
+        if hasattr(os, 'add_dll_directory'):
+            os.add_dll_directory(_torch_lib)
+        os.environ['PATH'] = _torch_lib + os.pathsep + os.environ['PATH']
+except Exception:
+    pass
+
+try:
+    import onnxruntime as ort
+    ONNX_AVAILABLE = True
+except ImportError:
+    ONNX_AVAILABLE = False
+
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+
 import concurrent.futures
 import threading
 from collections import Counter
@@ -35,18 +57,45 @@ except ImportError:
 
 from ejection_queue import EjectionQueue
 
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    BUNDLE_DIR = getattr(sys, '_MEIPASS', BASE_DIR)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BUNDLE_DIR = BASE_DIR
+
+# Helper to find first existing path from candidates, or fallback to default
+def get_existing_path(candidates, default_path):
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return default_path
+
 # ========================================================
 # CONFIG
 # =========================================================
 
-SERIAL_FILE = r"C:\Users\i7\Desktop\camera_serial(b).txt" 
-RANGES_FILE = r"D:\4_belt_main\4_belt\range\value.txt"  # Grading ranges file
+SERIAL_FILE = get_existing_path([
+    r"C:\Users\i7\Desktop\camera_serial(b).txt",
+    r"D:\Keya Work\360\camera_ref.json",
+    os.path.join(BASE_DIR, "wate", "camera_ref.txt")
+], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
+
+RANGES_FILE = get_existing_path([
+    r"D:\4_belt_main\4_belt\range\value.txt",
+    r"D:\Keya Work\360\wate\value.txt",
+    os.path.join(BASE_DIR, "wate", "value.txt")
+], os.path.join(BASE_DIR, "wate", "value.txt"))  # Grading ranges file
 
 # ================= CUSTOM PROCESS ZONES =================
 # We now use a SINGLE COM PORT for both zones.
 # Format: (x, y, width, height)
 
-MAIN_COM_FILE = r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt"
+MAIN_COM_FILE = get_existing_path([
+    r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt",
+    r"D:\Keya Work\360\wate\com_port(a).txt",
+    os.path.join(BASE_DIR, "wate", "com_port(a).txt")
+], os.path.join(BASE_DIR, "wate", "com_port(a).txt"))
 
 DEFAULT_ZONE_CONFIGS = [
     {
@@ -71,13 +120,22 @@ DEFAULT_ZONE_CONFIGS = [
     }
 ]
 
-ZONES_CONFIG_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "zones_config.json")
-DETECTIONS_FOLDER = r"f:\server\360\detections"
+ZONES_CONFIG_FILE = get_existing_path([
+    os.path.join(BASE_DIR, "zones_config.json"),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "zones_config.json")
+], os.path.join(BASE_DIR, "zones_config.json"))
+
+DETECTIONS_FOLDER = get_existing_path([
+    r"f:\server\360\detections"
+], os.path.join(BASE_DIR, "detections"))
 
 # Ensure detections folder exists
 if not os.path.exists(DETECTIONS_FOLDER):
-    os.makedirs(DETECTIONS_FOLDER)
-    print(f"Created detections folder: {DETECTIONS_FOLDER}")
+    try:
+        os.makedirs(DETECTIONS_FOLDER, exist_ok=True)
+        print(f"Created detections folder: {DETECTIONS_FOLDER}")
+    except Exception:
+        pass
 
 class AsyncImageSaver:
     """
@@ -208,6 +266,18 @@ MAX_TRACKING_DISTANCE = 250 # Increased to 250 to follow fast-moving cashews wit
 DELAY_SECONDS = 5.50    # Default PLC ejection delay in seconds
 
 # =========================================================
+# PER-ZONE INDEPENDENT DELAY CONFIGURATION (SECONDS)
+# Each zone operates on its own timing without affecting others
+# =========================================================
+ZONE_DELAY_MAP = {
+    'Zone-1': 5.50,
+    'Zone-2': 5.50,
+    'Zone-3': 5.50,
+    'Zone-4': 5.50,
+    'Zone-5': 5.50
+}
+
+# =========================================================
 # KEYBOARD CONTROL CONFIGURATION
 # =========================================================
 SELECTED_ZONE_INDEX = None  # Currently selected zone for adjustment (0-4)
@@ -215,9 +285,12 @@ SHOW_DISPLAY = True  # Whether to show the display window
 ZONE_ADJUST_STEP = 10  # Pixels to move/resize per keypress
 
 # =========================================================
-# YOLO CONFIGURATION
+# YOLO CONFIGURATION (GPU ACCELERATED)
 # =========================================================
-YOLO_MODEL_PATH = r"c:\Users\i7\Desktop\360\best.pt"  # <--- UPDATE THIS PATH
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "best.onnx")
+if not os.path.exists(YOLO_MODEL_PATH):
+    YOLO_MODEL_PATH = os.path.join(BUNDLE_DIR, "best.onnx")
+
 # Broadened 'good' list to match various possible model training class names
 GOOD_CLASS_NAMES = ['good', 'cashew', 'white', 'full', 'whole', 'object'] 
 
@@ -225,23 +298,66 @@ GOOD_CLASS_NAMES = ['good', 'cashew', 'white', 'full', 'whole', 'object']
 # GRADING CONFIGURATION
 # =========================================================
 
-# Commands for all grades depending on the zone they are processed in
-ZONE_COMMAND_MAP = {
-    'Zone-1': '11|',
-    'Zone-2': '16|',
-    'Zone-3': '12|',
-    'Zone-4': '13|',
-    'Zone-5': '14|'
+# Individual commands for each grade per zone
+GRADE_PORT_MAP = {
+    'Zone-1': {
+        '400': '11|',
+        '320': '12|',
+        '240': '13|',
+        '210': '14|',
+        '180': '15|',
+        'default': '11|'
+    },
+    'Zone-2': {
+        '400': '22|',
+        '320': '23|',
+        '240': '24|',
+        '210': '25|',
+        '180': '26|',
+        'default': '22|'
+    },
+    'Zone-3': {
+        '400': '33|',
+        '320': '34|',
+        '240': '35|',
+        '210': '36|',
+        '180': '41|',
+        'default': '33|'
+    },
+    'Zone-4': {
+        '400': '44|',
+        '320': '45|',
+        '240': '46|',
+        '210': '51|',
+        '180': '52|',
+        'default': '44|'
+    },
+    'Zone-5': {
+        '400': '55|',
+        '320': '56|',
+        '240': '61|',
+        '210': '62|',
+        '180': '63|',
+        'default': '55|'
+    }
 }
+
+# Backward compatibility alias
+ZONE_COMMAND_MAP = {zone: cmds['default'] for zone, cmds in GRADE_PORT_MAP.items()}
 
 # =========================================================
 # LOAD SDK
 # =========================================================
 
-if platform.system()=="Windows":
-    SDK_PATH=r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
-    if os.path.exists(SDK_PATH):
-        sys.path.append(SDK_PATH)
+if platform.system() == "Windows":
+    for p in [
+        os.path.join(BASE_DIR, "Python", "MvImport"),
+        os.path.join(BUNDLE_DIR, "Python", "MvImport"),
+        os.path.join(BUNDLE_DIR, "MvImport"),
+        r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
+    ]:
+        if os.path.exists(p) and p not in sys.path:
+            sys.path.append(p)
 
     # Add runtime DLL path
     DLL_PATH = r"C:\Program Files (x86)\Common Files\MVS\Runtime\Win64_x64"
@@ -252,22 +368,40 @@ if platform.system()=="Windows":
 
 try:
     from MvCameraControl_class import *  # type: ignore
-    SDK_IMPORTED=True
+    SDK_IMPORTED = True
 except Exception as e:
     print(f"SDK not loaded: {e}")
-    SDK_IMPORTED=False
+    SDK_IMPORTED = False
 
 # =========================================================
 # READ SERIAL
 # =========================================================
 
 def read_target_serial():
-    try:
-        with open(SERIAL_FILE,"r") as f:
-            return f.read().strip()
-    except:
-        print("Serial file missing")
-        return None
+    candidates = [
+        SERIAL_FILE,
+        os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
+        os.path.join(BASE_DIR, "camera_serial.txt"),
+        r"C:\Users\i7\Desktop\camera_serial(b).txt"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            try:
+                with open(c, "r") as f:
+                    content = f.read().strip()
+                    if content.startswith("[") or content.startswith("{"):
+                        data = json.loads(content)
+                        if isinstance(data, dict):
+                            refs = data.get("references", [""])
+                            if refs and refs[0]: return refs[0].strip()
+                        elif isinstance(data, list):
+                            if data and data[0]: return data[0].strip()
+                    elif content:
+                        return content.splitlines()[0].strip()
+            except Exception:
+                pass
+    print("No camera serial found in config files")
+    return None
 
 # =========================================================
 # READ COM PORT FROM FILE
@@ -279,47 +413,64 @@ def read_com_port_from_file(file_path):
     Accepts '6', 'COM6', 'ASRL6::INSTR', etc.
     Returns normalized COM port string or None on error.
     """
-    try:
-        with open(file_path, 'r') as f:
-            content = f.read().strip()
-    except FileNotFoundError:
-        print(f"COM port file not found: {file_path}")
-        return None
-    except Exception as e:
-        print(f"Error reading COM port file: {e}")
-        return None
+    candidates = [
+        file_path,
+        os.path.join(BASE_DIR, "wate", "com_port(a).txt"),
+        os.path.join(BASE_DIR, "wate", "comport(a).txt"),
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt")
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            try:
+                with open(c, 'r') as f:
+                    content = f.read().strip()
+                if content.startswith("[") or content.startswith("{"):
+                    data = json.loads(content)
+                    if isinstance(data, dict):
+                        refs = data.get("references", [""])
+                        if refs and refs[0]: content = refs[0].strip()
+                m = re.search(r'(\d+)', content)
+                if m:
+                    return f"COM{m.group(1)}"
+                if content.upper().startswith('COM'):
+                    return content
+            except Exception:
+                pass
 
-    if not content:
-        print("COM port file is empty")
-        return None
-
-    # Try extract first group of digits
-    m = re.search(r'(\d+)', content)
-    if m:
-        return f"COM{m.group(1)}"
-
-    # Fallbacks
-    if content.upper().startswith('COM'):
-        return content
-    return content
+    return None
 
 # =========================================================
 # GRADING SYSTEM
 # =========================================================
 
 def load_ranges(file_path):
-    """Load grading ranges from file"""
+    """Load grading ranges from file (supports both 'min-max:grade' and 'grade,min,max')"""
     ranges = []
     try:
-        with open(file_path, 'r') as f:
-            for line in f:
-                part = line.strip()
-                if not part:
-                    continue
-                range_part, grade = part.split(':')
-                start, end = map(int, range_part.split('-'))
-                ranges.append((start, end, grade.strip()))
-        print(f"Loaded {len(ranges)} grading ranges")
+        if not os.path.exists(file_path):
+            local_path = os.path.join(BASE_DIR, "wate", "value.txt")
+            if os.path.exists(local_path):
+                file_path = local_path
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                for line in f:
+                    part = line.strip()
+                    if not part:
+                        continue
+                    if ':' in part:
+                        range_part, grade = part.split(':')
+                        start, end = map(float, range_part.split('-'))
+                        ranges.append((start, end, grade.strip()))
+                    elif ',' in part:
+                        parts = [p.strip() for p in part.split(',')]
+                        if len(parts) >= 3 and parts[1] and parts[2]:
+                            grade = parts[0]
+                            start = float(parts[1])
+                            end = float(parts[2])
+                            ranges.append((start, end, grade))
+            print(f"Loaded {len(ranges)} grading ranges from {file_path}: {ranges}")
+        else:
+            print(f"Ranges file not found: {file_path}")
         return ranges
     except Exception as e:
         print(f"Error loading ranges: {e}")
@@ -327,65 +478,159 @@ def load_ranges(file_path):
 
 def get_grade(mm_value, ranges):
     """Get grade based on mm value"""
+    if not ranges:
+        return None
     for start, end, grade in ranges:
         if start <= mm_value <= end:
             return grade
     return None
 
 # =========================================================
-# YOLO FILTER CLASS
+# GPU ACCELERATED YOLO / ONNX QUALITY FILTER CLASS
 # =========================================================
 
 class CashewQualityFilter:
-    def __init__(self, model_path):
+    """
+    Ultra-fast GPU-accelerated Defect Detection and Quality Filter.
+    Supports ONNX Runtime with CUDAExecutionProvider on RTX 5050 GPU (~9-10ms per cashew).
+    Automatically falls back to PyTorch YOLO or CPU if needed.
+    """
+    CLASS_MAP = {0: 'bad', 1: 'blackdot', 2: 'brown', 3: 'good', 4: 'multi', 5: 'oilly', 6: 'unpill'}
+
+    def __init__(self, model_path=None):
+        self.session = None
         self.model = None
-        if YOLO_AVAILABLE:
+        self.provider = None
+        self.input_name = None
+        self.input_shape = (704, 704)
+        
+        # 1. First Priority: ONNX Runtime GPU / CPU
+        onnx_candidates = [
+            model_path if model_path and model_path.endswith('.onnx') else None,
+            os.path.join(BASE_DIR, "best.onnx"),
+            os.path.join(BUNDLE_DIR, "best.onnx"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.onnx")
+        ]
+        
+        onnx_path = next((p for p in onnx_candidates if p and os.path.exists(p)), None)
+        
+        if ONNX_AVAILABLE and onnx_path:
             try:
-                self.model = YOLO(model_path)
-                print(f"YOLO Model loaded from: {model_path}")
-                if self.model and hasattr(self.model, 'names'):
-                    print(f"  [STARTUP] YOLO Classes: {self.model.names}")
+                available = ort.get_available_providers()
+                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if 'CUDAExecutionProvider' in available else ['CPUExecutionProvider']
+                self.session = ort.InferenceSession(onnx_path, providers=providers)
+                self.provider = self.session.get_providers()[0]
+                self.input_name = self.session.get_inputs()[0].name
+                inp_shape = self.session.get_inputs()[0].shape
+                h = inp_shape[2] if len(inp_shape) > 2 and isinstance(inp_shape[2], int) else 704
+                w = inp_shape[3] if len(inp_shape) > 3 and isinstance(inp_shape[3], int) else 704
+                self.input_shape = (w, h)
+                print(f"\n[AI CORE] ONNX Engine loaded from: {onnx_path}")
+                print(f"[AI CORE] Active Provider: {self.provider}")
+                print(f"[AI CORE] Defect Detection Classes: {list(self.CLASS_MAP.values())}")
+                
+                # Warmup
+                dummy = np.zeros((1, 3, h, w), dtype=np.float32)
+                for _ in range(2):
+                    self.session.run(None, {self.input_name: dummy})
+                print(f"[AI CORE] Warmup Complete (AI Ready)\n")
+                return
             except Exception as e:
-                print(f"Error loading YOLO model: {e}")
+                print(f"[AI CORE] Error initializing ONNX: {e}")
+                self.session = None
+                
+        # 2. Fallback: Ultralytics PyTorch YOLO
+        pt_candidates = [
+            model_path if model_path and model_path.endswith('.pt') else None,
+            os.path.join(BASE_DIR, "best.pt"),
+            os.path.join(BUNDLE_DIR, "best.pt"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.pt")
+        ]
+        pt_path = next((p for p in pt_candidates if p and os.path.exists(p)), None)
+        
+        if YOLO_AVAILABLE and pt_path:
+            try:
+                self.model = YOLO(pt_path)
+                print(f"[AI CORE] YOLO Model loaded from: {pt_path}")
+                if hasattr(self.model, 'names') and isinstance(self.model.names, dict):
+                    self.CLASS_MAP = {k: v.lower() for k, v in self.model.names.items()}
+                print(f"[AI CORE] YOLO Classes: {self.CLASS_MAP}")
+            except Exception as e:
+                print(f"[AI CORE] Error loading PyTorch YOLO: {e}")
 
     def get_cashew_categories_batch(self, crops):
         """
-        Run inference on a batch of cashew crops.
+        Run high-speed GPU inference on cashew crops to detect defects or good cashews.
         Returns a list of (class_name, confidence) or (None, 0).
         """
-        if self.model is None or not crops:
-            return [(None, 0)] * len(crops)
-            
-        try:
-            start_ai = time.time()
-            
-            # Force CPU inference because PyTorch currently lacks RTX 5000 (Blackwell) support.
-            # With our optimizations, CPU inference now only takes ~100ms which is lightning fast.
-            results = self.model(crops, verbose=False, conf=YOLO_CONF_THRESHOLD, device='cpu', imgsz=224)
-            
-            ai_time = (time.time() - start_ai) * 1000
-            if len(crops) > 0:
-                print(f"[AI CORE] Processed {len(crops)} cashews in {ai_time:.1f}ms ({(ai_time/len(crops)):.1f}ms/crop)")
-            
-            batch_results = []
-            for result in results:
-                if len(result.boxes) > 0:
-                    found_good = False
-                    for box in result.boxes:
-                        cls_name = self.model.names[int(box.cls[0])].lower()
-                        if cls_name in [n.lower() for n in GOOD_CLASS_NAMES]:
-                            batch_results.append((cls_name, float(box.conf[0])))
-                            found_good = True
-                            break
-                    if not found_good:
-                        best_box = result.boxes[0]
-                        batch_results.append((self.model.names[int(best_box.cls[0])].lower(), float(best_box.conf[0])))
-                else:
-                    batch_results.append((None, 0))
-            return batch_results
-        except Exception as e:
-            print(f"    [YOLO BATCH ERROR] {e}")
-            return [(None, 0)] * len(crops)
+        if not crops:
+            return []
+
+        start_ai = time.perf_counter()
+        batch_results = []
+
+        # --- 1. GPU ONNX RUNTIME ENGINE ---
+        if self.session is not None:
+            try:
+                w_in, h_in = self.input_shape
+                for crop in crops:
+                    if crop is None or crop.size == 0:
+                        batch_results.append((None, 0.0))
+                        continue
+                    
+                    # Preprocessing: resize + normalize (1, 3, H, W)
+                    img = cv2.resize(crop, (w_in, h_in)).transpose(2, 0, 1).astype(np.float32) / 255.0
+                    img_tensor = np.expand_dims(img, axis=0)
+                    
+                    # Run on NVIDIA GPU
+                    output = self.session.run(None, {self.input_name: img_tensor})[0]
+                    
+                    # Output is (1, 11, 10164) where 11 = 4 bbox coords + 7 class scores
+                    preds = output[0].T  # shape (10164, 11)
+                    scores = preds[:, 4:]  # shape (10164, 7)
+                    
+                    # Find highest scoring detection
+                    max_idx = np.unravel_index(np.argmax(scores), scores.shape)
+                    anchor_idx, class_id = max_idx
+                    best_conf = float(scores[anchor_idx, class_id])
+                    
+                    if best_conf >= YOLO_CONF_THRESHOLD:
+                        class_name = self.CLASS_MAP.get(class_id, 'good')
+                        batch_results.append((class_name, best_conf))
+                    else:
+                        # Default to good
+                        batch_results.append(('good', best_conf))
+                
+                ai_time = (time.perf_counter() - start_ai) * 1000
+                if len(crops) > 0:
+                    print(f"[AI GPU] Processed {len(crops)} cashews on RTX 5050 in {ai_time:.1f}ms ({(ai_time/len(crops)):.1f}ms/crop) -> {batch_results}")
+                return batch_results
+            except Exception as e:
+                print(f"[AI GPU ERROR] {e}")
+
+        # --- 2. ULTRALYTICS PYTORCH FALLBACK ---
+        if self.model is not None:
+            try:
+                results = self.model(crops, verbose=False, conf=YOLO_CONF_THRESHOLD, device='cpu', imgsz=224)
+                for result in results:
+                    if len(result.boxes) > 0:
+                        found_good = False
+                        for box in result.boxes:
+                            cls_name = self.model.names[int(box.cls[0])].lower()
+                            if cls_name in [n.lower() for n in GOOD_CLASS_NAMES]:
+                                batch_results.append((cls_name, float(box.conf[0])))
+                                found_good = True
+                                break
+                        if not found_good:
+                            best_box = result.boxes[0]
+                            batch_results.append((self.model.names[int(best_box.cls[0])].lower(), float(best_box.conf[0])))
+                    else:
+                        batch_results.append(('good', 0.0))
+                return batch_results
+            except Exception as e:
+                print(f"[AI PYTORCH ERROR] {e}")
+
+        return [(None, 0.0)] * len(crops)
 
 # =========================================================
 # CAMERA CLASS
@@ -1182,34 +1427,16 @@ class ZoneProcessor:
                 # Memory cleanup is MANDATORY for all disappeared objects!
                 self.tracker.remove_object(obj_id)
         if disappeared_crops:
-            # --- SCHEDULE EJECTION VIA QUEUE (replaces per-thread timing) ---
-            command = ZONE_COMMAND_MAP.get(self.name, '16|')
-
-            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                if obj_id in already_scheduled_ids:
-                    continue
-                already_scheduled_ids.add(obj_id)
-                if self.ejection_queue is not None:
-                    self.ejection_queue.schedule(
-                        obj_id=obj_id,
-                        command=command,
-                        exit_time=true_exit_time,
-                        zone_name=self.name,
-                        grade=str(obj_info.get('current_grade', '')),
-                        size_mm=obj_info['max_mm'],
-                    )
-                else:
-                    now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-                    print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{obj_info['max_mm']:.1f}) -> NO EJECTION QUEUE")
-
-            # --- NOW PROCEED WITH YOLO PROCESSING ---
+            # --- PROCESS YOLO / GRADING ---
             processing_start_time = time.time()
             yolo_results = []
-            if quality_filter and quality_filter.model:
+            if quality_filter and (quality_filter.session is not None or quality_filter.model is not None):
                 yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
             else:
                 yolo_results = [(None, 0)] * len(disappeared_crops)
                 
+            zone_map = GRADE_PORT_MAP.get(self.name, GRADE_PORT_MAP.get('Zone-1', {}))
+
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
                 # Use robust size measurement (trimmed median) instead of max
                 if hasattr(self.tracker, 'get_robust_size'):
@@ -1232,22 +1459,39 @@ class ZoneProcessor:
                         final_grade = yolo_cat
                         
                 if not final_grade and not yolo_confirmed_good:
-                    final_grade = get_grade(int(max_mm), self.ranges)
+                    final_grade = get_grade(max_mm, self.ranges)
                     
+                grade_str = str(final_grade).strip() if final_grade is not None else 'default'
+                command = zone_map.get(grade_str, zone_map.get('default', '11|'))
+                zone_delay = ZONE_DELAY_MAP.get(self.name, DELAY_SECONDS)
+
+                # --- SCHEDULE EJECTION VIA QUEUE (replaces per-thread timing) ---
+                # Completely independent non-blocking scheduling: each zone has its own delay
+                if self.ejection_queue is not None:
+                    self.ejection_queue.schedule(
+                        obj_id=obj_id,
+                        command=command,
+                        exit_time=true_exit_time,
+                        zone_name=self.name,
+                        grade=grade_str,
+                        size_mm=max_mm,
+                        delay_seconds=zone_delay,
+                    )
+                else:
+                    now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                    print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{max_mm:.1f}, Grade:{grade_str}, Cmd:{command.strip()}) -> NO EJECTION QUEUE")
+
                 # --- SAVE FINAL IMAGE ASYNCHRONOUSLY (NON-BLOCKING) ---
                 if last_crop is not None:
                     tracked_cnt = obj_info.get('latest_contour')
                     ASYNC_IMAGE_SAVER.submit(last_crop, obj_id, final_grade, max_mm, tracked_cnt)
-                
-                # Object was evaluated and removed during DISAPPEARANCE LOGIC block
-                pass
             
             processing_end_time = time.time()
             processing_duration = processing_end_time - processing_start_time
             
-            delay_sec = self.ejection_queue.delay_seconds if self.ejection_queue else DELAY_SECONDS
+            zone_delay = ZONE_DELAY_MAP.get(self.name, DELAY_SECONDS)
             for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
-                target_time = true_exit_time + delay_sec
+                target_time = true_exit_time + zone_delay
                 remaining_hold = max(0, target_time - processing_end_time)
                 now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
                 print(f"[{now_str}] [{self.name}] ID:{obj_id} Processing Done (Took: {processing_duration:.3f}s) -> Remaining Hold: {remaining_hold:.3f}s")

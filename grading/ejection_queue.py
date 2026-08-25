@@ -22,15 +22,16 @@ import heapq
 class EjectionEvent:
     """A scheduled PLC ejection command."""
 
-    __slots__ = ("target_time", "command", "zone_name", "obj_id", "grade", "size_mm", "_seq")
+    __slots__ = ("target_time", "command", "zone_name", "obj_id", "grade", "size_mm", "delay_seconds", "_seq")
 
-    def __init__(self, target_time, command, zone_name, obj_id, grade, size_mm, seq):
+    def __init__(self, target_time, command, zone_name, obj_id, grade, size_mm, delay_seconds, seq):
         self.target_time = target_time
         self.command = command
         self.zone_name = zone_name
         self.obj_id = obj_id
         self.grade = grade
         self.size_mm = size_mm
+        self.delay_seconds = delay_seconds
         self._seq = seq  # Tiebreaker for heapq when target_time is equal
 
     def __lt__(self, other):
@@ -49,7 +50,7 @@ class EjectionQueue:
 
         # From vision thread:
         eq.schedule(obj_id=42, command='11|', exit_time=time.perf_counter(),
-                    zone_name='Zone-1', grade='W320', size_mm=22.5)
+                    zone_name='Zone-1', grade='W320', size_mm=22.5, delay_seconds=5.50)
 
         # At shutdown:
         eq.stop()
@@ -85,7 +86,7 @@ class EjectionQueue:
             self._worker.join(timeout=2.0)
         print("[EJECTION] Worker thread stopped")
 
-    def schedule(self, obj_id, command, exit_time, zone_name="", grade="", size_mm=0.0):
+    def schedule(self, obj_id, command, exit_time, zone_name="", grade="", size_mm=0.0, delay_seconds=None):
         """
         Schedule a PLC ejection command.
 
@@ -103,8 +104,11 @@ class EjectionQueue:
             Grade label for logging.
         size_mm : float
             Object size for logging.
+        delay_seconds : float, optional
+            Zone-specific delay time in seconds (falls back to default if None).
         """
-        target_time = exit_time + self.delay_seconds
+        delay = delay_seconds if delay_seconds is not None else self.delay_seconds
+        target_time = exit_time + delay
 
         with self._lock:
             now = time.perf_counter()
@@ -126,6 +130,7 @@ class EjectionQueue:
                 obj_id=obj_id,
                 grade=str(grade or ""),
                 size_mm=size_mm,
+                delay_seconds=delay,
                 seq=self._seq,
             )
             heapq.heappush(self._heap, event)
@@ -200,7 +205,7 @@ class EjectionQueue:
 
     def _fire(self, event):
         """Send the serial command and log the result."""
-        actual_delay = time.perf_counter() - (event.target_time - self.delay_seconds)
+        actual_delay = time.perf_counter() - (event.target_time - event.delay_seconds)
 
         if self.arduino:
             try:
