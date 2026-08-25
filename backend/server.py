@@ -908,53 +908,119 @@ class ValveCommand(BaseModel):
     belt_id: int
     port_id: int
 
-@app.post("/api/fire-valve")
-def fire_valve(cmd: ValveCommand):
-    print(f"[ACTION] Firing air for Belt {cmd.belt_id}, Port {cmd.port_id}", flush=True)
-    
-    # 5 Belts per Controller/Arduino:
+# Persistent serial connection cache for low-latency air firing without resetting microcontroller
+_open_serial_ports = {}
+_serial_lock = threading.Lock()
+
+def get_or_open_serial(port_name: str, baudrate: int = 115200):
+    with _serial_lock:
+        if port_name in _open_serial_ports:
+            ser = _open_serial_ports[port_name]
+            if ser and ser.is_open:
+                return ser
+            else:
+                try:
+                    ser.open()
+                    return ser
+                except Exception:
+                    del _open_serial_ports[port_name]
+
+        # Configure serial port with dtr=False & rts=False to prevent resetting microcontroller
+        ser = serial.Serial()
+        ser.port = port_name
+        ser.baudrate = baudrate
+        ser.timeout = 0.5
+        ser.write_timeout = 0.5
+        ser.dtr = False
+        ser.rts = False
+        ser.open()
+        _open_serial_ports[port_name] = ser
+        return ser
+
+def resolve_com_port_for_belt(belt_id: int):
     # Belts 1-5  -> Module 'a' (com_port(a).txt)
     # Belts 6-10 -> Module 'b' (com_port(b).txt)
     # Belts 11-15 -> Module 'c' (com_port(c).txt)
-    if cmd.belt_id <= 5:
+    if belt_id <= 5:
+        idx = 0
         belt_char = 'a'
-    elif cmd.belt_id <= 10:
+    elif belt_id <= 10:
+        idx = 1
         belt_char = 'b'
     else:
+        idx = 2
         belt_char = 'c'
-    
-    possible_paths = [
+
+    # Priority 1: Check legacy D:\ directory if present
+    legacy_p = rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt"
+    if os.path.exists(legacy_p):
+        try:
+            with open(legacy_p, 'r') as f:
+                c = f.read().strip()
+                if c:
+                    return c if c.upper().startswith("COM") else f"COM{c}"
+        except Exception:
+            pass
+
+    # Priority 2: Check comport_ref.txt (Settings UI)
+    comport_ref_file = get_existing_path([
+        r"D:\Keya Work\360\wate\comport_ref.txt",
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt")
+    ], os.path.join(BASE_DIR, "wate", "comport_ref.txt"))
+    if os.path.exists(comport_ref_file):
+        try:
+            with open(comport_ref_file, "r") as f:
+                data = json.load(f)
+                refs = data.get("references", [])
+                if idx < len(refs) and refs[idx]:
+                    val = str(refs[idx]).strip()
+                    if val:
+                        return val if val.upper().startswith("COM") else f"COM{val}"
+        except Exception:
+            pass
+
+    # Priority 3: Check local wate/com_port(a/b/c).txt
+    for p in [
         os.path.join(BASE_DIR, "wate", f"com_port({belt_char}).txt"),
         os.path.join(BASE_DIR, "wate", f"comport({belt_char}).txt"),
-        os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
-        rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt",
         rf"D:\Keya Work\360\wate\com_port({belt_char}).txt",
-    ]
-    
-    com_port = None
-    for p in possible_paths:
+    ]:
         if os.path.exists(p):
             try:
                 with open(p, 'r') as f:
-                    content = f.read().strip()
-                    if content.startswith("COM") or content.isdigit():
-                        com_port = content if content.startswith("COM") else f"COM{content}"
-                        break
-            except Exception as e:
-                print(f"Error reading COM file {p}: {e}")
-            
+                    c = f.read().strip()
+                    if c:
+                        return c if c.upper().startswith("COM") else f"COM{c}"
+            except Exception:
+                pass
+
+    return None
+
+@app.post("/api/fire-valve")
+def fire_valve(cmd: ValveCommand):
+    com_port = resolve_com_port_for_belt(cmd.belt_id)
     if not com_port:
-        return {"status": "error", "message": f"COM port file for Belt {cmd.belt_id} ({belt_char}) not found or invalid."}
-        
+        print(f"[ACTION ERROR] No COM port found for Belt {cmd.belt_id}", flush=True)
+        return {"status": "error", "message": f"COM port for Belt {cmd.belt_id} not configured."}
+
+    command_str = f"{cmd.port_id}|"
+    print(f"[ACTION] Firing air for Belt {cmd.belt_id}, Port {cmd.port_id} on {com_port} -> {command_str}", flush=True)
+
     try:
-        # Open port, send command, close port immediately
-        with serial.Serial(port=com_port, baudrate=115200, timeout=1) as ser:
-            command_str = f"{cmd.port_id}|"
-            ser.write(command_str.encode())
+        ser = get_or_open_serial(com_port)
+        ser.write(command_str.encode())
+        ser.flush()
         return {"status": "success", "message": f"Fired {command_str} on {com_port}"}
     except Exception as e:
-        print(f"Serial Error in fire_valve: {e}")
-        return {"status": "error", "message": f"Serial Error: {e}"}
+        print(f"Serial Error in fire_valve on {com_port}: {e}")
+        with _serial_lock:
+            if com_port in _open_serial_ports:
+                try:
+                    _open_serial_ports[com_port].close()
+                except Exception:
+                    pass
+                del _open_serial_ports[com_port]
+        return {"status": "error", "message": f"Serial Error on {com_port}: {e}"}
 
 @app.get("/api/status")
 def get_status():
@@ -1084,6 +1150,26 @@ def save_comport_ref(req: ComportRefData):
     os.makedirs(os.path.dirname(COMPORT_REF_FILE), exist_ok=True)
     with open(COMPORT_REF_FILE, "w") as f:
         json.dump({"references": req.references}, f)
+
+    # Sync references to com_port(a).txt, com_port(b).txt, com_port(c).txt
+    chars = ['a', 'b', 'c']
+    wate_dir = os.path.join(BASE_DIR, "wate")
+    os.makedirs(wate_dir, exist_ok=True)
+    for idx, char in enumerate(chars):
+        if idx < len(req.references):
+            val = str(req.references[idx]).strip()
+            if val:
+                port_val = val if val.upper().startswith("COM") else f"COM{val}"
+                try:
+                    with open(os.path.join(wate_dir, f"com_port({char}).txt"), "w") as f:
+                        f.write(port_val)
+                    legacy_path = rf"D:\4_belt_main\4_belt\Test_checkup\com_port({char}).txt"
+                    if os.path.exists(os.path.dirname(legacy_path)):
+                        with open(legacy_path, "w") as f:
+                            f.write(port_val)
+                except Exception as e:
+                    print(f"Error syncing com_port({char}).txt: {e}")
+
     return {"message": "Comport references saved successfully"}
 @app.get("/api/zones")
 def get_zones():
