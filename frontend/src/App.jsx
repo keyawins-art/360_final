@@ -104,13 +104,25 @@ function App() {
   // Zones Configuration State
   const [zonesTab, setZonesTab] = useState('camera'); // 'camera' or 'zones'
   const [zones, setZones] = useState([
-    { "name": "Zone-1", "zone": [100, 100, 370, 1920] },
-    { "name": "Zone-2", "zone": [540, 100, 350, 1910] },
-    { "name": "Zone-3", "zone": [960, 100, 360, 1910] },
-    { "name": "Zone-4", "zone": [1400, 100, 340, 1910] },
-    { "name": "Zone-5", "zone": [1840, 100, 370, 1910] }
+    { "name": "Zone-1", "zone": [0, 100, 447, 1920] },
+    { "name": "Zone-2", "zone": [460, 100, 350, 1910] },
+    { "name": "Zone-3", "zone": [870, 100, 360, 1910] },
+    { "name": "Zone-4", "zone": [1310, 100, 340, 1910] },
+    { "name": "Zone-5", "zone": [0, 0, 0, 0] },
+    { "name": "Zone-6", "zone": [0, 100, 447, 1920] },
+    { "name": "Zone-7", "zone": [460, 100, 350, 1910] },
+    { "name": "Zone-8", "zone": [870, 100, 360, 1910] },
+    { "name": "Zone-9", "zone": [1310, 100, 340, 1910] },
+    { "name": "Zone-10", "zone": [0, 0, 0, 0] }
   ]);
   const [activeZoneIdx, setActiveZoneIdx] = useState(0);
+
+  const getVisibleZonesForCam = (camIdx) => {
+    const num = parseInt(camIdx, 10) || 1;
+    const startIdx = (num - 1) * 5;
+    const endIdx = startIdx + 5;
+    return zones.map((z, globalIdx) => ({ ...z, globalIdx })).slice(startIdx, endIdx);
+  };
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [cameraRefs, setCameraRefs] = useState(["", "", ""]);
   const [connectedCameras, setConnectedCameras] = useState([]);
@@ -253,7 +265,23 @@ function App() {
       axios.get(`${API_URL}/zones`)
         .then(res => {
           if (res.data && Array.isArray(res.data)) {
-            setZones(res.data);
+            const defaultFallback = [
+              { "name": "Zone-1", "zone": [0, 100, 447, 1920] },
+              { "name": "Zone-2", "zone": [460, 100, 350, 1910] },
+              { "name": "Zone-3", "zone": [870, 100, 360, 1910] },
+              { "name": "Zone-4", "zone": [1310, 100, 340, 1910] },
+              { "name": "Zone-5", "zone": [0, 0, 0, 0] },
+              { "name": "Zone-6", "zone": [0, 100, 447, 1920] },
+              { "name": "Zone-7", "zone": [460, 100, 350, 1910] },
+              { "name": "Zone-8", "zone": [870, 100, 360, 1910] },
+              { "name": "Zone-9", "zone": [1310, 100, 340, 1910] },
+              { "name": "Zone-10", "zone": [0, 0, 0, 0] }
+            ];
+            const loaded = [...res.data];
+            while (loaded.length < 10) {
+              loaded.push(defaultFallback[loaded.length]);
+            }
+            setZones(loaded);
           }
         })
         .catch(err => console.error("Error fetching zones:", err));
@@ -297,6 +325,17 @@ function App() {
       return () => clearTimeout(delayDebounceFn);
     }
   }, [cameraParams, activePage]);
+
+  // Real-time live auto-save for zones so changes immediately reflect on the live preview video feed
+  useEffect(() => {
+    if (zones && zones.length > 0 && activePage === 'Camera Setting') {
+      const delayDebounceFn = setTimeout(() => {
+        axios.post(`${API_URL}/zones`, zones)
+          .catch(err => console.error("Zones live auto-save error:", err));
+      }, 50);
+      return () => clearTimeout(delayDebounceFn);
+    }
+  }, [zones, activePage]);
 
   const saveZonesConfig = () => {
     axios.post(`${API_URL}/zones`, zones)
@@ -1488,6 +1527,8 @@ function App() {
                         await stopPreviewBackend();
                       }
                       setActiveCamParamIdx(camIdx);
+                      const startIdx = (parseInt(camIdx, 10) - 1) * 5;
+                      setActiveZoneIdx(startIdx);
                       setTimeout(() => setIsPreviewing(true), 200);
                     }}
                     className={`flex-1 md:flex-1 py-3 md:py-0 rounded-xl font-bold text-sm transition-all border-2 flex items-center justify-center ${activeCamParamIdx === camIdx ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/30' : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300 hover:text-blue-600'}`}
@@ -1597,13 +1638,13 @@ function App() {
                   </>
                 ) : (
                   <>
-                    {/* Zone Selector Buttons */}
+                    {/* Zone Selector Buttons for Active Camera */}
                     <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1.5 custom-scrollbar">
-                      {zones.map((z, idx) => (
+                      {getVisibleZonesForCam(activeCamParamIdx).map((z) => (
                         <button
-                          key={idx}
-                          onClick={() => setActiveZoneIdx(idx)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeZoneIdx === idx ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                          key={z.globalIdx}
+                          onClick={() => setActiveZoneIdx(z.globalIdx)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold whitespace-nowrap transition-all ${activeZoneIdx === z.globalIdx ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                         >
                           {z.name}
                         </button>
@@ -1612,6 +1653,9 @@ function App() {
 
                     {zones[activeZoneIdx] ? (
                       <div className="flex flex-col gap-3 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="text-[11px] font-bold text-slate-500 px-1">
+                          Configuring <span className="text-blue-600 font-extrabold">{zones[activeZoneIdx].name}</span> (Cam {activeCamParamIdx})
+                        </div>
                         {[
                           { label: 'X (Left/Right)', max: 2448, idx: 0 },
                           { label: 'Y (Top/Bottom)', max: 2048, idx: 1 },

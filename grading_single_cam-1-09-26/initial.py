@@ -1,0 +1,1880 @@
+import sys, os, platform
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from ctypes import *
+import numpy as np
+import cv2
+import serial
+import time
+import re
+import json
+
+# Setup CUDA DLL paths for ONNX GPU (NVIDIA RTX 5050 Blackwell sm_120)
+try:
+    import torch
+    _torch_lib = os.path.join(os.path.dirname(torch.__file__), 'lib')
+    if os.path.exists(_torch_lib):
+        if hasattr(os, 'add_dll_directory'):
+            os.add_dll_directory(_torch_lib)
+        os.environ['PATH'] = _torch_lib + os.pathsep + os.environ['PATH']
+except Exception:
+    pass
+
+try:
+    import onnxruntime as ort
+    ONNX_AVAILABLE = True
+except ImportError:
+    ONNX_AVAILABLE = False
+
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+
+import concurrent.futures
+import threading
+from collections import Counter
+import gc
+import math
+import datetime
+import queue
+
+# =========================================================
+# TRACKER SELECTION (C++ Kalman → Python Kalman fallback)
+# =========================================================
+try:
+    from tracker_adapter import CppObjectTracker as _TrackerClass, CPP_AVAILABLE
+    if not CPP_AVAILABLE:
+        raise ImportError("cashew_tracker_core extension not compiled")
+    _TRACKER_TYPE = "C++ Kalman"
+except ImportError:
+    try:
+        from fallback_tracker import FallbackObjectTracker as _TrackerClass
+        _TRACKER_TYPE = "Python Kalman (fallback)"
+    except ImportError:
+        _TrackerClass = None
+        _TRACKER_TYPE = "Legacy (built-in)"
+
+from ejection_queue import EjectionQueue
+
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+    BUNDLE_DIR = getattr(sys, '_MEIPASS', BASE_DIR)
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    BUNDLE_DIR = BASE_DIR
+
+# Helper to find first existing path from candidates, or fallback to default
+def get_existing_path(candidates, default_path):
+    for c in candidates:
+        if c and os.path.exists(c):
+            return c
+    return default_path
+
+# ========================================================
+# CONFIG
+# =========================================================
+
+SERIAL_FILE = get_existing_path([
+    r"C:\Users\i7\Desktop\camera_serial(a).txt",
+    r"D:\Keya Work\360\camera_ref.json",
+    os.path.join(BASE_DIR, "wate", "camera_ref.txt")
+], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
+
+RANGES_FILE = get_existing_path([
+    r"D:\4_belt_main\4_belt\range\value.txt",
+    r"D:\Keya Work\360\wate\value.txt",
+    os.path.join(BASE_DIR, "wate", "value.txt")
+], os.path.join(BASE_DIR, "wate", "value.txt"))  # Grading ranges file
+
+# ================= CUSTOM PROCESS ZONES =================
+# We now use a SINGLE COM PORT for both zones.
+# Format: (x, y, width, height)
+
+MAIN_COM_FILE = get_existing_path([
+    r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt",
+    r"D:\Keya Work\360\wate\com_port(a).txt",
+    os.path.join(BASE_DIR, "wate", "com_port(a).txt")
+], os.path.join(BASE_DIR, "wate", "com_port(a).txt"))
+
+DEFAULT_ZONE_CONFIGS = [
+    {
+        'zone': (50, 100, 250, 800),
+        'name': 'Zone-1'
+    },
+    {
+        'zone': (350, 100, 250, 800),
+        'name': 'Zone-2'
+    },
+    {
+        'zone': (650, 100, 250, 800),
+        'name': 'Zone-3'
+    },
+    {
+        'zone': (950, 100, 250, 800),
+        'name': 'Zone-4'
+    },
+    {
+        'zone': (1250, 100, 250, 800),
+        'name': 'Zone-5'
+    }
+]
+
+ZONES_CONFIG_FILE = get_existing_path([
+    os.path.join(BASE_DIR, "zones_config.json"),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "zones_config.json")
+], os.path.join(BASE_DIR, "zones_config.json"))
+
+DETECTIONS_FOLDER = get_existing_path([
+    r"f:\server\360\detections"
+], os.path.join(BASE_DIR, "detections"))
+
+# Ensure detections folder exists
+if not os.path.exists(DETECTIONS_FOLDER):
+    try:
+        os.makedirs(DETECTIONS_FOLDER, exist_ok=True)
+        print(f"Created detections folder: {DETECTIONS_FOLDER}")
+    except Exception:
+        pass
+
+class AsyncImageSaver:
+    """
+    Non-blocking background thread for saving detection images to disk.
+    Prevents cv2.imwrite disk I/O latency from stalling vision processing threads.
+    """
+    def __init__(self, max_queue_size=200):
+        self.queue = queue.Queue(maxsize=max_queue_size)
+        self.worker = threading.Thread(target=self._worker_loop, daemon=True, name="AsyncImageSaver")
+        self.worker.start()
+
+    def submit(self, crop, obj_id, final_grade, max_mm, tracked_cnt):
+        if crop is None or crop.size == 0:
+            return
+        try:
+            cnt_copy = tracked_cnt.copy() if tracked_cnt is not None else None
+            self.queue.put_nowait((crop.copy(), obj_id, final_grade, max_mm, cnt_copy))
+        except queue.Full:
+            pass  # Drop save if queue is full to preserve real-time vision performance
+
+    def _worker_loop(self):
+        while True:
+            try:
+                item = self.queue.get()
+                if item is None:
+                    break
+                crop, obj_id, final_grade, max_mm, tracked_cnt = item
+                self._save(crop, obj_id, final_grade, max_mm, tracked_cnt)
+                self.queue.task_done()
+            except Exception:
+                pass
+
+    def _save(self, last_crop, obj_id, final_grade, max_mm, tracked_cnt):
+        try:
+            save_img = last_crop.copy()
+            h_s, w_s = save_img.shape[:2]
+            is_defect = final_grade and not any(size in str(final_grade) for size in ['400', '320', '240', '210', '180'])
+            color_border = (0, 0, 255) if is_defect else (0, 255, 0)
+
+            x_b, y_b, w_b, h_b = cv2.boundingRect(tracked_cnt) if tracked_cnt is not None else (0, 0, w_s, h_s)
+            side = max(w_b, h_b) + 40
+            cx_b, cy_b = x_b + w_b // 2, y_b + h_b // 2
+            crop_ox = max(0, cx_b - side // 2)
+            crop_oy = max(0, cy_b - side // 2)
+
+            contour_drawn = False
+            if tracked_cnt is not None and len(tracked_cnt) >= 3:
+                local_cnt = tracked_cnt.copy()
+                local_cnt[:, 0, 0] -= crop_ox
+                local_cnt[:, 0, 1] -= crop_oy
+                smooth_cnt = smooth_contour(local_cnt, window=11)
+                if len(smooth_cnt) >= 3:
+                    cv2.drawContours(save_img, [smooth_cnt], -1, color_border, 2)
+                    contour_drawn = True
+
+            if not contour_drawn:
+                smooth_s = cv2.GaussianBlur(save_img, (7, 7), 0)
+                gray_s = cv2.cvtColor(smooth_s, cv2.COLOR_BGR2GRAY)
+                _, mask_s = cv2.threshold(gray_s, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+                kernel_e_s = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+                mask_s = cv2.morphologyEx(mask_s, cv2.MORPH_CLOSE, kernel_e_s, iterations=2)
+                mask_s = cv2.GaussianBlur(mask_s, (15, 15), 0)
+                _, mask_s = cv2.threshold(mask_s, 127, 255, cv2.THRESH_BINARY)
+                cnts_s, _ = cv2.findContours(mask_s, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                if cnts_s:
+                    best_cnt = max(cnts_s, key=cv2.contourArea)
+                    smooth_cnt_s = smooth_contour(best_cnt, window=11)
+                    cv2.drawContours(save_img, [smooth_cnt_s], -1, color_border, 2)
+                else:
+                    cv2.rectangle(save_img, (0, 0), (w_s - 1, h_s - 1), color_border, 2)
+
+            label_grade = f"{final_grade or 'None'}"
+            label_size = f"{max_mm:.1f}mm"
+            cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            cv2.putText(save_img, label_grade, (5, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 2)
+            cv2.putText(save_img, label_size, (5, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            filename = f"ID{obj_id}_{final_grade}_{int(max_mm)}mm_{int(time.time())}.jpg"
+            filepath = os.path.join(DETECTIONS_FOLDER, filename)
+            cv2.imwrite(filepath, save_img)
+        except Exception:
+            pass
+
+ASYNC_IMAGE_SAVER = AsyncImageSaver()
+
+def load_zones_config():
+    if os.path.exists(ZONES_CONFIG_FILE):
+        try:
+            with open(ZONES_CONFIG_FILE, 'r') as f:
+                configs = json.load(f)
+                # Convert list zone back to tuple
+                for c in configs:
+                    if 'zone' in c and isinstance(c['zone'], list):
+                        c['zone'] = tuple(c['zone'])
+                print(f"Loaded zone configurations from {ZONES_CONFIG_FILE}")
+                return configs
+        except Exception as e:
+            print(f"Error loading zones config: {e}. Using default.")
+    return DEFAULT_ZONE_CONFIGS
+
+def save_zones_config(configs):
+    try:
+        with open(ZONES_CONFIG_FILE, 'w') as f:
+            json.dump(configs, f, indent=4)
+        print(f"\n[SAVE] Zone configuration saved to {ZONES_CONFIG_FILE}")
+    except Exception as e:
+        print(f"\n[SAVE] Error saving zones config: {e}")
+
+ZONE_CONFIGS = load_zones_config()
+
+# === DETECTION SENSITIVITY CONTROL PANEL (TUNE HERE) ===
+MIN_CASHEW_AREA = 3500       # Increased to 3500 to ignore dust/noise
+MIN_MM_SIZE = 15.0           # Minimum measurement to log/act on cashew
+MAX_CASHEW_MM = 33.0         # Any object larger than 45mm is likely a roller
+MAX_ASPECT_RATIO = 3.0       # Ignore extremely long objects (Rollers)
+
+# General Shape/Color Segmentation (Validation only)
+HSV_LOWER = np.array([0, 30, 15])     # Higher Saturation to ensure it's not the belt
+HSV_UPPER = np.array([40, 255, 255])  # Upper hue/sat/val for cashew detection
+
+YOLO_CONF_THRESHOLD = 0.40   # [0.1-1.0] AI strictness: Higher = Fewer defect calls
+YOLO_STRICT_BYPASS = 0.85    # [0.1-1.0] If AI is 85% sure it is GOOD, skip heuristics
+
+# =========================================================
+
+PIXEL_TO_MM_RATIO = 0.111  # 1 px = 0.0937 mm
+MAX_TRACKING_DISTANCE = 250 # Increased to 250 to follow fast-moving cashews without duplicate IDs
+DELAY_SECONDS = 5.50    # Default PLC ejection delay in seconds
+
+# =========================================================
+# PER-ZONE INDEPENDENT DELAY CONFIGURATION (SECONDS)
+# Each zone operates on its own timing without affecting others
+# =========================================================
+ZONE_DELAY_MAP = {
+    'Zone-1': 5.50,
+    'Zone-2': 5.50,
+    'Zone-3': 5.50,
+    'Zone-4': 5.50,
+    'Zone-5': 5.50
+}
+
+# =========================================================
+# KEYBOARD CONTROL CONFIGURATION
+# =========================================================
+SELECTED_ZONE_INDEX = None  # Currently selected zone for adjustment (0-4)
+SHOW_DISPLAY = True  # Whether to show the display window
+ZONE_ADJUST_STEP = 10  # Pixels to move/resize per keypress
+
+# =========================================================
+# YOLO CONFIGURATION (GPU ACCELERATED)
+# =========================================================
+YOLO_MODEL_PATH = os.path.join(BASE_DIR, "best.onnx")
+if not os.path.exists(YOLO_MODEL_PATH):
+    YOLO_MODEL_PATH = os.path.join(BUNDLE_DIR, "best.onnx")
+
+# Broadened 'good' list to match various possible model training class names
+GOOD_CLASS_NAMES = ['good', 'cashew', 'white', 'full', 'whole', 'object'] 
+
+# =========================================================
+# GRADING CONFIGURATION
+# =========================================================
+
+# Individual commands for each grade per zone
+GRADE_PORT_MAP = {
+    'Zone-1': {
+        '400': '11|',
+        '320': '12|',
+        '240': '13|',
+        '210': '14|',
+        '180': '15|',
+        'default': '11|'
+    },
+    'Zone-2': {
+        '400': '22|',
+        '320': '23|',
+        '240': '24|',
+        '210': '25|',
+        '180': '26|',
+        'default': '22|'
+    },
+    'Zone-3': {
+        '400': '33|',
+        '320': '34|',
+        '240': '35|',
+        '210': '36|',
+        '180': '41|',
+        'default': '33|'
+    },
+    'Zone-4': {
+        '400': '44|',
+        '320': '45|',
+        '240': '46|',
+        '210': '51|',
+        '180': '52|',
+        'default': '44|'
+    },
+    'Zone-5': {
+        '400': '55|',
+        '320': '56|',
+        '240': '61|',
+        '210': '62|',
+        '180': '63|',
+        'default': '55|'
+    }
+}
+
+# Backward compatibility alias
+ZONE_COMMAND_MAP = {zone: cmds['default'] for zone, cmds in GRADE_PORT_MAP.items()}
+
+# =========================================================
+# LOAD SDK
+# =========================================================
+
+if platform.system() == "Windows":
+    for p in [
+        os.path.join(BASE_DIR, "Python", "MvImport"),
+        os.path.join(BUNDLE_DIR, "Python", "MvImport"),
+        os.path.join(BUNDLE_DIR, "MvImport"),
+        r"C:\Program Files (x86)\MVS\Development\Samples\Python\MvImport"
+    ]:
+        if os.path.exists(p) and p not in sys.path:
+            sys.path.append(p)
+
+    # Add runtime DLL path
+    DLL_PATH = r"C:\Program Files (x86)\Common Files\MVS\Runtime\Win64_x64"
+    if os.path.exists(DLL_PATH):
+        os.environ['PATH'] = DLL_PATH + os.pathsep + os.environ['PATH']
+        if hasattr(os, 'add_dll_directory'):
+            os.add_dll_directory(DLL_PATH)
+
+try:
+    from MvCameraControl_class import *  # type: ignore
+    SDK_IMPORTED = True
+except Exception as e:
+    print(f"SDK not loaded: {e}")
+    SDK_IMPORTED = False
+
+# =========================================================
+# READ SERIAL
+# =========================================================
+
+def read_target_serial():
+    candidates = [
+        SERIAL_FILE,
+        os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
+        os.path.join(BASE_DIR, "camera_serial.txt"),
+        r"C:\Users\i7\Desktop\camera_serial(b).txt"
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            try:
+                with open(c, "r") as f:
+                    content = f.read().strip()
+                    if content.startswith("[") or content.startswith("{"):
+                        data = json.loads(content)
+                        if isinstance(data, dict):
+                            refs = data.get("references", [""])
+                            if refs and refs[0]: return refs[0].strip()
+                        elif isinstance(data, list):
+                            if data and data[0]: return data[0].strip()
+                    elif content:
+                        return content.splitlines()[0].strip()
+            except Exception:
+                pass
+    print("No camera serial found in config files")
+    return None
+
+# =========================================================
+# READ COM PORT FROM FILE
+# =========================================================
+
+def read_com_port_from_file(file_path):
+    """
+    Read COM port string from file and normalize to e.g. 'COM6'.
+    Accepts '6', 'COM6', 'ASRL6::INSTR', etc.
+    Returns normalized COM port string or None on error.
+    """
+    candidates = [
+        file_path,
+        os.path.join(BASE_DIR, "wate", "com_port(a).txt"),
+        os.path.join(BASE_DIR, "wate", "comport(a).txt"),
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt")
+    ]
+    for c in candidates:
+        if c and os.path.exists(c):
+            try:
+                with open(c, 'r') as f:
+                    content = f.read().strip()
+                if content.startswith("[") or content.startswith("{"):
+                    data = json.loads(content)
+                    if isinstance(data, dict):
+                        refs = data.get("references", [""])
+                        if refs and refs[0]: content = refs[0].strip()
+                m = re.search(r'(\d+)', content)
+                if m:
+                    return f"COM{m.group(1)}"
+                if content.upper().startswith('COM'):
+                    return content
+            except Exception:
+                pass
+
+    return None
+
+# =========================================================
+# GRADING SYSTEM
+# =========================================================
+
+def load_ranges(file_path):
+    """Load grading ranges from file (supports both 'min-max:grade' and 'grade,min,max')"""
+    ranges = []
+    try:
+        if not os.path.exists(file_path):
+            local_path = os.path.join(BASE_DIR, "wate", "value.txt")
+            if os.path.exists(local_path):
+                file_path = local_path
+        if os.path.exists(file_path):
+            with open(file_path, 'r') as f:
+                for line in f:
+                    part = line.strip()
+                    if not part:
+                        continue
+                    if ':' in part:
+                        range_part, grade = part.split(':')
+                        start, end = map(float, range_part.split('-'))
+                        ranges.append((start, end, grade.strip()))
+                    elif ',' in part:
+                        parts = [p.strip() for p in part.split(',')]
+                        if len(parts) >= 3 and parts[1] and parts[2]:
+                            grade = parts[0]
+                            start = float(parts[1])
+                            end = float(parts[2])
+                            ranges.append((start, end, grade))
+            print(f"Loaded {len(ranges)} grading ranges from {file_path}: {ranges}")
+        else:
+            print(f"Ranges file not found: {file_path}")
+        return ranges
+    except Exception as e:
+        print(f"Error loading ranges: {e}")
+        return []
+
+def get_grade(mm_value, ranges):
+    """Get grade based on mm value"""
+    if not ranges:
+        return None
+    for start, end, grade in ranges:
+        if start <= mm_value <= end:
+            return grade
+    return None
+
+# =========================================================
+# GPU ACCELERATED YOLO / ONNX QUALITY FILTER CLASS
+# =========================================================
+
+class CashewQualityFilter:
+    """
+    Ultra-fast GPU-accelerated Defect Detection and Quality Filter.
+    Supports ONNX Runtime with CUDAExecutionProvider on RTX 5050 GPU (~9-10ms per cashew).
+    Automatically falls back to PyTorch YOLO or CPU if needed.
+    """
+    CLASS_MAP = {0: 'bad', 1: 'blackdot', 2: 'brown', 3: 'good', 4: 'multi', 5: 'oilly', 6: 'unpill'}
+
+    def __init__(self, model_path=None):
+        self.session = None
+        self.model = None
+        self.provider = None
+        self.input_name = None
+        self.input_shape = (704, 704)
+        
+        # 1. First Priority: ONNX Runtime GPU / CPU
+        onnx_candidates = [
+            model_path if model_path and model_path.endswith('.onnx') else None,
+            os.path.join(BASE_DIR, "best.onnx"),
+            os.path.join(BUNDLE_DIR, "best.onnx"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.onnx")
+        ]
+        
+        onnx_path = next((p for p in onnx_candidates if p and os.path.exists(p)), None)
+        
+        if ONNX_AVAILABLE and onnx_path:
+            try:
+                available = ort.get_available_providers()
+                providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if 'CUDAExecutionProvider' in available else ['CPUExecutionProvider']
+                self.session = ort.InferenceSession(onnx_path, providers=providers)
+                self.provider = self.session.get_providers()[0]
+                self.input_name = self.session.get_inputs()[0].name
+                inp_shape = self.session.get_inputs()[0].shape
+                h = inp_shape[2] if len(inp_shape) > 2 and isinstance(inp_shape[2], int) else 704
+                w = inp_shape[3] if len(inp_shape) > 3 and isinstance(inp_shape[3], int) else 704
+                self.input_shape = (w, h)
+                print(f"\n[AI CORE] ONNX Engine loaded from: {onnx_path}")
+                print(f"[AI CORE] Active Provider: {self.provider}")
+                print(f"[AI CORE] Defect Detection Classes: {list(self.CLASS_MAP.values())}")
+                
+                # Warmup
+                dummy = np.zeros((1, 3, h, w), dtype=np.float32)
+                for _ in range(2):
+                    self.session.run(None, {self.input_name: dummy})
+                print(f"[AI CORE] Warmup Complete (AI Ready)\n")
+                return
+            except Exception as e:
+                print(f"[AI CORE] Error initializing ONNX: {e}")
+                self.session = None
+                
+        # 2. Fallback: Ultralytics PyTorch YOLO
+        pt_candidates = [
+            model_path if model_path and model_path.endswith('.pt') else None,
+            os.path.join(BASE_DIR, "best.pt"),
+            os.path.join(BUNDLE_DIR, "best.pt"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.pt")
+        ]
+        pt_path = next((p for p in pt_candidates if p and os.path.exists(p)), None)
+        
+        if YOLO_AVAILABLE and pt_path:
+            try:
+                self.model = YOLO(pt_path)
+                print(f"[AI CORE] YOLO Model loaded from: {pt_path}")
+                if hasattr(self.model, 'names') and isinstance(self.model.names, dict):
+                    self.CLASS_MAP = {k: v.lower() for k, v in self.model.names.items()}
+                print(f"[AI CORE] YOLO Classes: {self.CLASS_MAP}")
+            except Exception as e:
+                print(f"[AI CORE] Error loading PyTorch YOLO: {e}")
+
+    def get_cashew_categories_batch(self, crops):
+        """
+        Run high-speed GPU inference on cashew crops to detect defects or good cashews.
+        Returns a list of (class_name, confidence) or (None, 0).
+        """
+        if not crops:
+            return []
+
+        start_ai = time.perf_counter()
+        batch_results = []
+
+        # --- 1. GPU ONNX RUNTIME ENGINE ---
+        if self.session is not None:
+            try:
+                w_in, h_in = self.input_shape
+                for crop in crops:
+                    if crop is None or crop.size == 0:
+                        batch_results.append((None, 0.0))
+                        continue
+                    
+                    # Preprocessing: resize + normalize (1, 3, H, W)
+                    img = cv2.resize(crop, (w_in, h_in)).transpose(2, 0, 1).astype(np.float32) / 255.0
+                    img_tensor = np.expand_dims(img, axis=0)
+                    
+                    # Run on NVIDIA GPU
+                    output = self.session.run(None, {self.input_name: img_tensor})[0]
+                    
+                    # Output is (1, 11, 10164) where 11 = 4 bbox coords + 7 class scores
+                    preds = output[0].T  # shape (10164, 11)
+                    scores = preds[:, 4:]  # shape (10164, 7)
+                    
+                    # Find highest scoring detection
+                    max_idx = np.unravel_index(np.argmax(scores), scores.shape)
+                    anchor_idx, class_id = max_idx
+                    best_conf = float(scores[anchor_idx, class_id])
+                    
+                    if best_conf >= YOLO_CONF_THRESHOLD:
+                        class_name = self.CLASS_MAP.get(class_id, 'good')
+                        batch_results.append((class_name, best_conf))
+                    else:
+                        # Default to good
+                        batch_results.append(('good', best_conf))
+                
+                ai_time = (time.perf_counter() - start_ai) * 1000
+                if len(crops) > 0:
+                    print(f"[AI GPU] Processed {len(crops)} cashews on RTX 5050 in {ai_time:.1f}ms ({(ai_time/len(crops)):.1f}ms/crop) -> {batch_results}")
+                return batch_results
+            except Exception as e:
+                print(f"[AI GPU ERROR] {e}")
+
+        # --- 2. ULTRALYTICS PYTORCH FALLBACK ---
+        if self.model is not None:
+            try:
+                results = self.model(crops, verbose=False, conf=YOLO_CONF_THRESHOLD, device='cpu', imgsz=224)
+                for result in results:
+                    if len(result.boxes) > 0:
+                        found_good = False
+                        for box in result.boxes:
+                            cls_name = self.model.names[int(box.cls[0])].lower()
+                            if cls_name in [n.lower() for n in GOOD_CLASS_NAMES]:
+                                batch_results.append((cls_name, float(box.conf[0])))
+                                found_good = True
+                                break
+                        if not found_good:
+                            best_box = result.boxes[0]
+                            batch_results.append((self.model.names[int(best_box.cls[0])].lower(), float(best_box.conf[0])))
+                    else:
+                        batch_results.append(('good', 0.0))
+                return batch_results
+            except Exception as e:
+                print(f"[AI PYTORCH ERROR] {e}")
+
+        return [(None, 0.0)] * len(crops)
+
+# =========================================================
+# CAMERA CLASS
+# =========================================================
+
+class HIKCashewCamera:
+
+    def __init__(self):
+        self.cam=None
+        self.is_grabbing=False
+        self.nPayloadSize=0
+
+    def connect(self):
+
+        target_serial=read_target_serial()
+        if not target_serial:
+            return False
+
+        print("Target Serial:",target_serial)
+
+        self.cam=MvCamera()
+
+        deviceList=MV_CC_DEVICE_INFO_LIST()
+        tlayerType=MV_GIGE_DEVICE|MV_USB_DEVICE
+
+        if MvCamera.MV_CC_EnumDevices(tlayerType,deviceList)!=0:
+            return False
+
+        selected=None
+
+        for i in range(deviceList.nDeviceNum):
+
+            info=cast(deviceList.pDeviceInfo[i],
+                      POINTER(MV_CC_DEVICE_INFO)).contents
+
+            try:
+                if info.nTLayerType==MV_GIGE_DEVICE:
+                    serial=bytes(info.SpecialInfo.stGigEInfo.chSerialNumber)\
+                           .decode(errors="ignore").strip("\x00")
+
+                elif info.nTLayerType==MV_USB_DEVICE:
+                    serial=bytes(info.SpecialInfo.stUsb3VInfo.chSerialNumber)\
+                           .decode(errors="ignore").strip("\x00")
+                else:
+                    continue
+
+                print("Camera",i,"Serial:",serial)
+
+                if serial==target_serial:
+                    selected=info
+                    break
+            except:
+                pass
+
+        if selected is None:
+            print("Camera serial not found")
+            return False
+
+        if self.cam.MV_CC_CreateHandle(selected)!=0: return False
+        if self.cam.MV_CC_OpenDevice(MV_ACCESS_Control,0)!=0: return False
+
+        self.cam_idx = "1"
+        try:
+            ref_path = os.path.join(os.path.dirname(__file__), "wate", "camera_ref.txt")
+            if os.path.exists(ref_path):
+                with open(ref_path, "r") as f:
+                    refs = json.load(f).get("references", ["", "", ""])
+                    for idx, ref in enumerate(refs):
+                        if ref.strip() == target_serial.strip():
+                            self.cam_idx = str(idx + 1)
+                            break
+        except: pass
+
+        params = {}
+        try:
+            params_path = os.path.join(os.path.dirname(__file__), "camera_params.json")
+            if os.path.exists(params_path):
+                with open(params_path, "r") as f:
+                    params = json.load(f).get(self.cam_idx, {})
+        except: pass
+
+        # Set to saved resolution or max if missing
+        try:
+            self.cam.MV_CC_SetIntValue("OffsetX", 0)
+            self.cam.MV_CC_SetIntValue("OffsetY", 0)
+            
+            stWidthParam = MVCC_INTVALUE()
+            memset(byref(stWidthParam), 0, sizeof(stWidthParam))
+            self.cam.MV_CC_GetIntValue("Width", stWidthParam)
+            w_max = stWidthParam.nMax if stWidthParam.nMax > 0 else 2448
+            
+            stHeightParam = MVCC_INTVALUE()
+            memset(byref(stHeightParam), 0, sizeof(stHeightParam))
+            self.cam.MV_CC_GetIntValue("Height", stHeightParam)
+            h_max = stHeightParam.nMax if stHeightParam.nMax > 0 else 2048
+            
+            w_val = int(params.get("width", w_max))
+            w_val = max(32, min(w_max, w_val))
+            w_val = (w_val // 8) * 8
+            self.cam.MV_CC_SetIntValue("Width", w_val)
+            self.current_width = w_val
+            
+            h_val = int(params.get("height", h_max))
+            h_val = max(8, min(h_max, h_val))
+            h_val = (h_val // 4) * 4
+            self.cam.MV_CC_SetIntValue("Height", h_val)
+            self.current_height = h_val
+            
+            off_x_val = int(params.get("offsetX", 0))
+            off_x_val = (off_x_val // 8) * 8
+            self.cam.MV_CC_SetIntValue("OffsetX", off_x_val)
+            self.current_offset_x = off_x_val
+            
+            off_y_val = int(params.get("offsetY", 0))
+            off_y_val = (off_y_val // 2) * 2
+            self.cam.MV_CC_SetIntValue("OffsetY", off_y_val)
+            self.current_offset_y = off_y_val
+            
+            # --- CRITICAL FIX FOR MOTION BLUR ---
+            # Turn off Auto Exposure & Auto Gain to prevent the camera from artificially 
+            # increasing exposure time in dark areas, which causes massive motion blur on the belt.
+            self.cam.MV_CC_SetEnumValue("ExposureAuto", 0) # 0 = Off
+            self.cam.MV_CC_SetEnumValue("GainAuto", 0)     # 0 = Off
+            
+            if "exposure" in params and params["exposure"]:
+                self.cam.MV_CC_SetFloatValue("ExposureTime", float(params["exposure"]))
+            else:
+                # Default to 6000us (6ms) - extremely fast shutter to freeze fast-moving cashews
+                self.cam.MV_CC_SetFloatValue("ExposureTime", 6000.0)
+                
+            if "gain" in params and params["gain"]:
+                self.cam.MV_CC_SetFloatValue("Gain", float(params["gain"]))
+                
+            print(f"[CAMERA] Set initial parameters: {w_val}x{h_val} offsets: {off_x_val},{off_y_val}")
+        except Exception as e:
+            print(f"[CAMERA] Failed to set parameters: {e}")
+
+        self.cam.MV_CC_SetEnumValue("TriggerMode",MV_TRIGGER_MODE_OFF)
+
+        stParam=MVCC_INTVALUE()
+        memset(byref(stParam),0,sizeof(stParam))
+        self.cam.MV_CC_GetIntValue("PayloadSize",stParam)
+        self.nPayloadSize=stParam.nCurValue
+
+        # Background thread handles buffer clearing now, so we let the camera run at its native speed
+
+        if self.cam.MV_CC_StartGrabbing()!=0:
+            return False
+
+        self.is_grabbing=True
+        print("Camera connected")
+        
+        # ==============================================================
+        # CRITICAL ZERO-LAG FIX: Background Thread Grabbing
+        # This thread runs at maximum speed, constantly pulling frames
+        # out of the camera's internal hardware buffer so it NEVER fills up!
+        # ==============================================================
+        self.frame_lock = threading.Lock()
+        self.latest_raw = None
+        self.latest_info = None
+        self.grab_thread = threading.Thread(target=self._grab_loop, daemon=True)
+        self.grab_thread.start()
+        
+        return True
+        
+    def _grab_loop(self):
+        current_data_size = self.nPayloadSize
+        data = (c_ubyte * current_data_size)()
+        frame_info = MV_FRAME_OUT_INFO_EX()
+        
+        while self.is_grabbing:
+            try:
+                # Re-allocate buffer if resolution/payload size was changed dynamically
+                if getattr(self, 'nPayloadSize', current_data_size) != current_data_size:
+                    current_data_size = self.nPayloadSize
+                    data = (c_ubyte * current_data_size)()
+                    
+                memset(byref(frame_info), 0, sizeof(frame_info))
+                ret = self.cam.MV_CC_GetOneFrameTimeout(byref(data), current_data_size, frame_info, 1000)
+                
+                if ret == 0:
+                    # Copy the raw bytes out of the buffer safely using ctypes
+                    raw_bytes = string_at(byref(data), frame_info.nFrameLen)
+                    
+                    with self.frame_lock:
+                        self.latest_raw = raw_bytes
+                        self.latest_info = (frame_info.nWidth, frame_info.nHeight, frame_info.enPixelType)
+                else:
+                    # If ret != 0, camera might be temporarily stopped for param updates
+                    time.sleep(0.01)
+            except Exception as e:
+                print(f"[CAMERA_THREAD] Exception: {e}")
+                time.sleep(0.1)
+
+    def check_and_update_parameters(self):
+        params_path = os.path.join(os.path.dirname(__file__), "camera_params.json")
+        if not os.path.exists(params_path): return
+        try:
+            mtime = os.path.getmtime(params_path)
+            if not hasattr(self, 'last_params_mtime'):
+                self.last_params_mtime = mtime
+                return
+            if mtime > self.last_params_mtime:
+                self.last_params_mtime = mtime
+                print("\n[CAMERA] camera_params.json changed! Reloading...")
+                with open(params_path, "r") as f:
+                    params = json.load(f).get(self.cam_idx, {})
+                if "exposure" in params and params["exposure"] is not None:
+                    self.cam.MV_CC_SetFloatValue("ExposureTime", float(params["exposure"]))
+                if "gain" in params and params["gain"] is not None:
+                    self.cam.MV_CC_SetFloatValue("Gain", float(params["gain"]))
+                
+                res_changed = False
+                if "width" in params and params["width"] is not None and int(params["width"]) != getattr(self, 'current_width', -1): res_changed = True
+                if "height" in params and params["height"] is not None and int(params["height"]) != getattr(self, 'current_height', -1): res_changed = True
+                if "offsetX" in params and params["offsetX"] is not None and int(params["offsetX"]) != getattr(self, 'current_offset_x', -1): res_changed = True
+                if "offsetY" in params and params["offsetY"] is not None and int(params["offsetY"]) != getattr(self, 'current_offset_y', -1): res_changed = True
+                
+                if res_changed:
+                    print("[CAMERA] Resolution/Offset changed, restarting grab...")
+                    self.cam.MV_CC_StopGrabbing()
+                    self.cam.MV_CC_SetIntValue("OffsetX", 0)
+                    self.cam.MV_CC_SetIntValue("OffsetY", 0)
+                    
+                    stWidthParam = MVCC_INTVALUE()
+                    memset(byref(stWidthParam), 0, sizeof(stWidthParam))
+                    self.cam.MV_CC_GetIntValue("Width", stWidthParam)
+                    w_max = stWidthParam.nMax if stWidthParam.nMax > 0 else 2448
+                    stHeightParam = MVCC_INTVALUE()
+                    memset(byref(stHeightParam), 0, sizeof(stHeightParam))
+                    self.cam.MV_CC_GetIntValue("Height", stHeightParam)
+                    h_max = stHeightParam.nMax if stHeightParam.nMax > 0 else 2048
+                    
+                    w_val = int(params.get("width", w_max))
+                    w_val = (max(32, min(w_max, w_val)) // 8) * 8
+                    self.cam.MV_CC_SetIntValue("Width", w_val)
+                    self.current_width = w_val
+                    
+                    h_val = int(params.get("height", h_max))
+                    h_val = (max(8, min(h_max, h_val)) // 4) * 4
+                    self.cam.MV_CC_SetIntValue("Height", h_val)
+                    self.current_height = h_val
+                    
+                    off_x_val = (int(params.get("offsetX", 0)) // 8) * 8
+                    self.cam.MV_CC_SetIntValue("OffsetX", off_x_val)
+                    self.current_offset_x = off_x_val
+                    
+                    off_y_val = (int(params.get("offsetY", 0)) // 2) * 2
+                    self.cam.MV_CC_SetIntValue("OffsetY", off_y_val)
+                    self.current_offset_y = off_y_val
+                    
+                    stParam = MVCC_INTVALUE()
+                    memset(byref(stParam), 0, sizeof(stParam))
+                    self.cam.MV_CC_GetIntValue("PayloadSize", stParam)
+                    self.nPayloadSize = stParam.nCurValue
+                    self.cam.MV_CC_StartGrabbing()
+        except Exception as e:
+            print(f"[CAMERA] Error applying parameters: {e}")
+
+    # -------- Frame Capture (all pixel formats) --------
+    def get_frame(self):
+        if not getattr(self, 'is_grabbing', False):
+            return None
+
+        # Instantly retrieve the absolute freshest frame from the background thread
+        with self.frame_lock:
+            if self.latest_raw is None:
+                return None
+            raw_bytes = self.latest_raw
+            w, h, pf = self.latest_info
+
+        # Convert raw bytes to numpy array
+        img = np.frombuffer(raw_bytes, dtype=np.uint8)
+
+        try:
+            if pf==PixelType_Gvsp_BGR8_Packed:
+                return img.reshape((h,w,3))
+
+            elif pf==PixelType_Gvsp_RGB8_Packed:
+                rgb=img.reshape((h,w,3))
+                return cv2.cvtColor(rgb,cv2.COLOR_RGB2BGR)
+
+            elif pf==PixelType_Gvsp_Mono8:
+                mono=img.reshape((h,w))
+                return cv2.cvtColor(mono,cv2.COLOR_GRAY2BGR)
+
+            elif pf==PixelType_Gvsp_BayerRG8:
+                return cv2.cvtColor(img.reshape((h,w)),cv2.COLOR_BAYER_RG2BGR)
+
+            elif pf==PixelType_Gvsp_BayerGB8:
+                return cv2.cvtColor(img.reshape((h,w)),cv2.COLOR_BAYER_GB2BGR)
+
+            elif pf==PixelType_Gvsp_BayerBG8:
+                return cv2.cvtColor(img.reshape((h,w)),cv2.COLOR_BAYER_BG2BGR)
+
+            elif pf==PixelType_Gvsp_BayerGR8:
+                return cv2.cvtColor(img.reshape((h,w)),cv2.COLOR_BAYER_GR2BGR)
+
+            else:
+                mono=img.reshape((h,w))
+                return cv2.cvtColor(mono,cv2.COLOR_GRAY2BGR)
+
+        except:
+            return None
+
+    def close(self):
+        if self.is_grabbing:
+            self.cam.MV_CC_StopGrabbing()
+            self.cam.MV_CC_CloseDevice()
+            self.cam.MV_CC_DestroyHandle()
+
+# =========================================================
+# OBJECT TRACKING CLASS
+# =========================================================
+# The old centroid-distance ObjectTracker (max_distance=4000) has been
+# replaced by CppObjectTracker (C++ Kalman) or FallbackObjectTracker
+# (Python Kalman). Both use:
+#   - Constant-velocity Kalman filter per track
+#   - Dynamic gating based on predicted velocity (120-320px)
+#   - Global cost-sorted greedy association
+#   - Direction gate (cashews move downward)
+#   - Size-based association cost
+#   - get_robust_size() / get_consensus_grade() for stable measurement
+#
+# If neither tracker module is available, fall back to a minimal legacy tracker.
+
+if _TrackerClass is None:
+    # ---- Legacy fallback: simple centroid-distance tracker ----
+    # Only used if both tracker_adapter.py and fallback_tracker.py are missing.
+    class _LegacyObjectTracker:
+        def __init__(self, zone_name, max_distance=320, max_disappeared=8, pixel_to_mm_ratio=1.0):
+            self.zone_name = zone_name
+            self.next_id = 1
+            self.objects = {}
+            self.max_distance = max_distance
+            self.max_disappeared = max_disappeared
+            self.pixel_to_mm_ratio = pixel_to_mm_ratio
+
+        def update(self, contours, is_good_flags, grades, crops, frame_timestamp=None):
+            if frame_timestamp is None:
+                frame_timestamp = time.perf_counter()
+            current_centroids = []
+            current_sizes = []
+            for i, c in enumerate(contours):
+                if c is None or len(c) < 3:
+                    continue
+                M = cv2.moments(c)
+                if M["m00"] != 0:
+                    cx = int(M["m10"] / M["m00"])
+                    cy = int(M["m01"] / M["m00"])
+                    # Use fitEllipse for rotation-stable size measurement
+                    if len(c) >= 15:
+                        ellipse = cv2.fitEllipse(c)
+                        w, h = ellipse[1]
+                    else:
+                        rect = cv2.minAreaRect(c)
+                        w, h = rect[1]
+                    mm_size = max(w, h) * self.pixel_to_mm_ratio
+                    current_centroids.append((cx, cy))
+                    current_sizes.append(mm_size)
+            object_ids = list(self.objects.keys())
+            matched_objects = set()
+            matched_detections = set()
+            for i, curr_centroid in enumerate(current_centroids):
+                min_dist = float('inf')
+                min_id = None
+                for obj_id in object_ids:
+                    if obj_id in matched_objects: continue
+                    old_centroid = self.objects[obj_id]['centroid']
+                    dy = curr_centroid[1] - old_centroid[1]
+                    if dy < -150: continue
+                    dist = math.hypot(curr_centroid[0] - old_centroid[0], dy)
+                    if dist < min_dist:
+                        min_dist = dist; min_id = obj_id
+                if min_dist < self.max_distance and min_id is not None:
+                    obj = self.objects[min_id]
+                    old_max = obj['max_mm']
+                    obj['prev_centroid'] = obj['centroid']
+                    obj['prev_time'] = obj.get('curr_time', frame_timestamp)
+                    obj['curr_time'] = frame_timestamp
+                    obj['centroid'] = curr_centroid
+                    obj['measurements'].append(current_sizes[i])
+                    obj['max_mm'] = max(old_max, current_sizes[i])
+                    obj['grade_history'].append(grades[i])
+                    if current_sizes[i] > old_max:
+                        obj['last_crop'] = crops[i].copy()
+                    obj['latest_contour'] = contours[i]
+                    obj['is_good'] = is_good_flags[i]
+                    obj['current_grade'] = grades[i]
+                    obj['disappeared_count'] = 0
+                    matched_objects.add(min_id)
+                    matched_detections.add(i)
+            for i in range(len(current_centroids)):
+                if i not in matched_detections:
+                    self.objects[self.next_id] = {
+                        'centroid': current_centroids[i],
+                        'prev_centroid': current_centroids[i],
+                        'curr_time': frame_timestamp,
+                        'prev_time': frame_timestamp,
+                        'measurements': [current_sizes[i]],
+                        'max_mm': current_sizes[i],
+                        'grade_history': [grades[i]],
+                        'last_crop': crops[i].copy(),
+                        'latest_contour': contours[i],
+                        'is_good': is_good_flags[i],
+                        'current_grade': grades[i],
+                        'disappeared_count': 0,
+                        'start_time': frame_timestamp,
+                        'start_y': current_centroids[i][1],
+                        'command_sent': False
+                    }
+                    self.next_id += 1
+            disappeared = []
+            for obj_id in object_ids:
+                if obj_id not in matched_objects:
+                    self.objects[obj_id]['disappeared_count'] += 1
+                    if self.objects[obj_id]['disappeared_count'] > self.max_disappeared:
+                        disappeared.append(obj_id)
+            return disappeared
+
+        def get_object_info(self, obj_id):
+            return self.objects.get(obj_id, None)
+
+        def remove_object(self, obj_id):
+            if obj_id in self.objects:
+                del self.objects[obj_id]
+
+        def reset(self):
+            self.objects.clear()
+
+        def get_robust_size(self, obj_id):
+            obj = self.objects.get(obj_id)
+            if not obj: return 0.0
+            m = obj['measurements']
+            if len(m) < 3: return max(m) if m else 0.0
+            import statistics
+            # Use last 30 measurements — most recent and relevant
+            recent = m[-30:] if len(m) > 30 else m
+            s = sorted(recent)
+            trim = max(1, len(s) // 10)
+            trimmed = s[trim:-trim] if trim < len(s)//2 else s
+            return statistics.median(trimmed)
+
+        def get_consensus_grade(self, obj_id):
+            obj = self.objects.get(obj_id)
+            if not obj: return None
+            history = obj.get('grade_history', [])
+            defects = [g for g in history if g is not None]
+            total = max(1, len(history))
+            if len(defects) / total > 0.40 and len(defects) >= 2:
+                return Counter(defects).most_common(1)[0][0]
+            return None
+
+    _TrackerClass = _LegacyObjectTracker
+
+print(f"[TRACKER] Using: {_TRACKER_TYPE}")
+
+# =========================================================
+# CONTOUR SMOOTHING HELPER
+# =========================================================
+
+def smooth_contour(contour, window=9):
+    """
+    Smooth contour points using circular moving-average convolution.
+    This produces ultra-smooth, stable borders that don't jitter.
+    """
+    if contour is None or len(contour) < window * 2:
+        return contour
+    pts = contour.reshape(-1, 2).astype(np.float64)
+    n = len(pts)
+    if n < 5:
+        return contour
+    
+    # Circular padding for seamless smoothing at contour endpoints
+    pad = window // 2
+    padded_x = np.concatenate([pts[-pad:, 0], pts[:, 0], pts[:pad, 0]])
+    padded_y = np.concatenate([pts[-pad:, 1], pts[:, 1], pts[:pad, 1]])
+    
+    # Moving average kernel
+    kernel = np.ones(window) / window
+    smooth_x = np.convolve(padded_x, kernel, mode='valid')
+    smooth_y = np.convolve(padded_y, kernel, mode='valid')
+    
+    smoothed = np.stack([smooth_x, smooth_y], axis=1).astype(np.int32)
+    return smoothed.reshape(-1, 1, 2)
+
+# Global pre-allocated kernels for high-speed morphological operations
+KERNEL_E_5 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+KERNEL_CLOSE_9 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+
+# Pre-allocated CLAHE for lighting-robust segmentation
+CLAHE_OBJ = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+
+# =========================================================
+# ZONE PROCESSOR CLASS
+# =========================================================
+
+class ZoneProcessor:
+    """
+    Processes a single zone independently
+    - Has its own tracker
+    - Maintains its own serial connection
+    - Works like a separate camera
+    """
+    
+    def __init__(self, zone_config, ranges, shared_arduino=None, serial_lock=None, ejection_queue=None):
+        self.zone = zone_config['zone']
+        self.name = zone_config.get('name', 'Zone-1')
+        self.ranges = ranges
+        self.tracker = _TrackerClass(
+            self.name,
+            max_distance=320,
+            max_disappeared=8,
+            pixel_to_mm_ratio=PIXEL_TO_MM_RATIO,
+        )
+        self.arduino = shared_arduino
+        self.serial_lock = serial_lock
+        self.ejection_queue = ejection_queue
+    
+    def update_zone(self, new_zone):
+        """Update zone coordinates dynamically"""
+        self.zone = new_zone
+    
+    def get_zone_mask(self, frame_shape):
+        """Create mask for this zone only"""
+        mask = np.zeros(frame_shape[:2], dtype=np.uint8)
+        x, y, w, h = self.zone
+        img_h, img_w = frame_shape[:2]
+        x1 = max(0, min(x, img_w))
+        y1 = max(0, min(y, img_h))
+        x2 = max(0, min(x + w, img_w))
+        y2 = max(0, min(y + h, img_h))
+        if x2 > x1 and y2 > y1:
+            mask[y1:y2, x1:x2] = 255
+        return mask
+    
+    def process_frame(self, frame, quality_filter=None):
+        """
+        Process frame for this zone
+        """
+        x, y, w, h = self.zone
+        
+        img_h, img_w = frame.shape[:2]
+        x1 = max(0, min(x, img_w))
+        y1 = max(0, min(y, img_h))
+        x2 = max(0, min(x + w, img_w))
+        y2 = max(0, min(y + h, img_h))
+        
+        # Extract zone region from frame
+        zone_frame = frame[y1:y2, x1:x2]
+        
+        if zone_frame.size == 0 or zone_frame.shape[0] == 0 or zone_frame.shape[1] == 0:
+            return []
+        
+        # Create zone-specific mask using clipped coordinates
+        zone_mask = np.zeros(frame.shape[:2], dtype=np.uint8)
+        zone_mask[y1:y2, x1:x2] = 255
+        
+        # --- LIGHTING-ROBUST SEGMENTATION (CLAHE + Adaptive Threshold) ---
+        # Step 1: Grayscale conversion
+        gray = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2GRAY)
+        
+        # Step 2: CLAHE for local contrast enhancement (handles shadows, LED flicker, dust)
+        clahe_img = CLAHE_OBJ.apply(gray)
+        
+        # Step 3: Light blur to suppress sensor noise before thresholding
+        smooth = cv2.GaussianBlur(clahe_img, (5, 5), 0)
+        
+        # Step 4: Adaptive threshold — uses local neighborhood instead of single global value
+        # blockSize=51: evaluates local area around each pixel (good for cashew-sized objects)
+        # C=-8: threshold is set 8 below local mean, captures cashew edges reliably
+        mask_raw = cv2.adaptiveThreshold(
+            smooth, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY, blockSize=51, C=-8
+        )
+        
+        # Step 5: Morphological refinement using pre-allocated elliptical kernels
+        mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_CLOSE, KERNEL_CLOSE_9, iterations=1)
+        mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_OPEN, KERNEL_E_5, iterations=1)
+        
+        # Step 6: ULTRA-SMOOTH EDGES - Gaussian blur for clean contour borders
+        mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
+        _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
+        
+        # Step 5: HSV validation mask (for density check only, not contour shape)
+        hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
+        hsv_mask = cv2.inRange(hsv, HSV_LOWER, HSV_UPPER)
+        
+        # Find contours with ALL edge points for maximum smoothness
+        cnts, _ = cv2.findContours(mask_final, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # Offset contours to full frame + apply smooth_contour
+        adjusted_contours = []
+        for c in cnts:
+            c_adjusted = c.copy()
+            c_adjusted[:, 0, 0] += x1  # Add zone x offset
+            c_adjusted[:, 0, 1] += y1  # Add zone y offset
+            # Apply circular moving-average smoothing for ultra-clean borders
+            c_adjusted = smooth_contour(c_adjusted, window=5)
+            adjusted_contours.append(c_adjusted)
+        
+        
+        # Filter by area and perform COLOR GRADING
+        valid_contours = []
+        is_good_flags = []
+        grades = []
+        crops = []
+        
+        # --- PASS 1: Apply Filters and Extract Crops ---
+        extracted_crops = []
+        valid_contours_indices = []
+        for i, c in enumerate(adjusted_contours):
+            area = cv2.contourArea(c)
+            if area < MIN_CASHEW_AREA:
+                continue
+                
+            # Density Check
+            c_mask = np.zeros(zone_frame.shape[:2], dtype=np.uint8)
+            cv2.drawContours(c_mask, [cnts[i]], -1, 255, -1)
+            cashew_pixels = cv2.countNonZero(cv2.bitwise_and(c_mask, hsv_mask))
+            total_pixels = cv2.countNonZero(c_mask)
+            density = cashew_pixels / max(1, total_pixels)
+            if density < 0.15:
+                continue
+                
+            # Roller / Noise Checks
+            # Use fitEllipse for rotation-stable size (fallback to minAreaRect for small contours)
+            if len(c) >= 15:
+                ellipse = cv2.fitEllipse(c)
+                (w_p, h_p) = ellipse[1]  # (major_axis, minor_axis)
+            else:
+                rect = cv2.minAreaRect(c)
+                (w_p, h_p) = rect[1]
+            if max(1, w_p * h_p) == 1: continue
+            mm_size = max(w_p, h_p) * PIXEL_TO_MM_RATIO
+            
+            # Reject objects larger than MAX_CASHEW_MM (likely rollers or noise)
+            if mm_size > MAX_CASHEW_MM:
+                continue
+            
+            # Identify rollers by checking if the object spans almost the entire width of the zone
+            x_b, y_b, w_b, h_b = cv2.boundingRect(c)
+            if w_b > (self.zone[2] * 0.90):
+                continue # Ignore horizontal rollers
+                
+            solidity = area / max(1, w_p * h_p)
+            if solidity < 0.50:
+                continue
+            if min(w_p, h_p) < 20:
+                continue
+                
+            # Crop Extraction
+            x_b, y_b, w_b, h_b = cv2.boundingRect(c)
+            side = max(w_b, h_b) + 40
+            cx_b, cy_b = x_b + w_b//2, y_b + h_b//2
+            px = max(0, cx_b - side//2)
+            py = max(0, cy_b - side//2)
+            pw = min(frame.shape[1] - px, side)
+            ph = min(frame.shape[0] - py, side)
+            crop = frame[py:py+ph, px:px+pw]
+            
+            if crop.size > 0:
+                extracted_crops.append(crop)
+                valid_contours_indices.append(i)
+                
+        # --- PASS 2: Pass crops to Tracker ---
+        for idx, crop_idx in enumerate(valid_contours_indices):
+            c = adjusted_contours[crop_idx]
+            crop = extracted_crops[idx]
+            valid_contours.append(c)
+            is_good_flags.append(True)
+            grades.append(None)
+            crops.append(crop)
+        
+        # Update tracker with newly determined grades and crops
+        frame_ts = time.perf_counter()
+        disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp=frame_ts)
+        
+        # --- PASS 3: Evaluate Cashews using LINE CROSSING + DISAPPEARANCE LOGIC ---
+        disappeared_crops = []
+        disappeared_objs = []
+        already_handled_ids = set()  # Track IDs handled by line-crossing to prevent double-fire
+        already_scheduled_ids = set()  # Prevent a single cashew from being queued twice in one frame
+        
+        x, y, _, zone_h = self.zone
+        
+        # Define triggering lines relative to Zone geometry
+        min_start_line = y + (zone_h * 0.85)  # 85% prevents 'ghost' respawns from double-firing, but allows manual drops
+        trigger_line = y + (zone_h * 0.95)
+        disappear_trigger_line = y + (zone_h * 0.20) # If tracker loses it anywhere below 20%, it's definitely an exit
+        
+        # 1. LINE CROSSING LOGIC: We check ALL active tracked objects to see if they just crossed the line.
+        # IMPORTANT: a single noisy frame should not trigger a pass. We require the object to stay past
+        # the trigger line for a short confirmation window so brief tracker gaps do not silently skip cashews.
+        for obj_id, obj_info in list(self.tracker.objects.items()):
+            if obj_info.get('command_sent', False):
+                continue
+            if obj_id in already_scheduled_ids:
+                continue
+
+            cy = obj_info['centroid'][1]
+            start_y = obj_info.get('start_y', cy)
+            prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
+
+            # Do not require the object to have started above 85% of the zone. In real belts, a valid cashew
+            # can first appear closer to the exit line or briefly flicker there before it is tracked cleanly.
+            # We only require that it is moving downward and has either started above the early-warning line
+            # or was seen below the trigger line in the previous frame.
+            if cy >= trigger_line and (start_y < min_start_line or prev_cy < trigger_line):
+                confirm_count = obj_info.setdefault('line_cross_confirm', 0)
+
+                # Require stable crossing instead of one noisy frame to avoid random mid-stream skips.
+                if cy >= prev_cy or prev_cy <= trigger_line:
+                    confirm_count += 1
+                else:
+                    confirm_count = max(0, confirm_count - 1)
+
+                obj_info['line_cross_confirm'] = confirm_count
+
+                if confirm_count < 2:
+                    continue
+
+                max_mm = obj_info['max_mm']
+                frames_tracked = len(obj_info.get('measurements', []))
+                if max_mm >= MIN_MM_SIZE and frames_tracked >= 3:
+                    # --- VELOCITY OVERSHOOT COMPENSATION ---
+                    prev_time = obj_info.get('prev_time', time.perf_counter())
+                    curr_time = obj_info.get('curr_time', time.perf_counter())
+
+                    true_exit_time = time.perf_counter()
+                    time_overshoot = 0
+                    dy = cy - prev_cy
+                    dt = curr_time - prev_time
+
+                    if dt > 0 and dy > 0:
+                        velocity = dy / dt
+                        overshoot_px = cy - trigger_line
+                        if overshoot_px > 0:
+                            time_overshoot = overshoot_px / velocity
+                            true_exit_time -= time_overshoot
+
+                    last_crop = obj_info.get('last_crop')
+                    if last_crop is not None:
+                        disappeared_crops.append(last_crop)
+                        disappeared_objs.append((obj_id, obj_info, true_exit_time, time_overshoot))
+                        obj_info['command_sent'] = True
+                        obj_info['crossed_trigger_line'] = True
+                        already_handled_ids.add(obj_id)
+                        already_scheduled_ids.add(obj_id)
+                        self.tracker.remove_object(obj_id)
+                else:
+                    reason = "Too small" if max_mm < MIN_MM_SIZE else f"Ghost/Flicker (Only {frames_tracked} frames, need 3+)"
+                    print(f"[{self.name}] Cashew ID:{obj_id} crossed 95% line but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
+                    obj_info['command_sent'] = True
+                    obj_info['line_cross_confirm'] = 0
+                    already_handled_ids.add(obj_id)
+                    self.tracker.remove_object(obj_id)
+            else:
+                obj_info['line_cross_confirm'] = 0
+
+        # 2. DISAPPEARANCE LOGIC: Catch cashews that the tracker lost slightly before the line
+        for obj_id in disappeared_ids:
+            if obj_id in already_handled_ids:
+                continue  # Already fired by line-crossing above, skip completely
+            obj_info = self.tracker.get_object_info(obj_id)
+            if obj_info:
+                if not obj_info.get('command_sent', False):
+                    if obj_id in already_scheduled_ids:
+                        self.tracker.remove_object(obj_id)
+                        continue
+
+                    cy = obj_info['centroid'][1]
+                    start_y = obj_info.get('start_y', cy)
+                    prev_cy = obj_info.get('prev_centroid', (0, cy))[1]
+
+                    if cy >= disappear_trigger_line and (start_y < min_start_line or prev_cy < disappear_trigger_line):
+                        max_mm = obj_info['max_mm']
+                        frames_tracked = len(obj_info.get('measurements', []))
+                        if max_mm >= MIN_MM_SIZE and frames_tracked >= 3:
+                            last_crop = obj_info.get('last_crop')
+                            if last_crop is not None:
+                                disappeared_crops.append(last_crop)
+                                disappeared_objs.append((obj_id, obj_info, time.perf_counter(), 0))
+                                obj_info['command_sent'] = True
+                                already_scheduled_ids.add(obj_id)
+                        else:
+                            reason = "Too small" if max_mm < MIN_MM_SIZE else f"Ghost/Flicker (Only {frames_tracked} frames, need 3+)"
+                            print(f"[{self.name}] Cashew ID:{obj_id} disappeared but REJECTED! (Reason: {reason}, Size: {max_mm:.1f}mm)")
+                            obj_info['command_sent'] = True
+                    else:
+                        print(f"[{self.name}] Cashew ID:{obj_id} SILENTLY VANISHED! (Start Y:{start_y:.0f}, End Y:{cy:.0f}, Required:{disappear_trigger_line:.0f})")
+                        obj_info['command_sent'] = True
+                                
+                # Memory cleanup is MANDATORY for all disappeared objects!
+                self.tracker.remove_object(obj_id)
+        if disappeared_crops:
+            # --- PROCESS YOLO / GRADING ---
+            processing_start_time = time.time()
+            yolo_results = []
+            if quality_filter and (quality_filter.session is not None or quality_filter.model is not None):
+                yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
+            else:
+                yolo_results = [(None, 0)] * len(disappeared_crops)
+                
+            zone_map = GRADE_PORT_MAP.get(self.name, GRADE_PORT_MAP.get('Zone-1', {}))
+
+            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
+                # Use robust size measurement (trimmed median) instead of max
+                if hasattr(self.tracker, 'get_robust_size'):
+                    max_mm = self.tracker.get_robust_size(obj_id)
+                    if max_mm <= 0:
+                        max_mm = obj_info['max_mm']  # fallback
+                else:
+                    max_mm = obj_info['max_mm']
+                last_crop = disappeared_crops[idx]
+                yolo_cat, yolo_conf = yolo_results[idx]
+                
+                final_grade = None
+                yolo_confirmed_good = False
+                
+                if yolo_cat:
+                    if yolo_cat in [name.lower() for name in GOOD_CLASS_NAMES]:
+                        if yolo_conf > YOLO_STRICT_BYPASS:
+                            yolo_confirmed_good = True
+                    else:
+                        final_grade = yolo_cat
+                        
+                if not final_grade and not yolo_confirmed_good:
+                    final_grade = get_grade(max_mm, self.ranges)
+                    
+                grade_str = str(final_grade).strip() if final_grade is not None else 'default'
+                command = zone_map.get(grade_str, zone_map.get('default', '11|'))
+                zone_delay = ZONE_DELAY_MAP.get(self.name, DELAY_SECONDS)
+
+                # --- SCHEDULE EJECTION VIA QUEUE (replaces per-thread timing) ---
+                # Completely independent non-blocking scheduling: each zone has its own delay
+                if self.ejection_queue is not None:
+                    self.ejection_queue.schedule(
+                        obj_id=obj_id,
+                        command=command,
+                        exit_time=true_exit_time,
+                        zone_name=self.name,
+                        grade=grade_str,
+                        size_mm=max_mm,
+                        delay_seconds=zone_delay,
+                    )
+                else:
+                    now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                    print(f"[{now_str}] [{self.name}] EXIT ID:{obj_id} (MM:{max_mm:.1f}, Grade:{grade_str}, Cmd:{command.strip()}) -> NO EJECTION QUEUE")
+
+                # --- SAVE FINAL IMAGE ASYNCHRONOUSLY (NON-BLOCKING) ---
+                if last_crop is not None:
+                    tracked_cnt = obj_info.get('latest_contour')
+                    ASYNC_IMAGE_SAVER.submit(last_crop, obj_id, final_grade, max_mm, tracked_cnt)
+            
+            processing_end_time = time.time()
+            processing_duration = processing_end_time - processing_start_time
+            
+            zone_delay = ZONE_DELAY_MAP.get(self.name, DELAY_SECONDS)
+            for idx, (obj_id, obj_info, true_exit_time, time_overshoot) in enumerate(disappeared_objs):
+                target_time = true_exit_time + zone_delay
+                remaining_hold = max(0, target_time - processing_end_time)
+                now_str = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
+                print(f"[{now_str}] [{self.name}] ID:{obj_id} Processing Done (Took: {processing_duration:.3f}s) -> Remaining Hold: {remaining_hold:.3f}s")
+                
+        return valid_contours
+    
+    def draw_zone(self, frame):
+        """Draw zone boundary and tracked objects with full info"""
+        x, y, w, h = self.zone
+        
+        # Draw zone rectangle (yellow)
+        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 255), 2)
+        
+        # Draw zone name
+        cv2.putText(frame, self.name, (x+5, y+20),
+                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        
+        # Draw tracked objects with SMOOTH contours + full info
+        for obj_id, obj_info in self.tracker.objects.items():
+            # SKIP disappeared objects - only draw currently visible ones
+            if obj_info.get('disappeared_count', 0) > 0:
+                continue
+            cnt = obj_info.get('latest_contour')
+            
+            # --- CONSENSUS-BASED COLORING (not single-frame) ---
+            # Use grade_history majority to decide good/bad (avoids false positives)
+            history = obj_info.get('grade_history', [])
+            defect_frames = [g for g in history if g is not None]
+            total_frames = max(1, len(history))
+            defect_ratio = len(defect_frames) / total_frames
+            
+            # Only mark as BAD if >40% of frames show a defect (consensus)
+            is_consensus_bad = defect_ratio > 0.40 and len(defect_frames) >= 2
+            
+            # Determine display defect type
+            current_grade = obj_info.get('current_grade', None)
+            if is_consensus_bad and defect_frames:
+                # Use most common defect from history
+                defect_counts = Counter(defect_frames)
+                display_defect = defect_counts.most_common(1)[0][0]
+                color = (0, 0, 255)  # RED for confirmed bad
+            else:
+                display_defect = None
+                color = (0, 255, 0)  # GREEN for good
+            
+            if cnt is not None and len(cnt) >= 3:
+                # Apply smooth_contour for perfectly smooth border drawing
+                smooth_cnt = smooth_contour(cnt, window=5)
+                cv2.drawContours(frame, [smooth_cnt], -1, color, 2)
+                
+                # --- DISPLAY FULL INFO ON SCREEN ---
+                cx, cy = obj_info['centroid']
+                max_mm = obj_info['max_mm']
+                
+                # Line 1: SR No (ID) + Size
+                label_id = f"SR:{obj_id} {max_mm:.1f}mm"
+                
+                # Line 2: Status (GOOD or defect type)
+                if display_defect:
+                    label_status = f"{display_defect.upper()}"
+                    status_color = (0, 0, 255)  # Red text for defect
+                else:
+                    label_status = "GOOD"
+                    status_color = (0, 255, 0)  # Green text for good
+                
+                # Draw labels with shadow for readability
+                # Line 1: ID + Size
+                cv2.putText(frame, label_id, (cx - 40, cy - 15),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
+                cv2.putText(frame, label_id, (cx - 40, cy - 15),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.45, (255, 255, 255), 1)
+                # Line 2: Status/Defect
+                cv2.putText(frame, label_status, (cx - 40, cy + 5),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.45, (0, 0, 0), 2)
+                cv2.putText(frame, label_status, (cx - 40, cy + 5),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.45, status_color, 1)
+    
+    def close(self):
+        """Serial connection is handled and closed by main()"""
+        pass
+
+# =========================================================
+# KEYBOARD CONTROL HANDLER
+# =========================================================
+
+def handle_keyboard_controls(key, zone_configs, zone_processors):
+    """
+    Handle keyboard input for zone adjustment and display control
+    Supports Arrow keys, WASD, and additional resizing keys.
+    """
+    global SELECTED_ZONE_INDEX, SHOW_DISPLAY
+    
+    should_quit = False
+    
+    # Get the masked key for character comparisons
+    char_key = key & 0xFF
+    
+    # 1. Zone selection (1-5)
+    if ord('1') <= char_key <= ord('5'):
+        SELECTED_ZONE_INDEX = char_key - ord('1')
+        print(f"\n[CONTROL] Selected {zone_configs[SELECTED_ZONE_INDEX]['name']} for adjustment")
+    
+    # 2. Display window control (Q or q)
+    elif char_key == ord('q') or char_key == ord('Q'):
+        SHOW_DISPLAY = not SHOW_DISPLAY
+        if SHOW_DISPLAY:
+            print(f"\n[CONTROL] Display window OPENING...")
+        else:
+            print(f"\n[CONTROL] Display window HIDDEN (processing continues in background). Press Q to reopen.")
+    
+    # 3. ESC to quit completely
+    elif char_key == 27:  # ESC
+        should_quit = True
+        print(f"\n[CONTROL] ESC pressed - Exiting program...")
+    
+    # 4. Save zones configuration (C or c)
+    elif char_key == ord('c') or char_key == ord('C'):
+        save_zones_config(zone_configs)
+    
+    # 5. Zone adjustment (only if a zone is selected)
+    elif SELECTED_ZONE_INDEX is not None:
+        zone_config = zone_configs[SELECTED_ZONE_INDEX]
+        x, y, w, h = zone_config['zone']
+        modified = False
+        action = ""
+        
+        # --- MOVEMENT (Arrows or WASD) ---
+        # We check full 'key' codes first for specific Windows Arrow keys
+        # Left: Arrow Left (2424832 / 81 / 37) or 'A'
+        if key in [2424832, 81, 37, 2] or char_key in [ord('a'), ord('A')]:
+            x -= ZONE_ADJUST_STEP
+            modified = True
+            action = "moved LEFT"
+        # Right: Arrow Right (2555904 / 83 / 39) or 'D'
+        elif key in [2555904, 83, 39, 3] or char_key in [ord('d'), ord('D')]:
+            x += ZONE_ADJUST_STEP
+            modified = True
+            action = "moved RIGHT"
+        # Up: Arrow Up (2490368 / 82 / 38) or 'W'
+        elif key in [2490368, 82, 38, 0] or char_key in [ord('w'), ord('W')]:
+            y -= ZONE_ADJUST_STEP
+            modified = True
+            action = "moved UP"
+        # Down: Arrow Down (2621440 / 84 / 40) or 'S'
+        elif key in [2621440, 84, 40, 1] or char_key in [ord('s'), ord('S')]:
+            y += ZONE_ADJUST_STEP
+            modified = True
+            action = "moved DOWN"
+        
+        # --- WIDTH (+/- or H/K) ---
+        elif char_key in [ord('+'), ord('='), ord('k'), ord('K')]:
+            w += ZONE_ADJUST_STEP
+            modified = True
+            action = "width INCREASED"
+        elif char_key in [ord('-'), ord('_'), ord('h'), ord('H')]:
+            w = max(50, w - ZONE_ADJUST_STEP)
+            modified = True
+            action = "width DECREASED"
+        
+        # --- HEIGHT ([ / ] or U / J) ---
+        elif char_key in [ord('['), ord('u'), ord('U')]:
+            h = max(50, h - ZONE_ADJUST_STEP)
+            modified = True
+            action = "height DECREASED"
+        elif char_key in [ord(']'), ord('j'), ord('J')]:
+            h += ZONE_ADJUST_STEP
+            modified = True
+            action = "height INCREASED"
+        
+        # Update zone configuration if modified
+        if modified:
+            new_zone = (x, y, w, h)
+            zone_config['zone'] = new_zone
+            zone_processors[SELECTED_ZONE_INDEX].update_zone(new_zone)
+            print(f"[CONTROL] {zone_config['name']} {action} → x={x}, y={y}, w={w}, h={h}")
+    
+    return should_quit, SHOW_DISPLAY
+
+# =========================================================
+# MAIN
+# =========================================================
+
+def main():
+    global SELECTED_ZONE_INDEX, SHOW_DISPLAY, ZONE_CONFIGS
+
+    # Load grading ranges
+    ranges = load_ranges(RANGES_FILE)
+    if not ranges:
+        print("Warning: No grading ranges loaded")
+
+    # Initialize camera
+    cam = HIKCashewCamera()
+    
+    last_config_mtime = 0
+    if os.path.exists(ZONES_CONFIG_FILE):
+        last_config_mtime = os.path.getmtime(ZONES_CONFIG_FILE)
+    if not cam.connect():
+        return
+
+    # Initialize YOLO
+    quality_filter = CashewQualityFilter(YOLO_MODEL_PATH)
+
+    cv2.namedWindow("Full Camera", cv2.WINDOW_NORMAL)
+    
+    # Initialize Shared Serial Connection over main COM PORT file
+    com_port = read_com_port_from_file(MAIN_COM_FILE)
+    shared_arduino = None
+    serial_lock = threading.Lock()
+    if com_port:
+        try:
+            shared_arduino = serial.Serial(port=com_port, baudrate=115200, timeout=1)
+            print(f"\nMain Serial connected on {com_port}. Waiting 2 seconds for Arduino to initialize...")
+            time.sleep(2)  # Give Arduino bootloader enough time to start
+            shared_arduino.reset_input_buffer()
+            shared_arduino.reset_output_buffer()
+            print("Main Serial is ready to send commands!")
+        except Exception as e:
+            print(f"Main Serial error: {e}")
+            shared_arduino = None
+    else:
+        print("\nNo valid MAIN COM port found.")
+
+    # Initialize ejection queue (single writer thread for PLC timing)
+    ejection_q = EjectionQueue(arduino=shared_arduino, delay_seconds=DELAY_SECONDS)
+    ejection_q.start()
+
+    # Initialize zone processors using the shared ejection queue
+    zone_processors = []
+    for zone_config in ZONE_CONFIGS:
+        processor = ZoneProcessor(zone_config, ranges, shared_arduino, serial_lock, ejection_queue=ejection_q)
+        zone_processors.append(processor)
+    
+    print(f"\n{'='*60}")
+    print(f"5 INDEPENDENT ZONES INITIALIZED - USING 1 SHARED COM PORT")
+    print(f"{'='*60}")
+    print(f"\nKEYBOARD CONTROLS:")
+    print(f"  1-5      : Select zone for adjustment")
+    print(f"  Arrows   : Move selected zone (UP/DOWN/LEFT/RIGHT)")
+    print(f"  +/-      : Increase/Decrease width")
+    print(f"  [ ]      : Decrease/Increase height")
+    print(f"  C        : Save current zone configuration")
+    print(f"  Q        : Toggle display window ON/OFF")
+    print(f"  ESC      : Quit program completely")
+    print(f"{'='*60}\n")
+
+    try:
+        frame_counter = 0
+        none_counter = 0
+        while True:
+            frame_counter += 1
+            if frame_counter % 500 == 0:
+                gc.collect()
+
+            frame = cam.get_frame()
+            cam.check_and_update_parameters()
+            if frame is None:
+                none_counter += 1
+                # Removed print statement for cleaner console
+                cv2.waitKeyEx(1) # Keep UI responsive even if no frames arrive
+                time.sleep(0.005) # Prevent 100% CPU pinning
+                continue
+            none_counter = 0
+
+            # Check for config file updates
+            t0 = time.time()
+            try:
+                if os.path.exists(ZONES_CONFIG_FILE):
+                    mtime = os.path.getmtime(ZONES_CONFIG_FILE)
+                    if mtime > last_config_mtime:
+                        last_config_mtime = mtime
+                        print("\n[CONFIG] zones_config.json changed! Reloading zones...")
+                        new_configs = load_zones_config()
+                        # Update global ZONE_CONFIGS in-place
+                        for i, new_z in enumerate(new_configs):
+                            if i < len(ZONE_CONFIGS):
+                                ZONE_CONFIGS[i]['zone'] = tuple(new_z['zone'])
+                            else:
+                                ZONE_CONFIGS.append({
+                                    'zone': tuple(new_z['zone']),
+                                    'name': new_z.get('name', f'Zone-{i+1}')
+                                })
+                        # Update zone processors
+                        for i, processor in enumerate(zone_processors):
+                            if i < len(ZONE_CONFIGS):
+                                processor.update_zone(ZONE_CONFIGS[i]['zone'])
+                        # If new zones were added, initialize new processors
+                        if len(ZONE_CONFIGS) > len(zone_processors):
+                            for i in range(len(zone_processors), len(ZONE_CONFIGS)):
+                                processor = ZoneProcessor(ZONE_CONFIGS[i], ranges, shared_arduino, serial_lock, ejection_queue=ejection_q)
+                                zone_processors.append(processor)
+            except Exception as e:
+                print(f"[CONFIG] Error reloading config: {e}")
+
+            # Create black background for display - only show zones
+            display_frame = np.zeros_like(frame)
+            img_h, img_w = frame.shape[:2]
+            for z in ZONE_CONFIGS:
+                x, y, w, h = z['zone']
+                x1 = max(0, min(x, img_w))
+                y1 = max(0, min(y, img_h))
+                x2 = max(0, min(x + w, img_w))
+                y2 = max(0, min(y + h, img_h))
+                if x2 > x1 and y2 > y1:
+                    # Copy original pixels for this zone
+                    display_frame[y1:y2, x1:x2] = frame[y1:y2, x1:x2]
+            
+            # Process each zone in PARALLEL using a ThreadPoolExecutor
+            total_cashews_in_frame = 0
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                future_to_processor = {
+                    executor.submit(p.process_frame, frame, quality_filter): p 
+                    for p in zone_processors
+                }
+                for future in concurrent.futures.as_completed(future_to_processor):
+                    processor = future_to_processor[future]
+                    try:
+                        contours = future.result()
+                        total_cashews_in_frame += len(contours)
+                    except Exception as e:
+                        print(f"Error in {processor.name}: {e}")
+                        
+            cv2.waitKeyEx(1) # Keep UI responsive
+            
+            # Draw all zones synchronously after processing
+            for processor in zone_processors:
+                processor.draw_zone(display_frame)
+            
+            # Draw YOLO boxes visualization is removed since we do it on crops directly
+            
+            # Highlight selected zone
+            if SELECTED_ZONE_INDEX is not None and SELECTED_ZONE_INDEX < len(ZONE_CONFIGS):
+                sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
+                sx, sy, sw, sh = sel_zone
+                # Draw thick red border for selected zone
+                cv2.rectangle(display_frame, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
+                # Add "SELECTED" label
+                cv2.putText(display_frame, "SELECTED", (sx+5, sy+40),
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+
+            try:
+                # Catch if user closed the window using 'X' button
+                if cv2.getWindowProperty("Full Camera", cv2.WND_PROP_VISIBLE) < 1:
+                    print("\n[CONTROL] Window closed via 'X'. Entering background mode. Press Q to reopen. ESC to exit.")
+                    cv2.namedWindow("Full Camera", cv2.WINDOW_NORMAL)
+                    SHOW_DISPLAY = False
+            except:
+                pass
+
+            if SHOW_DISPLAY:
+                cv2.imshow("Full Camera", display_frame)
+            else:
+                # Keep a tiny dashboard so waitKey still works
+                bg_frame = np.zeros((200, 600, 3), dtype=np.uint8)
+                cv2.putText(bg_frame, "PROCESS RUNNING IN BACKGROUND", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                cv2.putText(bg_frame, "Press 'Q' to show camera view, ESC to exit", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
+                cv2.imshow("Full Camera", bg_frame)
+            
+            # --- KEYBOARD PROCESSING ---
+            # waitKeyEx is better for Arrow Keys on Windows
+            key = cv2.waitKeyEx(1)
+            
+            if key != -1: # Any key pressed
+                should_quit, SHOW_DISPLAY = handle_keyboard_controls(key, ZONE_CONFIGS, zone_processors)
+                if should_quit:
+                    break
+            
+            # Performance printing removed for cleaner console
+            pass
+
+    finally:
+        cam.close()
+        for processor in zone_processors:
+            processor.close()
+        # Stop ejection queue before closing serial
+        if 'ejection_q' in locals():
+            ejection_q.stop()
+        cv2.destroyAllWindows()
+        if 'shared_arduino' in locals() and shared_arduino:
+            try:
+                shared_arduino.close()
+                print("Main Serial closed")
+            except:
+                pass
+
+if __name__ == "__main__":
+    main()

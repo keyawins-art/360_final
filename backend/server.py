@@ -433,12 +433,13 @@ def generate_camera_frames(cam_idx: str):
         
     cam.MV_CC_SetEnumValue("TriggerMode", MV_TRIGGER_MODE_OFF)
     
-    # Disable auto exposure and auto gain so manual settings can be modified
+    # Disable auto exposure and auto gain, and ensure Timed exposure mode for manual control
     try:
+        cam.MV_CC_SetEnumValue("ExposureMode", 0) # 0 = Timed
         cam.MV_CC_SetEnumValue("ExposureAuto", 0) # 0 = Off
-        cam.MV_CC_SetEnumValue("GainAuto", 0) # 0 = Off
+        cam.MV_CC_SetEnumValue("GainAuto", 0)     # 0 = Off
     except Exception as e:
-        log_camera(f"Warning: could not disable auto exposure/gain: {e}")
+        log_camera(f"Warning: could not set exposure/gain modes: {e}")
     
     stParam = MVCC_INTVALUE()
     ctypes.memset(ctypes.byref(stParam), 0, ctypes.sizeof(stParam))
@@ -610,30 +611,37 @@ def generate_camera_frames(cam_idx: str):
                             with open(zones_file, "r") as zf:
                                 zone_data = json.load(zf)
                             if isinstance(zone_data, list):
-                                for zi, zinfo in enumerate(zone_data):
+                                cam_num = int(cam_idx) if str(cam_idx).isdigit() else 1
+                                start_idx = (cam_num - 1) * 5
+                                end_idx = start_idx + 5
+                                cam_zones = zone_data[start_idx:end_idx]
+                                for zi, zinfo in enumerate(cam_zones):
                                     zcoords = zinfo.get("zone", [])
-                                    zname = zinfo.get("name", f"Zone-{zi+1}")
+                                    zname = zinfo.get("name", f"Zone-{start_idx + zi + 1}")
                                     if len(zcoords) == 4:
                                         zx, zy, zw, zh = int(zcoords[0]), int(zcoords[1]), int(zcoords[2]), int(zcoords[3])
+                                        if zw <= 0 or zh <= 0:
+                                            continue  # Skip disabled zone
                                         # Clamp to image bounds
                                         img_h, img_w = display_img.shape[:2]
                                         zx1 = max(0, min(zx, img_w - 1))
                                         zy1 = max(0, min(zy, img_h - 1))
                                         zx2 = max(0, min(zx + zw, img_w))
                                         zy2 = max(0, min(zy + zh, img_h))
-                                        # Red rectangle border (thickness 2)
-                                        if len(display_img.shape) == 3:
-                                            cv2.rectangle(display_img, (zx1, zy1), (zx2, zy2), (0, 0, 255), 2)
-                                            # Zone label with background
-                                            label = zname
-                                            font = cv2.FONT_HERSHEY_SIMPLEX
-                                            font_scale = 0.7
-                                            thickness = 2
-                                            (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
-                                            cv2.rectangle(display_img, (zx1, zy1), (zx1 + tw + 8, zy1 + th + 10), (0, 0, 255), -1)
-                                            cv2.putText(display_img, label, (zx1 + 4, zy1 + th + 5), font, font_scale, (255, 255, 255), thickness)
-                                        else:
-                                            cv2.rectangle(display_img, (zx1, zy1), (zx2, zy2), 255, 2)
+                                        if zx2 > zx1 and zy2 > zy1:
+                                            # Red rectangle border (thickness 2)
+                                            if len(display_img.shape) == 3:
+                                                cv2.rectangle(display_img, (zx1, zy1), (zx2, zy2), (0, 0, 255), 2)
+                                                # Zone label with background
+                                                label = zname
+                                                font = cv2.FONT_HERSHEY_SIMPLEX
+                                                font_scale = 0.7
+                                                thickness = 2
+                                                (tw, th), _ = cv2.getTextSize(label, font, font_scale, thickness)
+                                                cv2.rectangle(display_img, (zx1, zy1), (zx1 + tw + 8, zy1 + th + 10), (0, 0, 255), -1)
+                                                cv2.putText(display_img, label, (zx1 + 4, zy1 + th + 5), font, font_scale, (255, 255, 255), thickness)
+                                            else:
+                                                cv2.rectangle(display_img, (zx1, zy1), (zx2, zy2), 255, 2)
                     except Exception as ze:
                         pass  # Don't crash video feed if zones file is broken
                     
@@ -1164,24 +1172,34 @@ def save_comport_ref(req: ComportRefData):
 def get_zones():
     zones_file = os.path.join(BASE_DIR, "zones_config.json")
     default_zones = [
-        {"zone": [100, 100, 370, 1920], "name": "Zone-1"},
-        {"zone": [540, 100, 350, 1910], "name": "Zone-2"},
-        {"zone": [960, 100, 360, 1910], "name": "Zone-3"},
-        {"zone": [1400, 100, 340, 1910], "name": "Zone-4"},
-        {"zone": [1840, 100, 370, 1910], "name": "Zone-5"}
+        {"zone": [0, 100, 447, 1920], "name": "Zone-1"},
+        {"zone": [460, 100, 350, 1910], "name": "Zone-2"},
+        {"zone": [870, 100, 360, 1910], "name": "Zone-3"},
+        {"zone": [1310, 100, 340, 1910], "name": "Zone-4"},
+        {"zone": [0, 0, 0, 0], "name": "Zone-5"},
+        {"zone": [0, 100, 447, 1920], "name": "Zone-6"},
+        {"zone": [460, 100, 350, 1910], "name": "Zone-7"},
+        {"zone": [870, 100, 360, 1910], "name": "Zone-8"},
+        {"zone": [1310, 100, 340, 1910], "name": "Zone-9"},
+        {"zone": [0, 0, 0, 0], "name": "Zone-10"}
     ]
     if os.path.exists(zones_file):
         try:
             with open(zones_file, "r") as f:
                 zones = json.load(f)
-                if isinstance(zones, list) and len(zones) >= 5:
-                    return zones
-                else:
-                    return default_zones
+                if isinstance(zones, list) and len(zones) >= 1:
+                    # Pad to ensure 10 zones always returned
+                    result = []
+                    for i in range(10):
+                        if i < len(zones):
+                            result.append(zones[i])
+                        else:
+                            result.append(default_zones[i])
+                    return result
         except Exception as e:
             pass
             
-    # If missing or broken, create default to avoid empty UI
+    # If missing or broken, create default
     try:
         with open(zones_file, "w") as f:
             json.dump(default_zones, f, indent=4)

@@ -56,10 +56,9 @@ class EjectionQueue:
         eq.stop()
     """
 
-    def __init__(self, arduino=None, delay_seconds=00,name=""):
+    def __init__(self, arduino=None, delay_seconds=7.20):
         self.arduino = arduino
         self.delay_seconds = delay_seconds
-        self.name = name
 
         self._heap = []  # Min-heap of EjectionEvent
         self._lock = threading.Lock()
@@ -75,11 +74,9 @@ class EjectionQueue:
         if self._running:
             return
         self._running = True
-        thread_name = f"EjectionWorker-{self.name}" if self.name else "EjectionWorker"
-        self._worker = threading.Thread(target=self._worker_loop, daemon=True, name=thread_name)
+        self._worker = threading.Thread(target=self._worker_loop, daemon=True, name="EjectionWorker")
         self._worker.start()
-        tag = f" [{self.name}]" if self.name else ""
-        print(f"[EJECTION{tag}] Worker thread started")
+        print("[EJECTION] Worker thread started")
 
     def stop(self):
         """Stop the worker thread gracefully."""
@@ -87,8 +84,7 @@ class EjectionQueue:
         self._event.set()  # Wake up if sleeping
         if self._worker and self._worker.is_alive():
             self._worker.join(timeout=2.0)
-        tag = f" [{self.name}]" if self.name else ""
-        print(f"[EJECTION{tag}] Worker thread stopped")
+        print("[EJECTION] Worker thread stopped")
 
     def schedule(self, obj_id, command, exit_time, zone_name="", grade="", size_mm=0.0, delay_seconds=None):
         """
