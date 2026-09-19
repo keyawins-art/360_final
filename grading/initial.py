@@ -263,24 +263,24 @@ def save_zones_config(configs):
 ZONE_CONFIGS = load_zones_config()
 
 # === DETECTION SENSITIVITY CONTROL PANEL (LOW & HIGH LIGHT COMPATIBLE) ===
-MIN_CASHEW_AREA = 1100       # Catches all small, broken, and curved cashews while ignoring noise
-MIN_MM_SIZE = 8.0            # Minimum measurement to log/act on cashew
-MAX_CASHEW_MM = 65.0         # Allows single cashews and multi-cashew clusters to be tracked
-MAX_ASPECT_RATIO = 4.5       # Rejects thin horizontal roller reflections
+MIN_CASHEW_AREA = 750        # Catches all small, broken, dark/shadowed, and curved cashews while ignoring noise
+MIN_MM_SIZE = 6.0            # Minimum measurement to log/act on cashew (catches small broken pieces)
+MAX_CASHEW_MM = 70.0         # Allows single cashews and multi-cashew clusters to be tracked
+MAX_ASPECT_RATIO = 3.5       # Rejects thin horizontal roller reflections
 
 HSV_LOWER = np.array([0, 5, 5])          # Ultra-wide threshold: catches cashews in deep shadow or dim light
 HSV_UPPER = np.array([180, 255, 255])    # Full spectrum upper bound for bright light/highlights
 
 # === AI CLASSIFICATION THRESHOLDS (SEPARATE PER CLASS) ===
 THRESH_BLACKDOT = 0.25      # Sensitive threshold for small & large black spots/dots
-THRESH_BAD = 0.25            # Threshold for damaged/broken/spotted bad cashews
-THRESH_GOOD = 0.10          # Confidence for clean good cashews
-YOLO_CONF_THRESHOLD = 0.15   # Global fallback minimum confidence
-YOLO_STRICT_BYPASS = 0.80    # Strict good confidence bypass
+THRESH_BAD = 0.10           # Threshold for damaged/broken/spotted bad cashews
+THRESH_GOOD = 0.75          # Confidence for clean good cashews
+YOLO_CONF_THRESHOLD = 0.15  # Global fallback minimum confidence
+YOLO_STRICT_BYPASS = 0.80   # Strict good confidence bypass
 
-PIXEL_TO_MM_RATIO = 0.145   # 1 px = 0.111 mm
-MAX_TRACKING_DISTANCE = 250  # Tracking association distance
-DELAY_SECONDS = 5.50         # Default PLC ejection delay
+PIXEL_TO_MM_RATIO = 0.145   # Calibrated mm per pixel ratio
+MAX_TRACKING_DISTANCE = 350 # Tracking association distance ceiling
+DELAY_SECONDS = 5.50        # Default PLC ejection delay
 
 # =========================================================
 # PER-ZONE INDEPENDENT DELAY CONFIGURATION (ZONE 1 TO 10)
@@ -1098,8 +1098,8 @@ class ZoneProcessor:
         self.ranges = ranges
         self.tracker = _TrackerClass(
             self.name,
-            max_distance=320,
-            max_disappeared=8,
+            max_distance=350,
+            max_disappeared=10,
             pixel_to_mm_ratio=PIXEL_TO_MM_RATIO,
         )
         self.ejection_queue = ejection_queue
@@ -1138,11 +1138,11 @@ class ZoneProcessor:
             clahe_chroma = CLAHE_OBJ.apply(chroma_diff)
             smooth_chroma = cv2.GaussianBlur(clahe_chroma, (5, 5), 0)
             
-            # Otsu threshold on enhanced chromaticity
+            # Otsu threshold on enhanced chromaticity (adapts to bright & dark illumination)
             _, mask_otsu = cv2.threshold(smooth_chroma, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
             
-            # Hard Minimum Chroma Gate (rejects neutral metallic rollers & divider reflections)
-            _, min_chroma_gate = cv2.threshold(chroma_diff, 14, 255, cv2.THRESH_BINARY)
+            # Sensitive Chroma Gate: catches cashews in low light/shadows while rejecting cool blue rollers
+            _, min_chroma_gate = cv2.threshold(chroma_diff, 10, 255, cv2.THRESH_BINARY)
             mask_raw = cv2.bitwise_and(mask_otsu, min_chroma_gate)
             
             # Clean morphological cleanup (5x5 kernel preserves cashew edge, prevents line bridging)
