@@ -30,3 +30,11 @@
   - Achieved ultra-fast **~9.9ms - 13ms** inference per cashew on the NVIDIA GeForce RTX 5050 GPU (100+ FPS).
   - Integrated real-time defect classification for all 7 classes: `Bad`, `Blackdot`, `Brown`, `Good`, `Multi`, `Oilly`, `Unpill`, routing defects to reject commands and good cashews to grade commands.
 
+## 2026-09-19
+- **Model Upgrade to `D:\yolo_cls\360models\19-09-26`:**
+  - Upgraded model path in `grading/initial.py` to target new model weights: `D:\yolo_cls\360models\19-09-26\product_detection\weights\best.pt`.
+  - Exported optimized high-speed ONNX GPU model (`best.onnx`) with dynamic shapes for NVIDIA RTX 5050 Blackwell CUDA Execution Provider.
+  - Synchronized `best.onnx` and `best.pt` to project root directory.
+  - Successfully verified ONNX `CUDAExecutionProvider` load and warmup with classes: `{0: 'Bad', 1: 'Blackdot', 2: 'Good'}`.
+
+

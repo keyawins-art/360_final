@@ -272,13 +272,13 @@ HSV_LOWER = np.array([0, 5, 5])          # Ultra-wide threshold: catches cashews
 HSV_UPPER = np.array([180, 255, 255])    # Full spectrum upper bound for bright light/highlights
 
 # === AI CLASSIFICATION THRESHOLDS (SEPARATE PER CLASS) ===
-THRESH_BLACKDOT = 0.1      # Sensitive threshold for small & large black spots/dots
+THRESH_BLACKDOT = 0.25      # Sensitive threshold for small & large black spots/dots
 THRESH_BAD = 0.25            # Threshold for damaged/broken/spotted bad cashews
-THRESH_GOOD = 0.20           # Confidence for clean good cashews
+THRESH_GOOD = 0.10          # Confidence for clean good cashews
 YOLO_CONF_THRESHOLD = 0.15   # Global fallback minimum confidence
 YOLO_STRICT_BYPASS = 0.80    # Strict good confidence bypass
 
-PIXEL_TO_MM_RATIO = 0.111    # 1 px = 0.111 mm
+PIXEL_TO_MM_RATIO = 0.145   # 1 px = 0.111 mm
 MAX_TRACKING_DISTANCE = 250  # Tracking association distance
 DELAY_SECONDS = 5.50         # Default PLC ejection delay
 
@@ -303,19 +303,15 @@ SHOW_DISPLAY = True         # Toggle display window
 ZONE_ADJUST_STEP = 10       # Step size in pixels
 
 # =========================================================
-# YOLO CONFIGURATION (GPU ACCELERATED)
+# YOLO CONFIGURATION (STRICTLY 19-09-26 MODEL ONLY)
 # =========================================================
 YOLO_MODEL_PATH = get_existing_path([
-    r"D:\yolo_cls\360models\product_detection\weights\best.onnx",
-    r"D:\yolo_cls\360models\product_detection\weights\best.pt",
-    r"D:\yolo_cls\360models\product_detection\best.onnx",
-    r"D:\yolo_cls\360models\product_detection\best.pt",
-    r"D:\yolo_cls\360models\product_detection",
-    os.path.join(BASE_DIR, "best.onnx"),
-    os.path.join(BUNDLE_DIR, "best.onnx"),
-    os.path.join(BASE_DIR, "best.pt"),
-    os.path.join(BUNDLE_DIR, "best.pt"),
-], r"D:\yolo_cls\360models\product_detection\weights\best.onnx")
+    r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx",
+    r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.pt",
+    r"D:\yolo_cls\360models\19-09-26\product_detection\best.onnx",
+    r"D:\yolo_cls\360models\19-09-26\product_detection\best.pt",
+    r"D:\yolo_cls\360models\19-09-26",
+], r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx")
 
 GOOD_CLASS_NAMES = ['good']
 
@@ -503,23 +499,11 @@ class CashewQualityFilter:
         self.clahe_crop = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
         
         # Build ONNX candidates
-        onnx_candidates = []
-        if model_path:
-            if os.path.isdir(model_path):
-                onnx_candidates.append(os.path.join(model_path, "weights", "best.onnx"))
-                onnx_candidates.append(os.path.join(model_path, "best.onnx"))
-            elif model_path.endswith('.onnx'):
-                onnx_candidates.append(model_path)
-            elif model_path.endswith('.pt'):
-                onnx_candidates.append(os.path.splitext(model_path)[0] + ".onnx")
-        
-        onnx_candidates.extend([
-            r"D:\yolo_cls\360models\product_detection\weights\best.onnx",
-            r"D:\yolo_cls\360models\product_detection\best.onnx",
-            os.path.join(BASE_DIR, "best.onnx"),
-            os.path.join(BUNDLE_DIR, "best.onnx"),
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.onnx")
-        ])
+        onnx_candidates = [
+            r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx",
+            r"D:\yolo_cls\360models\19-09-26\product_detection\best.onnx",
+            r"D:\yolo_cls\360models\19-09-26\best.onnx",
+        ]
         
         onnx_path = next((p for p in onnx_candidates if p and os.path.exists(p)), None)
         
@@ -534,7 +518,7 @@ class CashewQualityFilter:
                 h = inp_shape[2] if len(inp_shape) > 2 and isinstance(inp_shape[2], int) else 640
                 w = inp_shape[3] if len(inp_shape) > 3 and isinstance(inp_shape[3], int) else 640
                 self.input_shape = (w, h)
-                print(f"\n[AI CORE] ONNX Engine loaded from: {onnx_path}")
+                print(f"\n[AI CORE] ONNX Engine loaded exclusively from: {onnx_path}")
                 print(f"[AI CORE] Active Provider: {self.provider}")
                 
                 # Dynamic class names from ONNX model metadata
@@ -564,21 +548,11 @@ class CashewQualityFilter:
                 print(f"[AI CORE] Error initializing ONNX: {e}")
                 self.session = None
                 
-        pt_candidates = []
-        if model_path:
-            if os.path.isdir(model_path):
-                pt_candidates.append(os.path.join(model_path, "weights", "best.pt"))
-                pt_candidates.append(os.path.join(model_path, "best.pt"))
-            elif model_path.endswith('.pt'):
-                pt_candidates.append(model_path)
-
-        pt_candidates.extend([
-            r"D:\yolo_cls\360models\product_detection\weights\best.pt",
-            r"D:\yolo_cls\360models\product_detection\best.pt",
-            os.path.join(BASE_DIR, "best.pt"),
-            os.path.join(BUNDLE_DIR, "best.pt"),
-            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.pt")
-        ])
+        pt_candidates = [
+            r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.pt",
+            r"D:\yolo_cls\360models\19-09-26\product_detection\best.pt",
+            r"D:\yolo_cls\360models\19-09-26\best.pt",
+        ]
         pt_path = next((p for p in pt_candidates if p and os.path.exists(p)), None)
         
         if YOLO_AVAILABLE and pt_path:
@@ -590,6 +564,97 @@ class CashewQualityFilter:
                 print(f"[AI CORE] YOLO Model Classes: {self.CLASS_MAP}")
             except Exception as e:
                 print(f"[AI CORE] Error loading PyTorch YOLO: {e}")
+
+    def detect_frame(self, frame, conf_thresh=0.20, nms_thresh=0.45):
+        """
+        Runs YOLO Object Detection on the full camera frame.
+        Returns a list of detected objects: [{'box': (x1, y1, x2, y2), 'center': (cx, cy), 'class': class_name, 'conf': conf}, ...]
+        """
+        if frame is None or frame.size == 0:
+            return []
+            
+        h_orig, w_orig = frame.shape[:2]
+        
+        if self.session is not None:
+            try:
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                w_in, h_in = self.input_shape
+                resized = cv2.resize(rgb, (w_in, h_in)).transpose(2, 0, 1).astype(np.float32) / 255.0
+                tensor = np.expand_dims(resized, axis=0)
+                
+                with self.lock:
+                    out = self.session.run(None, {self.input_name: tensor})[0]
+                    
+                preds = out[0].T # (8400, 7) [cx, cy, w, h, score_bad, score_blackdot, score_good]
+                boxes = preds[:, :4]
+                scores = preds[:, 4:]
+                
+                class_ids = np.argmax(scores, axis=1)
+                confidences = np.max(scores, axis=1)
+                
+                mask = confidences >= conf_thresh
+                valid_boxes = boxes[mask]
+                valid_cids = class_ids[mask]
+                valid_confs = confidences[mask]
+                
+                if len(valid_boxes) == 0:
+                    return []
+                    
+                orig_boxes = []
+                for b in valid_boxes:
+                    bx = (b[0] / float(w_in)) * w_orig
+                    by = (b[1] / float(h_in)) * h_orig
+                    bw = (b[2] / float(w_in)) * w_orig
+                    bh = (b[3] / float(h_in)) * h_orig
+                    x1 = int(bx - bw / 2.0)
+                    y1 = int(by - bh / 2.0)
+                    orig_boxes.append([x1, y1, int(bw), int(bh)])
+                    
+                indices = cv2.dnn.NMSBoxes(
+                    bboxes=orig_boxes,
+                    scores=valid_confs.tolist(),
+                    score_threshold=conf_thresh,
+                    nms_threshold=nms_thresh
+                )
+                
+                detections = []
+                for idx in indices:
+                    cid = valid_cids[idx]
+                    cname = self.CLASS_MAP.get(cid, 'good')
+                    conf = float(valid_confs[idx])
+                    x, y, w, h = orig_boxes[idx]
+                    detections.append({
+                        'box': (x, y, x + w, y + h),
+                        'center': (x + w // 2, y + h // 2),
+                        'class': cname,
+                        'conf': conf
+                    })
+                return detections
+            except Exception as e:
+                print(f"[AI GPU DETECT ERROR] {e}")
+                
+        if self.model is not None:
+            try:
+                with self.lock:
+                    results = self.model(frame, verbose=False, conf=conf_thresh, device='cpu', imgsz=640)
+                    detections = []
+                    for r in results:
+                        for box in r.boxes:
+                            cid = int(box.cls[0])
+                            cname = self.model.names.get(cid, 'good').lower()
+                            conf = float(box.conf[0])
+                            x1, y1, x2, y2 = map(int, box.xyxy[0].tolist())
+                            detections.append({
+                                'box': (x1, y1, x2, y2),
+                                'center': ((x1 + x2) // 2, (y1 + y2) // 2),
+                                'class': cname,
+                                'conf': conf
+                            })
+                    return detections
+            except Exception as e:
+                print(f"[AI PYTORCH DETECT ERROR] {e}")
+                
+        return []
 
     def get_cashew_categories_batch(self, crops):
         if not crops:
@@ -1042,7 +1107,7 @@ class ZoneProcessor:
     def update_zone(self, new_zone):
         self.zone = new_zone
     
-    def process_frame(self, frame, quality_filter=None):
+    def process_frame(self, frame, quality_filter=None, frame_detections=None):
         if frame is None or frame.size == 0:
             return []
 
@@ -1064,28 +1129,26 @@ class ZoneProcessor:
             if zone_frame.size == 0 or zone_frame.shape[0] < 8 or zone_frame.shape[1] < 8:
                 return []
             
-            gray = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2GRAY)
-            clahe_img = CLAHE_OBJ.apply(gray)
-            smooth = cv2.GaussianBlur(clahe_img, (7, 7), 0)
-            
-            # Hybrid segmentation: Otsu + Sensitive Adaptive thresholding
-            _, mask_otsu = cv2.threshold(smooth, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-            mask_adapt = cv2.adaptiveThreshold(
-                smooth, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                cv2.THRESH_BINARY, blockSize=51, C=-3
-            )
-            mask_raw = cv2.bitwise_or(mask_otsu, mask_adapt)
-
-            # Chromaticity contrast: Cashew (organic warm: R, G > B) vs Roller/Metal (cool: B >= R)
+            # Chromaticity contrast: Cashew (organic warm: R, G > B) vs Roller/Metal/Belt (cool: B >= R, G)
             b_ch, g_ch, r_ch = cv2.split(zone_frame)
             rg_avg = cv2.addWeighted(r_ch, 0.5, g_ch, 0.5, 0)
             chroma_diff = cv2.subtract(rg_avg, b_ch)
-            _, mask_chroma = cv2.threshold(chroma_diff, 8, 255, cv2.THRESH_BINARY)
-            mask_raw = cv2.bitwise_and(mask_raw, mask_chroma)
-
-            mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_CLOSE, KERNEL_CLOSE_9, iterations=1)
-            mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_OPEN, KERNEL_E_5, iterations=1)
-            mask_smooth = cv2.GaussianBlur(mask_clean, (9, 9), 0)
+            
+            # CLAHE on Chroma to enhance dimly lit cashews without boosting metal glares
+            clahe_chroma = CLAHE_OBJ.apply(chroma_diff)
+            smooth_chroma = cv2.GaussianBlur(clahe_chroma, (5, 5), 0)
+            
+            # Otsu threshold on enhanced chromaticity
+            _, mask_otsu = cv2.threshold(smooth_chroma, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            
+            # Hard Minimum Chroma Gate (rejects neutral metallic rollers & divider reflections)
+            _, min_chroma_gate = cv2.threshold(chroma_diff, 14, 255, cv2.THRESH_BINARY)
+            mask_raw = cv2.bitwise_and(mask_otsu, min_chroma_gate)
+            
+            # Clean morphological cleanup (5x5 kernel preserves cashew edge, prevents line bridging)
+            mask_clean = cv2.morphologyEx(mask_raw, cv2.MORPH_OPEN, KERNEL_E_5, iterations=1)
+            mask_clean = cv2.morphologyEx(mask_clean, cv2.MORPH_CLOSE, KERNEL_E_5, iterations=1)
+            mask_smooth = cv2.GaussianBlur(mask_clean, (5, 5), 0)
             _, mask_final = cv2.threshold(mask_smooth, 127, 255, cv2.THRESH_BINARY)
             
             hsv = cv2.cvtColor(zone_frame, cv2.COLOR_BGR2HSV)
@@ -1108,8 +1171,6 @@ class ZoneProcessor:
             grades = []
             crops = []
             
-            extracted_crops = []
-            valid_contours_indices = []
             for i, c in enumerate(adjusted_contours):
                 if c is None or len(c) < 3:
                     continue
@@ -1150,14 +1211,14 @@ class ZoneProcessor:
                 max_dim = max(w_p, h_p)
                 aspect_ratio = max_dim / max(1.0, min_dim)
                 
-                # Reject thin horizontal roller lines/glares (cashews have thickness >= 18px)
+                # Reject thin horizontal roller lines/glares (cashews have thickness >= 18px, aspect <= 3.0)
                 if min_dim < 18:
                     continue
-                if aspect_ratio > 3.2 and min_dim < 25:
+                if aspect_ratio > 3.0:
                     continue
                     
                 solidity = area / max(1, w_p * h_p)
-                if solidity < 0.12:
+                if solidity < 0.15:
                     continue
                     
                 side = max(w_b, h_b) + 40
@@ -1169,29 +1230,40 @@ class ZoneProcessor:
                 if pw < 8 or ph < 8:
                     continue
                 crop = frame[py:py+ph, px:px+pw]
+                if crop.size == 0:
+                    continue
                 
-                if crop.size > 0 and crop.shape[0] >= 8 and crop.shape[1] >= 8:
-                    extracted_crops.append(crop)
-                    valid_contours_indices.append(i)
-                    
-            # Run AI on live frame crops for real-time tracking display & classification
-            ai_results = []
-            if extracted_crops and quality_filter and (quality_filter.session is not None or quality_filter.model is not None):
-                ai_results = quality_filter.get_cashew_categories_batch(extracted_crops)
-            else:
-                ai_results = [(None, 0.0)] * len(extracted_crops)
+                # Spatial matching against full-frame YOLO detections
+                matched_defect = None
+                if frame_detections:
+                    best_dist = 999999
+                    for det in frame_detections:
+                        dx, dy = det['center']
+                        dist = math.hypot(cx_b - dx, cy_b - dy)
+                        max_allow_dist = max(w_b, h_b) * 0.85 + 35
+                        if dist <= max_allow_dist:
+                            det_x1, det_y1, det_x2, det_y2 = det['box']
+                            inter_x1 = max(x_b, det_x1)
+                            inter_y1 = max(y_b, det_y1)
+                            inter_x2 = min(x_b + w_b, det_x2)
+                            inter_y2 = min(y_b + h_b, det_y2)
+                            inter_area = max(0, inter_x2 - inter_x1) * max(0, inter_y2 - inter_y1)
+                            cashew_area = max(1, w_b * h_b)
+                            overlap = inter_area / cashew_area
+                            
+                            if dist < best_dist or overlap > 0.15:
+                                if det['class'] in ['blackdot', 'bad']:
+                                    matched_defect = det['class']
+                                    best_dist = dist
+                                elif matched_defect is None and det['class'] not in GOOD_CLASS_NAMES:
+                                    matched_defect = det['class']
+                                    best_dist = dist
 
-            for idx, crop_idx in enumerate(valid_contours_indices):
-                if crop_idx < len(adjusted_contours):
-                    c = adjusted_contours[crop_idx]
-                    crop = extracted_crops[idx]
-                    ai_cat, ai_conf = ai_results[idx] if idx < len(ai_results) else (None, 0.0)
-                    
-                    is_defect = (ai_cat in ['bad', 'blackdot'])
-                    valid_contours.append(c)
-                    is_good_flags.append(not is_defect)
-                    grades.append(ai_cat if is_defect else None)
-                    crops.append(crop)
+                is_defect = (matched_defect in ['bad', 'blackdot'])
+                valid_contours.append(c)
+                is_good_flags.append(not is_defect)
+                grades.append(matched_defect if is_defect else None)
+                crops.append(crop)
             
             frame_ts = time.perf_counter()
             disappeared_ids = self.tracker.update(valid_contours, is_good_flags, grades, crops, frame_timestamp=frame_ts)
@@ -1292,14 +1364,8 @@ class ZoneProcessor:
                                     
                     self.tracker.remove_object(obj_id)
 
-            # 3. AI Inference & Ejection Queuing
-            if disappeared_crops:
-                yolo_results = []
-                if quality_filter and (quality_filter.session is not None or quality_filter.model is not None):
-                    yolo_results = quality_filter.get_cashew_categories_batch(disappeared_crops)
-                else:
-                    yolo_results = [(None, 0)] * len(disappeared_crops)
-                    
+            # 3. Ejection Queuing & Logging
+            if disappeared_objs:
                 zone_map = GRADE_PORT_MAP.get(self.name, {})
                 default_zone_cmd = zone_map.get('default', ZONE_COMMAND_MAP.get(self.name, ''))
 
@@ -1311,26 +1377,16 @@ class ZoneProcessor:
                     else:
                         max_mm = obj_info['max_mm']
 
-                    last_crop = disappeared_crops[idx]
-                    yolo_cat, yolo_conf = yolo_results[idx]
+                    last_crop = disappeared_crops[idx] if idx < len(disappeared_crops) else None
                     
-                    # Also check tracked defect history
+                    # Check persistent defect history across frames
                     history = obj_info.get('grade_history', [])
-                    defect_frames = [g for g in history if g is not None]
+                    defect_frames = [g for g in history if g in ['blackdot', 'bad']]
                     
-                    final_grade = None
-                    yolo_confirmed_good = False
-                    
-                    if yolo_cat and yolo_cat not in [name.lower() for name in GOOD_CLASS_NAMES]:
-                        final_grade = yolo_cat
-                    elif defect_frames:
+                    if defect_frames:
                         defect_counts = Counter(defect_frames)
                         final_grade = defect_counts.most_common(1)[0][0]
-                    elif yolo_cat and yolo_cat in [name.lower() for name in GOOD_CLASS_NAMES]:
-                        if yolo_conf > YOLO_STRICT_BYPASS:
-                            yolo_confirmed_good = True
-                            
-                    if not final_grade and not yolo_confirmed_good:
+                    else:
                         final_grade = get_grade(max_mm, self.ranges)
                         
                     grade_str = str(final_grade).strip().lower() if final_grade is not None else 'default'
@@ -1399,11 +1455,16 @@ class ZoneProcessor:
                 cv2.drawContours(frame, [smooth_cnt], -1, color, 3)
                 
                 cx, cy = obj_info['centroid']
-                max_mm = obj_info['max_mm']
+                if hasattr(self.tracker, 'get_robust_size'):
+                    disp_mm = self.tracker.get_robust_size(obj_id)
+                    if disp_mm <= 0:
+                        disp_mm = obj_info.get('max_mm', 0.0)
+                else:
+                    disp_mm = obj_info.get('max_mm', 0.0)
                 x_b, y_b, w_b, h_b = cv2.boundingRect(cnt)
                 
                 # Line 1: Millimeter size
-                line_size = f"{max_mm:.1f} mm"
+                line_size = f"{disp_mm:.1f} mm"
                 
                 # Line 2: Status
                 if display_defect:
@@ -1719,17 +1780,20 @@ def main():
                 except Exception as e:
                     print(f"[CONFIG ERROR] {e}")
 
-            # Vision Processing for all active zones
+            # Vision Processing with Full-Frame AI Defect Detection
+            detections_a = quality_filter.detect_frame(frame_a, conf_thresh=THRESH_BLACKDOT) if (frame_a is not None and quality_filter) else []
+            detections_b = quality_filter.detect_frame(frame_b, conf_thresh=THRESH_BLACKDOT) if (frame_b is not None and quality_filter) else []
+
             if frame_a is not None:
                 for p in zone_processors_a:
                     try:
-                        p.process_frame(frame_a, quality_filter)
+                        p.process_frame(frame_a, quality_filter=quality_filter, frame_detections=detections_a)
                     except Exception:
                         pass
             if frame_b is not None:
                 for p in zone_processors_b:
                     try:
-                        p.process_frame(frame_b, quality_filter)
+                        p.process_frame(frame_b, quality_filter=quality_filter, frame_detections=detections_b)
                     except Exception:
                         pass
 

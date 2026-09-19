@@ -268,8 +268,7 @@ class CppObjectTracker:
         n = len(measurements)
 
         if n < 3:
-            # Too few for statistics — use max as fallback
-            return max(measurements) if measurements else 0.0
+            return statistics.median(measurements) if measurements else 0.0
 
         # Use last 30 measurements — most recent and relevant
         recent = measurements[-30:] if n > 30 else measurements
