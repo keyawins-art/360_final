@@ -18,15 +18,15 @@ def get_existing_path(candidates, default_path):
     return default_path
 
 input_folder = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "Con_1_Images"),
     r"D:\Keya Work\360\wate\Con_1_Images",
     r"D:\Kesyu_250524_4_Belts\Images\Con_1_Images",
-    os.path.join(BASE_DIR, "wate", "Con_1_Images")
 ], os.path.join(BASE_DIR, "wate", "Con_1_Images"))
 
 output_folder = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "Con_2_Images"),
     r"D:\Keya Work\360\wate\Con_2_Images",
     r"D:\Kesyu_250524_4_Belts\Images\Con_2_Images",
-    os.path.join(BASE_DIR, "wate", "Con_2_Images")
 ], os.path.join(BASE_DIR, "wate", "Con_2_Images"))
 
 os.makedirs(input_folder, exist_ok=True)

@@ -147,20 +147,21 @@ def get_existing_path(candidates, default_path):
 
 def get_value_file():
     return get_existing_path([
+        os.path.join(BASE_DIR, "wate", "value.txt"),
         r"D:\4_belt_main\4_belt\range\value.txt",
-        r"D:\Keya Work\360\wate\value.txt",
-        os.path.join(BASE_DIR, "wate", "value.txt")
+        r"D:\Keya Work\360\wate\value.txt"
     ], os.path.join(BASE_DIR, "wate", "value.txt"))
 
 def get_camera_ref_file():
     return get_existing_path([
+        os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
+        os.path.join(os.path.expanduser("~"), "Desktop", "camera_serial(b).txt"),
         r"C:\Users\i7\Desktop\camera_serial(b).txt",
-        r"D:\Keya Work\360\camera_ref.json",
-        os.path.join(BASE_DIR, "wate", "camera_ref.txt")
+        r"D:\Keya Work\360\camera_ref.json"
     ], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
 
 def get_time_settings_dir():
-    for p in [r"D:\4_belt_main\4_belt\time", r"D:\Keya Work\360\wate", os.path.join(BASE_DIR, "wate")]:
+    for p in [os.path.join(BASE_DIR, "wate"), r"D:\4_belt_main\4_belt\time", r"D:\Keya Work\360\wate"]:
         if os.path.exists(p) and os.path.isdir(p):
             return p
     return os.path.join(BASE_DIR, "wate")
@@ -959,21 +960,10 @@ def resolve_com_port_for_belt(belt_id: int):
         idx = 2
         belt_char = 'c'
 
-    # Priority 1: Check legacy D:\ directory if present
-    legacy_p = rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt"
-    if os.path.exists(legacy_p):
-        try:
-            with open(legacy_p, 'r') as f:
-                c = f.read().strip()
-                if c:
-                    return c if c.upper().startswith("COM") else f"COM{c}"
-        except Exception:
-            pass
-
-    # Priority 2: Check comport_ref.txt (Settings UI)
+    # Priority 1: Check comport_ref.txt (Settings UI)
     comport_ref_file = get_existing_path([
-        r"D:\Keya Work\360\wate\comport_ref.txt",
-        os.path.join(BASE_DIR, "wate", "comport_ref.txt")
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
+        r"D:\Keya Work\360\wate\comport_ref.txt"
     ], os.path.join(BASE_DIR, "wate", "comport_ref.txt"))
     if os.path.exists(comport_ref_file):
         try:
@@ -987,7 +977,7 @@ def resolve_com_port_for_belt(belt_id: int):
         except Exception:
             pass
 
-    # Priority 3: Check local wate/com_port(a/b/c).txt
+    # Priority 2: Check local wate/com_port(a/b/c).txt
     for p in [
         os.path.join(BASE_DIR, "wate", f"com_port({belt_char}).txt"),
         os.path.join(BASE_DIR, "wate", f"comport({belt_char}).txt"),
@@ -1001,6 +991,17 @@ def resolve_com_port_for_belt(belt_id: int):
                         return c if c.upper().startswith("COM") else f"COM{c}"
             except Exception:
                 pass
+
+    # Priority 3: Check legacy D:\ directory if present
+    legacy_p = rf"D:\4_belt_main\4_belt\Test_checkup\com_port({belt_char}).txt"
+    if os.path.exists(legacy_p):
+        try:
+            with open(legacy_p, 'r') as f:
+                c = f.read().strip()
+                if c:
+                    return c if c.upper().startswith("COM") else f"COM{c}"
+        except Exception:
+            pass
 
     return None
 

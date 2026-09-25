@@ -20,27 +20,28 @@ def get_existing_path(candidates, default_path):
 
 # ------------ CONFIGURATION ------------  n
 input_folder = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "Con_4_Images"),
     r"D:\Keya Work\360\wate\Con_4_Images",
     r"D:\Kesyu_250524_4_Belts\Images\Con_4_Images",
-    os.path.join(BASE_DIR, "wate", "Con_4_Images")
 ], os.path.join(BASE_DIR, "wate", "Con_4_Images"))
 
 ranges_file = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "value.txt"),
     r"D:\Keya Work\360\wate\value.txt",
     r"D:\4_belt_main\4_belt\range\value.txt",
-    os.path.join(BASE_DIR, "wate", "value.txt")
 ], os.path.join(BASE_DIR, "wate", "value.txt"))
 
 timing_file = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "4(D)-time.txt"),
     r"D:\Keya Work\360\wate\4(D)-time.txt",
     r"D:\4_belt_main\4_belt\time\4(D)-time.txt",
-    os.path.join(BASE_DIR, "wate", "4(D)-time.txt")
 ], os.path.join(BASE_DIR, "wate", "4(D)-time.txt"))
 
 com_port_file = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "com_port(d).txt"),
+    os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
     r"D:\Keya Work\360\wate\com_port(d).txt",
     r"D:\4_belt_main\4_belt\Test_checkup\com_port(d).txt",
-    os.path.join(BASE_DIR, "wate", "com_port(d).txt")
 ], os.path.join(BASE_DIR, "wate", "com_port(d).txt"))
 
 os.makedirs(input_folder, exist_ok=True)

@@ -116,7 +116,7 @@ def build():
 
     # 3. Copy runtime configs and helper batch launcher
     print("\n[STEP 3/4] Preparing runtime folders and launchers in dist/360_App...")
-    for item in ["zones_config.json", "camera_params.json", "best.onnx"]:
+    for item in ["zones_config.json", "camera_params.json", "best.onnx", "best.pt", "camera_serial(a).txt", "camera_serial(b).txt"]:
         src = os.path.join(BASE_DIR, item)
         dst = os.path.join(dist_app_dir, item)
         if os.path.exists(src):
@@ -128,8 +128,10 @@ def build():
     for folder in ["wate", "grading", "defoult", "grading_color"]:
         src_f = os.path.join(BASE_DIR, folder)
         dst_f = os.path.join(dist_app_dir, folder)
-        if os.path.exists(src_f) and not os.path.exists(dst_f):
+        if os.path.exists(src_f):
             try:
+                if os.path.exists(dst_f):
+                    shutil.rmtree(dst_f, ignore_errors=True)
                 shutil.copytree(src_f, dst_f)
             except Exception:
                 pass

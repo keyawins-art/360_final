@@ -78,44 +78,50 @@ def get_existing_path(candidates, default_path):
 
 # Camera Serial Files
 SERIAL_FILE_A = get_existing_path([
-    r"C:\Users\i7\Desktop\camera_serial(a).txt",
-    r"D:\Keya Work\360\camera_ref.json",
     os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
-    os.path.join(BASE_DIR, "camera_serial(a).txt")
+    os.path.join(BASE_DIR, "camera_serial(a).txt"),
+    os.path.join(os.path.expanduser("~"), "Desktop", "camera_serial(a).txt"),
+    r"C:\Users\i7\Desktop\camera_serial(a).txt",
+    r"D:\Keya Work\360\camera_ref.json"
 ], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
 
 SERIAL_FILE_B = get_existing_path([
-    r"C:\Users\i7\Desktop\camera_serial(b).txt",
-    r"D:\Keya Work\360\camera_ref.json",
     os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
-    os.path.join(BASE_DIR, "camera_serial(b).txt")
+    os.path.join(BASE_DIR, "camera_serial(b).txt"),
+    os.path.join(os.path.expanduser("~"), "Desktop", "camera_serial(b).txt"),
+    r"C:\Users\i7\Desktop\camera_serial(b).txt",
+    r"D:\Keya Work\360\camera_ref.json"
 ], os.path.join(BASE_DIR, "wate", "camera_ref.txt"))
 
 # Arduino / PLC Controller COM Port Files
 MAIN_COM_FILE_A = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "com_port(a).txt"),
+    os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
     r"D:\4_belt_main\4_belt\Test_checkup\com_port(a).txt",
-    r"D:\Keya Work\360\wate\com_port(a).txt",
-    os.path.join(BASE_DIR, "wate", "com_port(a).txt")
+    r"D:\Keya Work\360\wate\com_port(a).txt"
 ], os.path.join(BASE_DIR, "wate", "com_port(a).txt"))
 
 MAIN_COM_FILE_B = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "com_port(b).txt"),
+    os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
     r"D:\4_belt_main\4_belt\Test_checkup\com_port(b).txt",
-    r"D:\Keya Work\360\wate\com_port(b).txt",
-    os.path.join(BASE_DIR, "wate", "com_port(b).txt")
+    r"D:\Keya Work\360\wate\com_port(b).txt"
 ], os.path.join(BASE_DIR, "wate", "com_port(b).txt"))
 
 RANGES_FILE = get_existing_path([
+    os.path.join(BASE_DIR, "wate", "value.txt"),
     r"D:\4_belt_main\4_belt\range\value.txt",
-    r"D:\Keya Work\360\wate\value.txt",
-    os.path.join(BASE_DIR, "wate", "value.txt")
+    r"D:\Keya Work\360\wate\value.txt"
 ], os.path.join(BASE_DIR, "wate", "value.txt"))  # Grading ranges file
 
 ZONES_CONFIG_FILE = get_existing_path([
     os.path.join(BASE_DIR, "zones_config.json"),
+    os.path.join(BUNDLE_DIR, "zones_config.json"),
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "zones_config.json")
 ], os.path.join(BASE_DIR, "zones_config.json"))
 
 DETECTIONS_FOLDER = get_existing_path([
+    os.path.join(BASE_DIR, "detections"),
     r"f:\server\360\detections"
 ], os.path.join(BASE_DIR, "detections"))
 
@@ -306,12 +312,17 @@ ZONE_ADJUST_STEP = 10       # Step size in pixels
 # YOLO CONFIGURATION (STRICTLY 19-09-26 MODEL ONLY)
 # =========================================================
 YOLO_MODEL_PATH = get_existing_path([
+    os.path.join(BASE_DIR, "best.onnx"),
+    os.path.join(BUNDLE_DIR, "best.onnx"),
+    os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.onnx"),
+    os.path.join(BASE_DIR, "best.pt"),
+    os.path.join(BUNDLE_DIR, "best.pt"),
     r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx",
     r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.pt",
     r"D:\yolo_cls\360models\19-09-26\product_detection\best.onnx",
     r"D:\yolo_cls\360models\19-09-26\product_detection\best.pt",
     r"D:\yolo_cls\360models\19-09-26",
-], r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx")
+], os.path.join(BASE_DIR, "best.onnx"))
 
 GOOD_CLASS_NAMES = ['good']
 
@@ -369,15 +380,16 @@ except Exception as e:
 def read_target_serial(cam_id='a'):
     """
     Reads the target serial number for Camera 'a' (index 0) or 'b' (index 1).
-    Checks camera_serial(a/b).txt, camera_ref.json, wate/camera_ref.txt.
+    Checks wate/camera_ref.txt, camera_serial(a/b).txt, camera_ref.json.
     """
     idx = 0 if str(cam_id).lower() in ['a', '1'] else 1
-    direct_desktop = rf"C:\Users\i7\Desktop\camera_serial({cam_id.lower()}).txt"
+    user_desktop = os.path.join(os.path.expanduser("~"), "Desktop", f"camera_serial({cam_id.lower()}).txt")
     candidates = [
-        direct_desktop,
-        os.path.join(BASE_DIR, f"camera_serial({cam_id.lower()}).txt"),
-        SERIAL_FILE_A if idx == 0 else SERIAL_FILE_B,
         os.path.join(BASE_DIR, "wate", "camera_ref.txt"),
+        SERIAL_FILE_A if idx == 0 else SERIAL_FILE_B,
+        user_desktop,
+        os.path.join(BASE_DIR, f"camera_serial({cam_id.lower()}).txt"),
+        rf"C:\Users\i7\Desktop\camera_serial({cam_id.lower()}).txt",
         r"D:\Keya Work\360\camera_ref.json"
     ]
     for c in candidates:
@@ -409,9 +421,9 @@ def read_com_port_from_file(file_path):
     Read COM port string from file and normalize to 'COMX'.
     """
     candidates = [
+        os.path.join(BASE_DIR, "wate", "comport_ref.txt"),
         file_path,
         os.path.join(BASE_DIR, "wate", os.path.basename(file_path)) if file_path else None,
-        os.path.join(BASE_DIR, "wate", "comport_ref.txt")
     ]
     for c in candidates:
         if c and os.path.exists(c):
@@ -422,7 +434,11 @@ def read_com_port_from_file(file_path):
                     data = json.loads(content)
                     if isinstance(data, dict):
                         refs = data.get("references", [""])
-                        if refs and refs[0]: content = str(refs[0]).strip()
+                        idx = 0
+                        if file_path and '(b)' in file_path.lower(): idx = 1
+                        elif file_path and '(c)' in file_path.lower(): idx = 2
+                        if len(refs) > idx and refs[idx]: content = str(refs[idx]).strip()
+                        elif refs and refs[0]: content = str(refs[0]).strip()
                 m = re.search(r'(\d+)', content)
                 if m:
                     return f"COM{m.group(1)}"
@@ -500,6 +516,9 @@ class CashewQualityFilter:
         
         # Build ONNX candidates
         onnx_candidates = [
+            os.path.join(BASE_DIR, "best.onnx"),
+            os.path.join(BUNDLE_DIR, "best.onnx"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.onnx"),
             r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.onnx",
             r"D:\yolo_cls\360models\19-09-26\product_detection\best.onnx",
             r"D:\yolo_cls\360models\19-09-26\best.onnx",
@@ -549,6 +568,9 @@ class CashewQualityFilter:
                 self.session = None
                 
         pt_candidates = [
+            os.path.join(BASE_DIR, "best.pt"),
+            os.path.join(BUNDLE_DIR, "best.pt"),
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "best.pt"),
             r"D:\yolo_cls\360models\19-09-26\product_detection\weights\best.pt",
             r"D:\yolo_cls\360models\19-09-26\product_detection\best.pt",
             r"D:\yolo_cls\360models\19-09-26\best.pt",
