@@ -1947,12 +1947,15 @@ def main():
                     pass
 
             key = -1
-            try:
-                key = cv2.waitKey(1)
-            except Exception:
+            if SHOW_DISPLAY:
+                try:
+                    key = cv2.waitKey(1)
+                except Exception:
+                    pass
+            else:
                 time.sleep(0.002)
 
-            if key != -1:
+            if key != -1 and key != 255 and (key & 0xFF) != 255:
                 should_quit, SHOW_DISPLAY = handle_keyboard_controls(key, ZONE_CONFIGS, all_zone_processors)
                 if should_quit:
                     break
