@@ -9,6 +9,11 @@ import re
 import json
 import ast
 
+try:
+    import msvcrt
+except ImportError:
+    msvcrt = None
+
 # Setup CUDA DLL paths for ONNX GPU (NVIDIA RTX 5050 Blackwell sm_120)
 try:
     import torch
@@ -1567,8 +1572,6 @@ class ZoneProcessor:
 # KEYBOARD CONTROL HANDLER (ZONES 1 TO 10)
 # =========================================================
 
-LAST_ESC_PRESS_TIME = 0.0
-
 def handle_keyboard_controls(key, zone_configs, zone_processors):
     """
     Handle keyboard input for selecting and tuning Zone-1 through Zone-10.
@@ -1580,10 +1583,10 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
     +/- : Width
     [/] : Height
     C: Save config
-    Q: Toggle display
-    ESC: Exit (Requires double-press within 2.5s to prevent accidental shutdown)
+    H: Toggle display window ON/OFF
+    Q / ESC: Exit cleanly
     """
-    global SELECTED_ZONE_INDEX, SHOW_DISPLAY, LAST_ESC_PRESS_TIME
+    global SELECTED_ZONE_INDEX, SHOW_DISPLAY
     
     should_quit = False
     char_key = key & 0xFF
@@ -1605,23 +1608,19 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
             SELECTED_ZONE_INDEX = (SELECTED_ZONE_INDEX + 1) % len(zone_configs)
         print(f"\n[CONTROL] Selected {zone_configs[SELECTED_ZONE_INDEX]['name']} for adjustment")
     
-    # 2. Display window control (Q or q)
-    elif char_key == ord('q') or char_key == ord('Q'):
+    # 2. Exit / Quit immediately on 'Q', 'q', or ESC (27)
+    elif char_key in [ord('q'), ord('Q'), 27]:
+        should_quit = True
+        key_name = 'Q' if char_key in [ord('q'), ord('Q')] else 'ESC'
+        print(f"\n[CONTROL] '{key_name}' pressed - Exiting grading system cleanly...")
+    
+    # 3. Toggle display (H or h for Hide/Show)
+    elif char_key in [ord('h'), ord('H')]:
         SHOW_DISPLAY = not SHOW_DISPLAY
         if SHOW_DISPLAY:
-            print(f"\n[CONTROL] Display window OPENING...")
+            print(f"\n[CONTROL] Full Camera display ENABLED.")
         else:
-            print(f"\n[CONTROL] Display window HIDDEN (processing continues in background at maximum 60+ FPS). Press Q to reopen.")
-    
-    # 3. ESC to quit (Double-press confirmation within 2.5s)
-    elif char_key == 27:
-        now = time.time()
-        if now - LAST_ESC_PRESS_TIME < 2.5:
-            should_quit = True
-            print(f"\n[CONTROL] ESC confirmed - Exiting grading system cleanly...")
-        else:
-            LAST_ESC_PRESS_TIME = now
-            print(f"\n[CONTROL WARNING] ESC pressed once! Press ESC again within 2.5 seconds if you really want to EXIT.")
+            print(f"\n[CONTROL] Full Camera display MINIMIZED (background processing at 60+ FPS). Press 'H' to show camera view.")
     
     # 4. Save zones configuration (C or c)
     elif char_key == ord('c') or char_key == ord('C'):
@@ -1785,8 +1784,8 @@ def main():
     print(f"  +/-      : Increase/Decrease width")
     print(f"  [ ]      : Decrease/Increase height")
     print(f"  C        : Save all 10 zones configuration to JSON")
-    print(f"  Q        : Toggle display window ON/OFF")
-    print(f"  ESC      : Quit program")
+    print(f"  H        : Toggle display window ON/OFF")
+    print(f"  Q / ESC  : Quit program cleanly")
     print(f"{'='*70}\n")
 
     # Initialize OpenCV Display Window explicitly to register with Win32 message pump
@@ -1875,92 +1874,108 @@ def main():
 
             now_time = time.perf_counter()
             # Throttle GUI display rendering to 30 FPS to leave 100% compute bandwidth for 60+ FPS AI sorting
-            if SHOW_DISPLAY and (now_time - last_display_time >= 0.033):
-                last_display_time = now_time
+            if SHOW_DISPLAY:
+                if now_time - last_display_time >= 0.033:
+                    last_display_time = now_time
 
-                # Build Display Canvases for Camera A and Camera B
-                canvas_a = None
-                if frame_a is not None:
-                    display_a = np.zeros_like(frame_a)
-                    img_h, img_w = frame_a.shape[:2]
-                    for z in ZONE_CONFIGS[:5]:
-                        x, y, w, h = z['zone']
-                        x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
-                        x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
-                        if x2 > x1 and y2 > y1:
-                            display_a[y1:y2, x1:x2] = frame_a[y1:y2, x1:x2]
-                    for processor in zone_processors_a:
-                        processor.draw_zone(display_a)
-                    
-                    # Highlight selected zone if on Camera A (0-4)
-                    if SELECTED_ZONE_INDEX is not None and 0 <= SELECTED_ZONE_INDEX < 5:
-                        sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
-                        sx, sy, sw, sh = sel_zone
-                        cv2.rectangle(display_a, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
-                        cv2.putText(display_a, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    canvas_a = display_a
-                else:
-                    canvas_a = np.zeros((1080, 1920, 3), dtype=np.uint8)
-                    cv2.putText(canvas_a, "CAMERA A (ZONES 1-5): OFFLINE / DISCONNECTED", (80, 540),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                    # Build Display Canvases for Camera A and Camera B
+                    canvas_a = None
+                    if frame_a is not None:
+                        display_a = np.zeros_like(frame_a)
+                        img_h, img_w = frame_a.shape[:2]
+                        for z in ZONE_CONFIGS[:5]:
+                            x, y, w, h = z['zone']
+                            x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
+                            x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
+                            if x2 > x1 and y2 > y1:
+                                display_a[y1:y2, x1:x2] = frame_a[y1:y2, x1:x2]
+                        for processor in zone_processors_a:
+                            processor.draw_zone(display_a)
+                        
+                        # Highlight selected zone if on Camera A (0-4)
+                        if SELECTED_ZONE_INDEX is not None and 0 <= SELECTED_ZONE_INDEX < 5:
+                            sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
+                            sx, sy, sw, sh = sel_zone
+                            cv2.rectangle(display_a, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
+                            cv2.putText(display_a, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                        canvas_a = display_a
+                    else:
+                        canvas_a = np.zeros((1080, 1920, 3), dtype=np.uint8)
+                        cv2.putText(canvas_a, "CAMERA A (ZONES 1-5): OFFLINE / DISCONNECTED", (80, 540),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
 
-                canvas_b = None
-                if frame_b is not None:
-                    display_b = np.zeros_like(frame_b)
-                    img_h, img_w = frame_b.shape[:2]
-                    for z in ZONE_CONFIGS[5:10]:
-                        x, y, w, h = z['zone']
-                        x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
-                        x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
-                        if x2 > x1 and y2 > y1:
-                            display_b[y1:y2, x1:x2] = frame_b[y1:y2, x1:x2]
-                    for processor in zone_processors_b:
-                        processor.draw_zone(display_b)
-                    
-                    # Highlight selected zone if on Camera B (5-9)
-                    if SELECTED_ZONE_INDEX is not None and 5 <= SELECTED_ZONE_INDEX < 10:
-                        sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
-                        sx, sy, sw, sh = sel_zone
-                        cv2.rectangle(display_b, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
-                        cv2.putText(display_b, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                    canvas_b = display_b
-                else:
-                    canvas_b = np.zeros((1080, 1920, 3), dtype=np.uint8)
-                    cv2.putText(canvas_b, "CAMERA B (ZONES 6-10): OFFLINE / DISCONNECTED", (80, 540),
-                                cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                    canvas_b = None
+                    if frame_b is not None:
+                        display_b = np.zeros_like(frame_b)
+                        img_h, img_w = frame_b.shape[:2]
+                        for z in ZONE_CONFIGS[5:10]:
+                            x, y, w, h = z['zone']
+                            x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
+                            x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
+                            if x2 > x1 and y2 > y1:
+                                display_b[y1:y2, x1:x2] = frame_b[y1:y2, x1:x2]
+                        for processor in zone_processors_b:
+                            processor.draw_zone(display_b)
+                        
+                        # Highlight selected zone if on Camera B (5-9)
+                        if SELECTED_ZONE_INDEX is not None and 5 <= SELECTED_ZONE_INDEX < 10:
+                            sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
+                            sx, sy, sw, sh = sel_zone
+                            cv2.rectangle(display_b, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
+                            cv2.putText(display_b, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
+                                        cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                        canvas_b = display_b
+                    else:
+                        canvas_b = np.zeros((1080, 1920, 3), dtype=np.uint8)
+                        cv2.putText(canvas_b, "CAMERA B (ZONES 6-10): OFFLINE / DISCONNECTED", (80, 540),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
 
-                # Resize both views for clean side-by-side split monitor display
-                target_h = 720
-                target_w = 960
-                view_a = cv2.resize(canvas_a, (target_w, target_h))
-                view_b = cv2.resize(canvas_b, (target_w, target_h))
+                    # Resize both views for clean side-by-side split monitor display
+                    target_h = 720
+                    target_w = 960
+                    view_a = cv2.resize(canvas_a, (target_w, target_h))
+                    view_b = cv2.resize(canvas_b, (target_w, target_h))
 
-                # Add Camera Header Badges
-                cv2.rectangle(view_a, (10, 10), (380, 50), (30, 30, 30), -1)
-                cv2.putText(view_a, "[ CAMERA A : ZONES 1 - 5 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                    # Add Camera Header Badges
+                    cv2.rectangle(view_a, (10, 10), (380, 50), (30, 30, 30), -1)
+                    cv2.putText(view_a, "[ CAMERA A : ZONES 1 - 5 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                cv2.rectangle(view_b, (10, 10), (380, 50), (30, 30, 30), -1)
-                cv2.putText(view_b, "[ CAMERA B : ZONES 6 - 10 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                    cv2.rectangle(view_b, (10, 10), (380, 50), (30, 30, 30), -1)
+                    cv2.putText(view_b, "[ CAMERA B : ZONES 6 - 10 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                combined_display = np.hstack((view_a, view_b))
-                # Draw center vertical divider
-                cv2.line(combined_display, (target_w, 0), (target_w, target_h), (255, 255, 255), 2)
+                    combined_display = np.hstack((view_a, view_b))
+                    # Draw center vertical divider
+                    cv2.line(combined_display, (target_w, 0), (target_w, target_h), (255, 255, 255), 2)
 
-                try:
-                    cv2.imshow("Full Camera", combined_display)
-                except Exception:
-                    pass
+                    try:
+                        cv2.imshow("Full Camera", combined_display)
+                    except Exception:
+                        pass
+            else:
+                if now_time - last_display_time >= 0.1:
+                    last_display_time = now_time
+                    bg_frame = np.zeros((160, 600, 3), dtype=np.uint8)
+                    cv2.putText(bg_frame, "PROCESS RUNNING IN BACKGROUND (60+ FPS)", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
+                    cv2.putText(bg_frame, "Press 'H' to show camera view, 'Q' or ESC to exit", (20, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                    try:
+                        cv2.imshow("Full Camera", bg_frame)
+                    except Exception:
+                        pass
 
             key = -1
-            if SHOW_DISPLAY:
+            try:
+                key = cv2.waitKeyEx(1)
+            except Exception:
+                pass
+
+            if key == -1 and msvcrt:
                 try:
-                    key = cv2.waitKey(1)
+                    if msvcrt.kbhit():
+                        ch = msvcrt.getch()
+                        key = ord(ch)
                 except Exception:
                     pass
-            else:
-                time.sleep(0.002)
 
             if key != -1 and key != 255 and (key & 0xFF) != 255:
                 should_quit, SHOW_DISPLAY = handle_keyboard_controls(key, ZONE_CONFIGS, all_zone_processors)
@@ -1972,6 +1987,10 @@ def main():
         print(f"\n[CRITICAL ERROR in main loop]: {e}")
         traceback.print_exc()
     finally:
+        try:
+            cam_pool.shutdown(wait=False, cancel_futures=True)
+        except Exception:
+            pass
         cam_a.close()
         cam_b.close()
         for p in all_zone_processors:
@@ -1980,6 +1999,8 @@ def main():
         ejection_q_b.stop()
         try:
             cv2.destroyAllWindows()
+            for _ in range(5):
+                cv2.waitKey(1)
         except Exception:
             pass
         if arduino_a:
