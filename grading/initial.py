@@ -1793,13 +1793,6 @@ def main():
     print(f"  Q / ESC  : Quit program cleanly")
     print(f"{'='*70}\n")
 
-    # Initialize OpenCV Display Window explicitly to register with Win32 message pump
-    if SHOW_DISPLAY:
-        try:
-            cv2.namedWindow("Full Camera", cv2.WINDOW_AUTOSIZE)
-        except Exception:
-            pass
-
     # Parallel Camera Processing Pool
     cam_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="CamWorker")
     
@@ -1820,12 +1813,19 @@ def main():
 
     last_display_time = 0.0
 
+    # Pre-allocated Zero-GC GUI Display Buffers
+    target_h = 720
+    target_w = 960
+    combined_display = np.zeros((target_h, target_w * 2, 3), dtype=np.uint8)
+    canvas_a = None
+    canvas_b = None
+    view_a_buf = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+    view_b_buf = np.zeros((target_h, target_w, 3), dtype=np.uint8)
+
     try:
         frame_counter = 0
         while True:
             frame_counter += 1
-            if frame_counter % 1000 == 0:
-                gc.collect()
 
             # Retrieve newest frames from both camera background threads
             frame_a = cam_a.get_frame() if cam_a_connected else None
@@ -1878,78 +1878,80 @@ def main():
                     pass
 
             now_time = time.perf_counter()
-            # Throttle GUI display rendering to 30 FPS to leave 100% compute bandwidth for 60+ FPS AI sorting
+            # Smooth GUI display rendering (30 FPS) with in-place zero-allocation buffers
             if SHOW_DISPLAY:
                 if now_time - last_display_time >= 0.033:
                     last_display_time = now_time
 
-                    # Build Display Canvases for Camera A and Camera B
-                    canvas_a = None
+                    # Camera A Canvas
                     if frame_a is not None:
-                        display_a = np.zeros_like(frame_a)
+                        if canvas_a is None or canvas_a.shape[:2] != frame_a.shape[:2]:
+                            canvas_a = np.zeros_like(frame_a)
+                        else:
+                            canvas_a.fill(0)
+
                         img_h, img_w = frame_a.shape[:2]
                         for z in ZONE_CONFIGS[:5]:
                             x, y, w, h = z['zone']
                             x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
                             x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
                             if x2 > x1 and y2 > y1:
-                                display_a[y1:y2, x1:x2] = frame_a[y1:y2, x1:x2]
+                                canvas_a[y1:y2, x1:x2] = frame_a[y1:y2, x1:x2]
                         for processor in zone_processors_a:
-                            processor.draw_zone(display_a)
+                            processor.draw_zone(canvas_a)
                         
                         # Highlight selected zone if on Camera A (0-4)
                         if SELECTED_ZONE_INDEX is not None and 0 <= SELECTED_ZONE_INDEX < 5:
                             sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
                             sx, sy, sw, sh = sel_zone
-                            cv2.rectangle(display_a, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
-                            cv2.putText(display_a, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
+                            cv2.rectangle(canvas_a, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
+                            cv2.putText(canvas_a, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                        canvas_a = display_a
+                        cv2.resize(canvas_a, (target_w, target_h), dst=view_a_buf)
                     else:
-                        canvas_a = np.zeros((1080, 1920, 3), dtype=np.uint8)
-                        cv2.putText(canvas_a, "CAMERA A (ZONES 1-5): OFFLINE / DISCONNECTED", (80, 540),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
+                        view_a_buf.fill(0)
+                        cv2.putText(view_a_buf, "CAMERA A (ZONES 1-5): OFFLINE", (40, target_h // 2),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
-                    canvas_b = None
+                    # Camera B Canvas
                     if frame_b is not None:
-                        display_b = np.zeros_like(frame_b)
+                        if canvas_b is None or canvas_b.shape[:2] != frame_b.shape[:2]:
+                            canvas_b = np.zeros_like(frame_b)
+                        else:
+                            canvas_b.fill(0)
+
                         img_h, img_w = frame_b.shape[:2]
                         for z in ZONE_CONFIGS[5:10]:
                             x, y, w, h = z['zone']
                             x1, y1 = max(0, min(x, img_w)), max(0, min(y, img_h))
                             x2, y2 = max(0, min(x + w, img_w)), max(0, min(y + h, img_h))
                             if x2 > x1 and y2 > y1:
-                                display_b[y1:y2, x1:x2] = frame_b[y1:y2, x1:x2]
+                                canvas_b[y1:y2, x1:x2] = frame_b[y1:y2, x1:x2]
                         for processor in zone_processors_b:
-                            processor.draw_zone(display_b)
+                            processor.draw_zone(canvas_b)
                         
                         # Highlight selected zone if on Camera B (5-9)
                         if SELECTED_ZONE_INDEX is not None and 5 <= SELECTED_ZONE_INDEX < 10:
                             sel_zone = ZONE_CONFIGS[SELECTED_ZONE_INDEX]['zone']
                             sx, sy, sw, sh = sel_zone
-                            cv2.rectangle(display_b, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
-                            cv2.putText(display_b, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
+                            cv2.rectangle(canvas_b, (sx, sy), (sx+sw, sy+sh), (0, 0, 255), 4)
+                            cv2.putText(canvas_b, f"SELECTED: {ZONE_CONFIGS[SELECTED_ZONE_INDEX]['name']}", (sx+5, sy+40),
                                         cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
-                        canvas_b = display_b
+                        cv2.resize(canvas_b, (target_w, target_h), dst=view_b_buf)
                     else:
-                        canvas_b = np.zeros((1080, 1920, 3), dtype=np.uint8)
-                        cv2.putText(canvas_b, "CAMERA B (ZONES 6-10): OFFLINE / DISCONNECTED", (80, 540),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2)
-
-                    # Resize both views for clean side-by-side split monitor display
-                    target_h = 720
-                    target_w = 960
-                    view_a = cv2.resize(canvas_a, (target_w, target_h))
-                    view_b = cv2.resize(canvas_b, (target_w, target_h))
+                        view_b_buf.fill(0)
+                        cv2.putText(view_b_buf, "CAMERA B (ZONES 6-10): OFFLINE", (40, target_h // 2),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
 
                     # Add Camera Header Badges
-                    cv2.rectangle(view_a, (10, 10), (380, 50), (30, 30, 30), -1)
-                    cv2.putText(view_a, "[ CAMERA A : ZONES 1 - 5 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                    cv2.rectangle(view_a_buf, (10, 10), (380, 50), (30, 30, 30), -1)
+                    cv2.putText(view_a_buf, "[ CAMERA A : ZONES 1 - 5 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                    cv2.rectangle(view_b, (10, 10), (380, 50), (30, 30, 30), -1)
-                    cv2.putText(view_b, "[ CAMERA B : ZONES 6 - 10 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
+                    cv2.rectangle(view_b_buf, (10, 10), (380, 50), (30, 30, 30), -1)
+                    cv2.putText(view_b_buf, "[ CAMERA B : ZONES 6 - 10 ]", (20, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 255), 2)
 
-                    combined_display = np.hstack((view_a, view_b))
+                    combined_display[:, :target_w] = view_a_buf
+                    combined_display[:, target_w:] = view_b_buf
                     # Draw center vertical divider
                     cv2.line(combined_display, (target_w, 0), (target_w, target_h), (255, 255, 255), 2)
 
