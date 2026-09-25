@@ -1483,6 +1483,11 @@ class ZoneProcessor:
         cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 255), 2)
         cv2.putText(frame, self.name, (x1+5, y1+20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
+        # Draw visible Exit Trigger Line at 95% of zone height
+        exit_line_y = int(y1 + (y2 - y1) * 0.95)
+        cv2.line(frame, (x1, exit_line_y), (x2, exit_line_y), (0, 0, 255), 1)
+        cv2.putText(frame, "EXIT", (x1 + 5, exit_line_y - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+        
         for obj_id, obj_info in self.tracker.objects.items():
             if obj_info.get('disappeared_count', 0) > 0:
                 continue
