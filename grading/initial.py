@@ -1789,6 +1789,13 @@ def main():
     print(f"  ESC      : Quit program")
     print(f"{'='*70}\n")
 
+    # Initialize OpenCV Display Window explicitly to register with Win32 message pump
+    if SHOW_DISPLAY:
+        try:
+            cv2.namedWindow("Full Camera", cv2.WINDOW_AUTOSIZE)
+        except Exception:
+            pass
+
     # Parallel Camera Processing Pool
     cam_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="CamWorker")
     
