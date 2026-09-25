@@ -703,7 +703,6 @@ class CashewQualityFilter:
     def get_cashew_categories_batch(self, crops):
         if not crops:
             return []
-
         if self.session is not None:
             try:
                 w_in, h_in = self.input_shape
@@ -1568,6 +1567,8 @@ class ZoneProcessor:
 # KEYBOARD CONTROL HANDLER (ZONES 1 TO 10)
 # =========================================================
 
+LAST_ESC_PRESS_TIME = 0.0
+
 def handle_keyboard_controls(key, zone_configs, zone_processors):
     """
     Handle keyboard input for selecting and tuning Zone-1 through Zone-10.
@@ -1580,9 +1581,9 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
     [/] : Height
     C: Save config
     Q: Toggle display
-    ESC: Exit
+    ESC: Exit (Requires double-press within 2.5s to prevent accidental shutdown)
     """
-    global SELECTED_ZONE_INDEX, SHOW_DISPLAY
+    global SELECTED_ZONE_INDEX, SHOW_DISPLAY, LAST_ESC_PRESS_TIME
     
     should_quit = False
     char_key = key & 0xFF
@@ -1610,12 +1611,17 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
         if SHOW_DISPLAY:
             print(f"\n[CONTROL] Display window OPENING...")
         else:
-            print(f"\n[CONTROL] Display window HIDDEN (processing continues in background). Press Q to reopen.")
+            print(f"\n[CONTROL] Display window HIDDEN (processing continues in background at maximum 60+ FPS). Press Q to reopen.")
     
-    # 3. ESC to quit completely
+    # 3. ESC to quit (Double-press confirmation within 2.5s)
     elif char_key == 27:
-        should_quit = True
-        print(f"\n[CONTROL] ESC pressed - Exiting program...")
+        now = time.time()
+        if now - LAST_ESC_PRESS_TIME < 2.5:
+            should_quit = True
+            print(f"\n[CONTROL] ESC confirmed - Exiting grading system cleanly...")
+        else:
+            LAST_ESC_PRESS_TIME = now
+            print(f"\n[CONTROL WARNING] ESC pressed once! Press ESC again within 2.5 seconds if you really want to EXIT.")
     
     # 4. Save zones configuration (C or c)
     elif char_key == ord('c') or char_key == ord('C'):
@@ -1723,15 +1729,20 @@ def main():
 
     arduino_b = None
     if com_port_b:
-        try:
-            arduino_b = serial.Serial(port=com_port_b, baudrate=115200, timeout=1)
-            print(f"[SERIAL B] Connected on {com_port_b} for Belts 6-10. Waiting for bootloader...")
-            time.sleep(1.5)
-            arduino_b.reset_input_buffer()
-            arduino_b.reset_output_buffer()
-            print(f"[SERIAL B] Ready on {com_port_b}!")
-        except Exception as e:
-            print(f"[SERIAL B ERROR] {com_port_b}: {e}")
+        if com_port_a and com_port_b.upper() == com_port_a.upper() and arduino_a is not None:
+            # Same COM port used for both cameras -> Share single opened serial connection safely!
+            arduino_b = arduino_a
+            print(f"[SERIAL B] Sharing {com_port_b} with Camera A (Single Controller / Shared Port Mode)!")
+        else:
+            try:
+                arduino_b = serial.Serial(port=com_port_b, baudrate=115200, timeout=1)
+                print(f"[SERIAL B] Connected on {com_port_b} for Belts 6-10. Waiting for bootloader...")
+                time.sleep(1.5)
+                arduino_b.reset_input_buffer()
+                arduino_b.reset_output_buffer()
+                print(f"[SERIAL B] Ready on {com_port_b}!")
+            except Exception as e:
+                print(f"[SERIAL B ERROR] {com_port_b}: {e}")
 
     # 5. Initialize Ejection Queues (Isolated Worker Threads for Zero Lock Contention)
     ejection_q_a = EjectionQueue(arduino=arduino_a, delay_seconds=DELAY_SECONDS, name="A")
@@ -1981,7 +1992,7 @@ def main():
                 print("[SERIAL A] Closed.")
             except Exception:
                 pass
-        if arduino_b:
+        if arduino_b and arduino_b is not arduino_a:
             try:
                 arduino_b.close()
                 print("[SERIAL B] Closed.")
