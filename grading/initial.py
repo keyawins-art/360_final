@@ -1942,29 +1942,15 @@ def main():
                 cv2.line(combined_display, (target_w, 0), (target_w, target_h), (255, 255, 255), 2)
 
                 try:
-                    if cv2.getWindowProperty("Full Camera", cv2.WND_PROP_VISIBLE) < 1:
-                        SHOW_DISPLAY = False
-                except Exception:
-                    pass
-
-                try:
                     cv2.imshow("Full Camera", combined_display)
-                except Exception:
-                    pass
-            elif not SHOW_DISPLAY and frame_counter % 30 == 0:
-                try:
-                    bg_frame = np.zeros((200, 650, 3), dtype=np.uint8)
-                    cv2.putText(bg_frame, "DUAL-CAMERA PROCESS RUNNING IN BACKGROUND (60+ FPS)", (20, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
-                    cv2.putText(bg_frame, "Press 'Q' to show camera view, ESC to exit", (20, 130), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 1)
-                    cv2.imshow("Full Camera", bg_frame)
                 except Exception:
                     pass
 
             key = -1
             try:
-                key = cv2.waitKeyEx(1)
+                key = cv2.waitKey(1)
             except Exception:
-                time.sleep(0.005)
+                time.sleep(0.002)
 
             if key != -1:
                 should_quit, SHOW_DISPLAY = handle_keyboard_controls(key, ZONE_CONFIGS, all_zone_processors)
