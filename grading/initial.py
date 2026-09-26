@@ -1798,6 +1798,7 @@ def main():
 
     cam_stream_counters = {'a': 0, 'b': 0}
     last_detections_cache = {'a': [], 'b': []}
+    cam_pool = concurrent.futures.ThreadPoolExecutor(max_workers=2, thread_name_prefix="CamWorker")
 
     def process_camera_stream(frame, processors, filter_obj, cam_key='a'):
         if frame is None or frame.size == 0:
