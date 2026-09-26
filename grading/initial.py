@@ -1960,15 +1960,26 @@ def main():
                     except Exception:
                         pass
             else:
-                if now_time - last_display_time >= 0.1:
+                if now_time - last_display_time >= 0.05:
                     last_display_time = now_time
-                    bg_frame = np.zeros((160, 600, 3), dtype=np.uint8)
-                    cv2.putText(bg_frame, "PROCESS RUNNING IN BACKGROUND (60+ FPS)", (20, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-                    cv2.putText(bg_frame, "Press 'H' to show camera view, 'Q' or ESC to exit", (20, 110), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+                    combined_display.fill(20)
+                    cv2.rectangle(combined_display, (460, 260), (1460, 460), (35, 35, 35), -1)
+                    cv2.rectangle(combined_display, (460, 260), (1460, 460), (0, 255, 0), 2)
+                    cv2.putText(combined_display, "PROCESS RUNNING IN BACKGROUND (60+ FPS)", (500, 340),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+                    cv2.putText(combined_display, "Press 'H' to show live cameras, 'Q' or ESC to exit", (540, 400),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 1)
                     try:
-                        cv2.imshow("Full Camera", bg_frame)
+                        cv2.imshow("Full Camera", combined_display)
                     except Exception:
                         pass
+
+            try:
+                if cv2.getWindowProperty("Full Camera", cv2.WND_PROP_VISIBLE) < 1:
+                    print("\n[CONTROL] Window closed via 'X' button - Stopping grading system cleanly...")
+                    break
+            except Exception:
+                pass
 
             key = -1
             try:
