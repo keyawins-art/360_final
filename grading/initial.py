@@ -1577,6 +1577,8 @@ class ZoneProcessor:
 # KEYBOARD CONTROL HANDLER (ZONES 1 TO 10)
 # =========================================================
 
+LAST_QUIT_PRESS_TIME = 0.0
+
 def handle_keyboard_controls(key, zone_configs, zone_processors):
     """
     Handle keyboard input for selecting and tuning Zone-1 through Zone-10.
@@ -1589,9 +1591,9 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
     [/] : Height
     C: Save config
     H: Toggle display window ON/OFF
-    Q / ESC: Exit cleanly
+    Q / ESC: Quit cleanly (Requires 2 presses within 3 seconds)
     """
-    global SELECTED_ZONE_INDEX, SHOW_DISPLAY
+    global SELECTED_ZONE_INDEX, SHOW_DISPLAY, LAST_QUIT_PRESS_TIME
     
     should_quit = False
     char_key = key & 0xFF
@@ -1613,11 +1615,16 @@ def handle_keyboard_controls(key, zone_configs, zone_processors):
             SELECTED_ZONE_INDEX = (SELECTED_ZONE_INDEX + 1) % len(zone_configs)
         print(f"\n[CONTROL] Selected {zone_configs[SELECTED_ZONE_INDEX]['name']} for adjustment")
     
-    # 2. Exit / Quit immediately on 'Q', 'q', or ESC (27)
+    # 2. Exit / Quit with double-press confirmation (requires 2 presses within 3s)
     elif char_key in [ord('q'), ord('Q'), 27]:
-        should_quit = True
+        now = time.time()
         key_name = 'Q' if char_key in [ord('q'), ord('Q')] else 'ESC'
-        print(f"\n[CONTROL] '{key_name}' pressed - Exiting grading system cleanly...")
+        if now - LAST_QUIT_PRESS_TIME < 3.0:
+            should_quit = True
+            print(f"\n[CONTROL] '{key_name}' double-confirmed - Exiting grading system cleanly...")
+        else:
+            LAST_QUIT_PRESS_TIME = now
+            print(f"\n[CONTROL WARNING] '{key_name}' pressed once! Press '{key_name}' again within 3 seconds if you want to STOP grading.")
     
     # 3. Toggle display (H or h for Hide/Show)
     elif char_key in [ord('h'), ord('H')]:
@@ -1974,13 +1981,6 @@ def main():
                     except Exception:
                         pass
 
-            try:
-                if cv2.getWindowProperty("Full Camera", cv2.WND_PROP_VISIBLE) < 1:
-                    print("\n[CONTROL] Window closed via 'X' button - Stopping grading system cleanly...")
-                    break
-            except Exception:
-                pass
-
             key = -1
             try:
                 key = cv2.waitKeyEx(1)
@@ -2004,6 +2004,7 @@ def main():
         import traceback
         print(f"\n[CRITICAL ERROR in main loop]: {e}")
         traceback.print_exc()
+        print("[RECOVERY] System encountered an error but will keep running safely...")
     finally:
         try:
             cam_pool.shutdown(wait=False, cancel_futures=True)
